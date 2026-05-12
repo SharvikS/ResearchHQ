@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BLE Beacon &mdash; Missing MACs in POST: Root Cause &amp; Fix</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm; }
+  html, body { font-family: 'Segoe UI', Arial, sans-serif; color:#1a1a1a; font-size: 10.5pt; line-height: 1.45; }
+  h1 { font-size: 18pt; margin: 0 0 4pt 0; color:#0b3a66; }
+  h2 { font-size: 13pt; margin: 16pt 0 6pt 0; color:#0b3a66; border-bottom: 1px solid #cdd6e0; padding-bottom: 2pt; }
+  h3 { font-size: 11pt; margin: 10pt 0 4pt 0; color:#0b3a66; }
+  .meta { color:#566; font-size: 9pt; margin-bottom: 8pt; }
+  p { margin: 4pt 0; }
+  ul { margin: 4pt 0 4pt 18pt; padding: 0; }
+  li { margin: 2pt 0; }
+  pre {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.8pt;
+    line-height: 1.35;
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 8px 10px;
+    white-space: pre;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+  code { font-family: 'Consolas', monospace; background:#eef1f4; padding: 0 3px; border-radius: 3px; font-size: 9.5pt; }
+  .filename { font-family: 'Consolas', monospace; font-weight: bold; color:#0b3a66; margin-top: 6pt; }
+
+  /* Highlight bands inside <pre> */
+  .bug      { background: #ffe1e1; display:block; border-left: 3px solid #d83a3a; padding-left: 6px; }
+  .warn     { background: #fff4cc; display:block; border-left: 3px solid #c89400; padding-left: 6px; }
+  .fix      { background: #d8f5d8; display:block; border-left: 3px solid #2c8c2c; padding-left: 6px; }
+  .note     { background: #e6f0ff; display:block; border-left: 3px solid #2a6fd6; padding-left: 6px; }
+  .tag {
+    display:inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 8.5pt; font-weight: bold; vertical-align: middle; margin-right: 4pt;
+  }
+  .tag.bug  { background:#d83a3a; color:#fff; border-left:none; padding-left:6px; }
+  .tag.warn { background:#c89400; color:#fff; border-left:none; padding-left:6px; }
+  .tag.fix  { background:#2c8c2c; color:#fff; border-left:none; padding-left:6px; }
+  .tag.note { background:#2a6fd6; color:#fff; border-left:none; padding-left:6px; }
+
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 9.5pt; }
+  th, td { border: 1px solid #cdd6e0; padding: 4px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3f8; }
+  .legend { font-size: 9pt; margin-top: 4pt; }
+  .legend span { margin-right: 10pt; }
+</style>
+</head>
+<body>
+
+<h1>BLE Beacon &mdash; Missing MACs in POST</h1>
+<div class="meta">Root cause analysis &amp; fix &nbsp;&middot;&nbsp; Files reviewed: <code>beacon_configure.sh</code>, <code>beacon_post.sh</code>, <code>beacon_daemon.sh</code>, <code>beacon_ctl.sh</code></div>
+
+<div class="legend">
+  <span><span class="tag bug">BUG</span> root cause</span>
+  <span><span class="tag warn">WARN</span> contributing issue</span>
+  <span><span class="tag note">NOTE</span> design observation</span>
+  <span><span class="tag fix">FIX</span> patched code</span>
+</div>
+
+<h2>Symptom</h2>
+<p>Tracked MACs are <em>not all</em> appearing in the POST to the orchestrator. Some MACs go missing after a configure run or after the auto-restart loop kicks in; the device falls back to heartbeat (<code>i[0]{b,r}:</code>) even though <code>tracked_macs.txt</code> still lists the MACs.</p>
+
+<h2>Root cause</h2>
+<p><span class="tag bug">BUG</span> <code>cmd_start</code> in <b>beacon_ctl.sh</b> brings microcom back up but never re&#8209;loads the tracked MAC list into it. The MACs are sent to microcom <em>only once</em> &mdash; by the daemon&rsquo;s feeder subshell at boot. After that, every restart path leaves microcom blind:</p>
+
+<table>
+  <tr><th>Restart path</th><th>microcom state</th><th>MAC list inside microcom</th></tr>
+  <tr><td>Daemon initial boot</td><td>started by daemon, feeder pushes ADDs from <code>tracked_macs.txt</code></td><td><b>loaded</b></td></tr>
+  <tr><td>Auto-restart loop in daemon (<code>is_microcom_running</code> false)</td><td>calls <code>beacon_ctl.sh start</code> &rarr; <code>cmd_start</code></td><td><b>EMPTY</b></td></tr>
+  <tr><td><code>beacon_configure.sh</code> (stop &rarr; add/del &rarr; start)</td><td>stop, then <code>cmd_start</code> at end</td><td><b>EMPTY</b></td></tr>
+  <tr><td>User runs <code>beacon_ctl.sh restart</code></td><td><code>cmd_stop</code> + <code>cmd_start</code></td><td><b>EMPTY</b></td></tr>
+</table>
+
+<p>Once microcom has zero MACs to track, no <code>MATCHED:</code> lines are emitted, <code>/tmp/beacon_rssi.log</code> stops growing, and within 60&nbsp;s the post script&rsquo;s cutoff ages out the old entries &rarr; POST goes to the heartbeat path with no MACs.</p>
+
+<h2>Where the bug lives</h2>
+
+<div class="filename">beacon_ctl.sh &mdash; cmd_start()</div>
+<pre>cmd_start() {
+    rm -f "$MANUAL_STOP_FLAG"
+    if is_microcom_running; then
+        log_msg WARN "microcom already running"
+        return
+    fi
+    if [ "$(check_daemon)" = "stopped" ]; then
+        log_msg INFO "Daemon not running, starting daemon..."
+        sh "$DAEMON_SCRIPT" > /dev/null 2>&amp;1 &amp;
+        sleep 3
+        if [ "$(check_daemon)" = "running" ]; then
+            log_msg OK "Daemon started"
+        else
+            log_msg ERROR "Daemon failed to start"
+            return
+        fi
+    fi
+    if [ ! -p "$FIFO_PIPE" ]; then
+        rm -f "$FIFO_PIPE"
+        mkfifo "$FIFO_PIPE" 2>/dev/null
+        log_msg INFO "Recreated FIFO pipe"
+    fi
+    rm -f /var/lock/LCK..ttyS1
+<span class="bug">    (
+        microcom -s 115200 "$UART_PORT" &lt; "$FIFO_PIPE" 2&gt;&amp;1 | while IFS= read -r line; do
+            if echo "$line" | grep -q "MATCHED:"; then
+                MAC=$(echo "$line" | sed -n 's/.*MATCHED:[[:space:]]*\([0-9A-Fa-f:]*\).*/\1/p')
+                RSSI=$(echo "$line" | sed -n 's/.*RSSI:[[:space:]]*\(-\?[0-9]*\).*/\1/p')
+                [ -n "$MAC" ] &amp;&amp; [ -n "$RSSI" ] &amp;&amp; echo "$(date '+%Y-%m-%d %H:%M:%S')|$MAC|$RSSI|$(date +%s)" &gt;&gt; "$RSSI_LOG"
+            fi
+        done
+    ) &amp;
+    sleep 2
+    # &lt;&lt;&lt; BUG: microcom is up here but NO 'ADD &lt;mac&gt;' commands are sent.   &gt;&gt;&gt;
+    # &lt;&lt;&lt; The previous microcom consumed the feeder's initial ADDs;        &gt;&gt;&gt;
+    # &lt;&lt;&lt; FIFOs aren't replayable, so the new microcom tracks ZERO MACs.   &gt;&gt;&gt;</span>
+    if is_microcom_running; then
+        log_msg OK "microcom started"
+    else
+        log_msg ERROR "microcom failed to start"
+    fi
+}</pre>
+
+<div class="filename">beacon_configure.sh &mdash; stop / add / start bracket</div>
+<pre><span class="warn"># Stop microcom before making changes
+/usr/sbin/beacon_ctl.sh stop 2&gt;/dev/null
+# &lt;&lt;&lt; WARN: this kills microcom (the FIFO reader). Subsequent          &gt;&gt;&gt;
+# &lt;&lt;&lt; 'beacon_ctl.sh add/del' calls do `printf ... &gt; $FIFO_PIPE`,      &gt;&gt;&gt;
+# &lt;&lt;&lt; opening the FIFO for write with NO READER -&gt; that open() blocks. &gt;&gt;&gt;
+# &lt;&lt;&lt; Even if it doesn't fully hang, the data flow is fragile.        &gt;&gt;&gt;</span>
+...
+        if beacon_ctl.sh add "$MAC_UPPER" &gt;/dev/null 2&gt;&amp;1; then
+            ...
+        fi
+...
+<span class="warn">/usr/sbin/beacon_ctl.sh start 2&gt;/dev/null
+# &lt;&lt;&lt; This restart triggers the cmd_start bug above:                  &gt;&gt;&gt;
+# &lt;&lt;&lt; microcom comes back tracking 0 MACs.                            &gt;&gt;&gt;</span></pre>
+
+<div class="filename">beacon_ctl.sh &mdash; cmd_add_mac() / cmd_del_mac()</div>
+<pre>cmd_add_mac() {
+    ...
+    echo "$MAC" &gt;&gt; "$MAC_LIST_FILE"
+    log_msg OK "Added $MAC to active tracking list"
+
+<span class="warn">    if [ -p "$FIFO_PIPE" ]; then
+        printf "ADD %s\r\n" "$MAC" &gt; "$FIFO_PIPE" 2&gt;/dev/null
+        # &lt;&lt;&lt; WARN: when called from beacon_configure.sh after a 'stop', &gt;&gt;&gt;
+        # &lt;&lt;&lt; microcom is dead -&gt; this open(O_WRONLY) blocks/stalls.    &gt;&gt;&gt;
+        log_msg OK "Sent ADD command to daemon"
+    fi</span>
+    return 0
+}</pre>
+
+<div class="filename">beacon_post.sh &mdash; MAC_COUNT calc</div>
+<pre><span class="warn">MAC_COUNT=$(echo "$BEACON_DATA" | grep -c '^  ' 2&gt;/dev/null || echo "0")
+# &lt;&lt;&lt; WARN: when no matches, grep -c PRINTS "0" AND returns exit 1.    &gt;&gt;&gt;
+# &lt;&lt;&lt; The '|| echo "0"' fires anyway, so MAC_COUNT becomes "0\n0",    &gt;&gt;&gt;
+# &lt;&lt;&lt; which breaks the later [ "$MAC_COUNT" -eq 0 ] arithmetic test.  &gt;&gt;&gt;
+# &lt;&lt;&lt; (Only matters when BEACON_DATA is non-empty but has no '^  '    &gt;&gt;&gt;
+# &lt;&lt;&lt;  lines &mdash; the empty-string case is short-circuited earlier.) &gt;&gt;&gt;</span></pre>
+
+<h2>Fix &mdash; reload MACs into microcom on every start</h2>
+
+<div class="filename">beacon_ctl.sh &mdash; patched cmd_start()</div>
+<pre>cmd_start() {
+    rm -f "$MANUAL_STOP_FLAG"
+    if is_microcom_running; then
+        log_msg WARN "microcom already running"
+        return
+    fi
+    if [ "$(check_daemon)" = "stopped" ]; then
+        log_msg INFO "Daemon not running, starting daemon..."
+        sh "$DAEMON_SCRIPT" &gt; /dev/null 2&gt;&amp;1 &amp;
+        sleep 3
+        if [ "$(check_daemon)" = "running" ]; then
+            log_msg OK "Daemon started"
+<span class="fix">            return    # FIX: daemon's own feeder already pushed ADDs &mdash;
+                      # don't double-load.</span>
+        else
+            log_msg ERROR "Daemon failed to start"
+            return
+        fi
+    fi
+    if [ ! -p "$FIFO_PIPE" ]; then
+        rm -f "$FIFO_PIPE"
+        mkfifo "$FIFO_PIPE" 2&gt;/dev/null
+        log_msg INFO "Recreated FIFO pipe"
+    fi
+    rm -f /var/lock/LCK..ttyS1
+    (
+        microcom -s 115200 "$UART_PORT" &lt; "$FIFO_PIPE" 2&gt;&amp;1 | while IFS= read -r line; do
+            if echo "$line" | grep -q "MATCHED:"; then
+                MAC=$(echo "$line" | sed -n 's/.*MATCHED:[[:space:]]*\([0-9A-Fa-f:]*\).*/\1/p')
+                RSSI=$(echo "$line" | sed -n 's/.*RSSI:[[:space:]]*\(-\?[0-9]*\).*/\1/p')
+                [ -n "$MAC" ] &amp;&amp; [ -n "$RSSI" ] &amp;&amp; \
+                    echo "$(date '+%Y-%m-%d %H:%M:%S')|$MAC|$RSSI|$(date +%s)" &gt;&gt; "$RSSI_LOG"
+            fi
+        done
+    ) &amp;
+    sleep 2
+    if ! is_microcom_running; then
+        log_msg ERROR "microcom failed to start"
+        return
+    fi
+
+<span class="fix">    # FIX: reload tracked MACs into the freshly started microcom.
+    # microcom is the FIFO reader now, so writes won't block.
+    if [ -s "$MAC_LIST_FILE" ]; then
+        COUNT=0
+        while read -r mac; do
+            [ -z "$mac" ] &amp;&amp; continue
+            printf "ADD %s\r\n" "$mac" &gt; "$FIFO_PIPE" 2&gt;/dev/null
+            COUNT=$((COUNT + 1))
+            sleep 1
+        done &lt; "$MAC_LIST_FILE"
+        printf "START\r\n" &gt; "$FIFO_PIPE" 2&gt;/dev/null
+        log_msg OK "Reloaded $COUNT MACs into microcom"
+    fi</span>
+
+    log_msg OK "microcom started"
+}</pre>
+
+<h3>Why the early <code>return</code> matters</h3>
+<p>When <code>cmd_start</code> is invoked while the daemon is <em>down</em>, it boots the daemon &mdash; and the daemon&rsquo;s own startup feeder already pushes <code>ADD</code> commands from <code>tracked_macs.txt</code>. Letting the function continue past that point would double-add every MAC.</p>
+
+<h3>Why FIFO writes are safe in the patch</h3>
+<p>The new ADD-replay loop runs <em>after</em> microcom has been started in the background subshell, so microcom is the FIFO reader. <code>open(O_WRONLY)</code> succeeds without blocking. The same is <b>not</b> true of the writes that <code>beacon_configure.sh</code> performs between its <code>stop</code> and <code>start</code> &mdash; those happen with no reader and should be removed (see follow-up below).</p>
+
+<h2>How to verify the diagnosis</h2>
+<p>After running <code>beacon_configure.sh</code> (or <code>beacon_ctl.sh restart</code>), check whether new entries are still being appended to <code>/tmp/beacon_rssi.log</code>:</p>
+<pre>wc -l /tmp/beacon_rssi.log
+sleep 30
+wc -l /tmp/beacon_rssi.log</pre>
+<ul>
+  <li><b>Count not growing</b> &rarr; microcom isn&rsquo;t tracking anything &rarr; this is the right fix.</li>
+  <li><b>Count grows for some MACs only</b> &rarr; not a microcom-reload issue. Either (a) those beacons aren&rsquo;t in range / advertising often enough, or (b) the 60&#8209;second cutoff in <code>beacon_post.sh</code> is too tight for their advertise interval.</li>
+</ul>
+
+<h2>Follow-ups (optional, not strictly required for the symptom)</h2>
+<ul>
+  <li><span class="tag warn">WARN</span> Drop the <code>stop</code>/<code>start</code> bracket in <code>beacon_configure.sh</code>. <code>beacon_ctl.sh add</code>/<code>del</code> are designed to push to a <em>live</em> FIFO; stopping microcom around them is harmful (FIFO write blocks) and unnecessary once <code>cmd_start</code> reloads MACs from the file.</li>
+  <li><span class="tag warn">WARN</span> Replace <code>MAC_COUNT=$(... grep -c '^  ' || echo "0")</code> with <code>MAC_COUNT=$(printf '%s\n' "$BEACON_DATA" | grep -c '^  ')</code>. <code>grep -c</code> already prints <code>0</code> on no-match; the <code>||</code> appends a second <code>0</code>.</li>
+  <li><span class="tag note">NOTE</span> The comment in <code>beacon_post.sh</code> says &ldquo;Averages last 1 minute of data&rdquo; but the awk only keeps the <em>latest</em> RSSI per MAC (<code>last_rssi[mac_lower] = rssi</code>). Either update the comment or implement the average.</li>
+</ul>
+
+</body>
+</html>

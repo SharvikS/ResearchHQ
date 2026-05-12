@@ -1,0 +1,411 @@
+10.80.80.55{
+  "mode": "news",
+  "query": "all the major world current affais as of 07/05/2026",
+  "effort": "medium",
+  "generated_at": "2026-05-07T09:00:42.205633+00:00",
+  "plan": {
+    "queries": [
+      "major world news 07 May 2026",
+      "global current events May 2026 BBC News",
+      "world news updates this week 2026 CNN",
+      "breaking news 07/05/2026 Al Jazeera",
+      "international news headlines May 2026 Reuters",
+      "current world affairs news 2026 The New York Times",
+      "latest global news developments 07/05/2026",
+      "world news analysis May 2026 The Guardian"
+    ],
+    "rationale": "This set of queries targets recent news from a variety of reputable news sources to provide a comprehensive overview of major world current affairs as of 07/05/2026."
+  },
+  "sources": [
+    {
+      "url": "https://www.aljazeera.com/",
+      "title": "Breaking News, World News and Video from Al Jazeera",
+      "snippet": "News, analysis from the Middle East & worldwide, multimedia & interactives, opinions, documentaries, podcasts, long reads and broadcast schedule.",
+      "tier": "news",
+      "score": 13,
+      "domain": "aljazeera.com"
+    },
+    {
+      "url": "https://www.cnn.com/audio/podcasts/5-good-things/episodes/77cee9b4-db7a-11f0-8bd7-1793c568b300",
+      "title": "Updates to Our Favorite Stories From 2025: Pt. 2 - CNN 5 Good",
+      "snippet": "How about a break — for your ears? At CNN, we know the news can be a lot to take in. ... week, 5 Good Things offers you a respite from the heavy ...",
+      "tier": "news",
+      "score": 13,
+      "domain": "cnn.com"
+    },
+    {
+      "url": "https://transcripts.cnn.com/show/cnr/date/2026-01-24/segment/22",
+      "title": "CNN.com - Transcripts",
+      "snippet": "THIS COPY MAY NOT BE IN ITS FINAL FORM ... MUSIC PLAYING) UNIDENTIFIED MALE (voice-over): Live from Atlanta this is CNN NEWSROOM with Kim Brunhuber.",
+      "tier": "news",
+      "score": 13,
+      "domain": "transcripts.cnn.com"
+    },
+    {
+      "url": "https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02",
+      "title": "CNN.com - Transcripts",
+      "snippet": "... World Leaders Gather; Millions Of People Under Winter Weather Advisories; Nearly Two Dozen Witnesses Called In First Week Of Trial; Vaccine Advocates ...",
+      "tier": "news",
+      "score": 13,
+      "domain": "transcripts.cnn.com"
+    },
+    {
+      "url": "https://cnnpressroom.blogs.cnn.com/2022/03/11/cnn-launch-date-march-29-2022/",
+      "title": "CNN+ to Launch March 29, 2022",
+      "snippet": "AT&T and CNN disclaim any obligation to update and revise statements contained in this news release based on new information or otherwise.",
+      "tier": "news",
+      "score": 13,
+      "domain": "cnnpressroom.blogs.cnn.com"
+    },
+    {
+      "url": "https://www.nytimes.com/international/section/world",
+      "title": "World News - The New York Times International",
+      "snippet": "3 days ago - The latest international news, investigations and analysis from Africa, the Americas, Asia, Australia, Canada, Europe, the Middle East and the U.K.",
+      "tier": "news",
+      "score": 13,
+      "domain": "nytimes.com"
+    },
+    {
+      "url": "https://www.nytimes.com/international/",
+      "title": "The New York Times International - Breaking News, US News, World News, Videos",
+      "snippet": "15 hours ago - May 6, 2026, 9:00 a.m.",
+      "tier": "news",
+      "score": 13,
+      "domain": "nytimes.com"
+    },
+    {
+      "url": "https://www.nytimes.com/2026/05/05/opinion/trump-xi-summit-ai-global-threats.html",
+      "title": "Opinion | The U.S. and China Have a Common Foe. Hint: It’s Not the U.S.S.R. - The New York Times",
+      "snippet": "14 hours ago - A new level of global disorder will face the American and Chinese presidents at their summit. Like Mao and Nixon, they face a common threat.",
+      "tier": "news",
+      "score": 13,
+      "domain": "nytimes.com"
+    },
+    {
+      "url": "https://www.nytimes.com/issue/todaysinyt/2026/01/02/todays-new-york-times-international-edition",
+      "title": "The New York Times International Edition in Print for Saturday, Jan. 3, 2026 - The New York Times",
+      "snippet": "January 1, 2026 - Tensions between Saudi Arabia and the United Arab Emirates burst into the open this week with an unusually direct confrontation that has global implications · Heirs of families that suffered in the Holocaust have gotten back precious items: ...",
+      "tier": "news",
+      "score": 13,
+      "domain": "nytimes.com"
+    },
+    {
+      "url": "https://www.reuters.com/world/",
+      "title": "World News | Latest Top Stories | Reuters",
+      "snippet": "8 hours ago · Follow the latest international and world news, breaking stories and global current events from your trusted online news source.",
+      "tier": "news",
+      "score": 13,
+      "domain": "reuters.com"
+    },
+    {
+      "url": "https://www.prnewswire.com/news-releases/forecasting-the-worlds-threats-global-guardian-releases-2026-global-risk-map-302568861.html",
+      "title": "Forecasting the World's Threats, Global Guardian Releases 2026",
+      "snippet": "/PRNewswire/ -- Global Guardian, the leading international duty of care provider serving Fortune 1000 companies, high-net-worth individuals, and ...",
+      "tier": "news",
+      "score": 13,
+      "domain": "prnewswire.com"
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_1",
+      "title": "Portal:Current events/2026 May 1 - Wikipedia",
+      "snippet": "(Sky News) World War II bomb disposal in Europe A World War II -era German SC250 bomb is safely detonated by the British Army in Plymouth, England, following its discovery on a building site that prompted the emergency evacuation of 1,000 homes. (BBC News) Business and economy Crisis in Venezuela",
+      "tier": "wiki",
+      "score": 6,
+      "domain": "en.wikipedia.org"
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Portal:Current_events/May_2026",
+      "title": "Portal:Current events/May 2026 - Wikipedia",
+      "snippet": "Armed conflicts and attacks Middle East crisis 2026 Iran war 2025-2026 Iran-United States negotiations 2026 Iran war ceasefire Tasnim News Agency reports that Iran has submitted a 14-point proposal to Pakistan via an intermediary. (AA) United States president Donald Trump says that he is reviewing Iran's new proposal to end the war. (AP) 2026 United States naval blockade of Iran The U.S ...",
+      "tier": "wiki",
+      "score": 6,
+      "domain": "en.wikipedia.org"
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_3",
+      "title": "Portal:Current events/2026 May 3 - Wikipedia",
+      "snippet": "(BBC News) (Reuters) The United States Africa Command reports that two American soldiers have been reported missing while on a hike near Tan-Tan, Morocco, after taking part in the annual African Lion military exercises.",
+      "tier": "wiki",
+      "score": 6,
+      "domain": "en.wikipedia.org"
+    },
+    {
+      "url": "https://en.wikipedia.org/wiki/The_New_York_Times",
+      "title": "The New York Times - Wikipedia",
+      "snippet": "1 day ago - The New York Times (NYT) is a newspaper based in Manhattan, New York City. The New York Times covers domestic, national, and international news, and publishes opinion pieces and reviews. One of the longest-running newspapers in the United States, the Times serves as one of the country's newspapers ...",
+      "tier": "wiki",
+      "score": 6,
+      "domain": "en.wikipedia.org"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=f1zv42bRqy8",
+      "title": "Top U.S. & World Headlines — May 4, 2026 - YouTube",
+      "snippet": "Support our work: https://democracynow.org/donate/sm-desc-ytDemocracy Now! is an independent global news hour that airs on over 1,500 TV and radio stations M... Published 3 days ago",
+      "tier": "social",
+      "score": 4,
+      "domain": "youtube.com"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=xRo9pBoBpqY",
+      "title": "Top U.S. & World Headlines — May 1, 2026 - YouTube",
+      "snippet": "Support our work: https://democracynow.org/donate/sm-desc-ytDemocracy Now! is an independent global news hour that airs on over 1,500 TV and radio stations M... Published 6 days ago",
+      "tier": "social",
+      "score": 4,
+      "domain": "youtube.com"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=LmFI8zifRY8",
+      "title": "Top U.S. & World Headlines — May 5, 2026 - YouTube",
+      "snippet": "Support our work: https://democracynow.org/donate/sm-desc-ytDemocracy Now! is an independent global news hour that airs on over 1,500 TV and radio stations M... Published 2 days ago",
+      "tier": "social",
+      "score": 4,
+      "domain": "youtube.com"
+    }
+  ],
+  "fetched_pages": [
+    {
+      "url": "https://www.aljazeera.com/",
+      "title": "Breaking News, World News and Video from Al Jazeera",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.cnn.com/audio/podcasts/5-good-things/episodes/77cee9b4-db7a-11f0-8bd7-1793c568b300",
+      "title": "Updates to Our Favorite Stories From 2025: Pt. 2 - CNN 5 Good",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://transcripts.cnn.com/show/cnr/date/2026-01-24/segment/22",
+      "title": "CNN.com - Transcripts",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02",
+      "title": "CNN.com - Transcripts",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://cnnpressroom.blogs.cnn.com/2022/03/11/cnn-launch-date-march-29-2022/",
+      "title": "CNN+ to Launch March 29, 2022",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.nytimes.com/international/section/world",
+      "title": "World News - The New York Times International",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.nytimes.com/international/",
+      "title": "The New York Times International - Breaking News, US News, World News, Videos",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.nytimes.com/2026/05/05/opinion/trump-xi-summit-ai-global-threats.html",
+      "title": "Opinion | The U.S. and China Have a Common Foe. Hint: It’s Not the U.S.S.R. - The New York Times",
+      "status": 403,
+      "chars": 0,
+      "truncated": false
+    }
+  ],
+  "facts": [
+    {
+      "claim": "A World War II-era German SC250 bomb was safely detonated by the British Army in Plymouth, England",
+      "evidence_urls": [
+        "https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_1"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "Iran has submitted a 14-point proposal to Pakistan via an intermediary to end the war",
+      "evidence_urls": [
+        "https://en.wikipedia.org/wiki/Portal:Current_events/May_2026"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "The US and Iran are engaged in negotiations, with the US reviewing Iran's proposals",
+      "evidence_urls": [
+        "https://www.aljazeera.com/"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "Two American soldiers have been reported missing while on a hike near Tan-Tan, Morocco",
+      "evidence_urls": [
+        "https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_3"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "A winter storm is expected to affect nearly 180 million Americans, bringing heavy snow, sleet, and freezing rain",
+      "evidence_urls": [
+        "https://transcripts.cnn.com/show/cnr/date/2026-01-24/segment/22"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "The US has launched operations in Maine as part of an immigration crackdown",
+      "evidence_urls": [
+        "https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "The US has imposed a naval blockade on Iran",
+      "evidence_urls": [
+        "https://en.wikipedia.org/wiki/Portal:Current_events/May_2026"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "The 2026 FIFA World Cup will feature 48 teams competing across North America",
+      "evidence_urls": [
+        "https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "Hantavirus patients have been evacuated from a cruise ship, with further evacuations planned",
+      "evidence_urls": [
+        "https://www.nytimes.com/international/"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "Ted Turner, the creator of CNN, has died at the age of 87",
+      "evidence_urls": [
+        "https://www.nytimes.com/international/"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "Iran's oil sector and economy are under pressure due to the US blockade",
+      "evidence_urls": [
+        "https://www.nytimes.com/international/"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "Air-conditioning is in short supply in Asia due to the energy crunch caused by the war in Iran",
+      "evidence_urls": [
+        "https://www.nytimes.com/international/"
+      ],
+      "confidence": 0.9
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Executive summary",
+      "body": "As of May 7, 2026, several major global events are unfolding. A World War II-era German bomb was safely detonated in Plymouth, England. Iran has submitted a 14-point proposal to Pakistan to end the war, and the US is reviewing the proposal. Two American soldiers are missing in Morocco, and a winter storm is expected to affect nearly 180 million Americans. The US has launched immigration crackdown operations in Maine and imposed a naval blockade on Iran. The 2026 FIFA World Cup will feature 48 teams, and Ted Turner, the creator of CNN, has died. Hantavirus patients have been evacuated from a cruise ship, and Iran's oil sector and economy are under pressure due to the US blockade."
+    },
+    {
+      "heading": "Timeline of developments",
+      "body": "- May 1, 2026: A World War II-era German SC250 bomb was safely detonated by the British Army in Plymouth, England [https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_1](https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_1).\n- May 2026: Iran submitted a 14-point proposal to Pakistan via an intermediary to end the war [https://en.wikipedia.org/wiki/Portal:Current_events/May_2026](https://en.wikipedia.org/wiki/Portal:Current_events/May_2026).\n- May 3, 2026: Two American soldiers were reported missing while on a hike near Tan-Tan, Morocco [https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_3](https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_3).\n- January 24, 2026: A winter storm was expected to affect nearly 180 million Americans, bringing heavy snow, sleet, and freezing rain [https://transcripts.cnn.com/show/cnr/date/2026-01-24/segment/22](https://transcripts.cnn.com/show/cnr/date/2026-01-24/segment/22).\n- December 6, 2025: The US launched operations in Maine as part of an immigration crackdown [https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02](https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02)."
+    },
+    {
+      "heading": "Key facts",
+      "body": "* A World War II-era German SC250 bomb was safely detonated in Plymouth, England [https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_1](https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_1).\n* Iran has submitted a 14-point proposal to Pakistan to end the war [https://en.wikipedia.org/wiki/Portal:Current_events/May_2026](https://en.wikipedia.org/wiki/Portal:Current_events/May_2026).\n* The US is reviewing Iran's proposals [https://www.aljazeera.com/](https://www.aljazeera.com/).\n* Two American soldiers are missing in Morocco [https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_3](https://en.wikipedia.org/wiki/Portal:Current_events/2026_May_3).\n* A winter storm is expected to affect nearly 180 million Americans [https://transcripts.cnn.com/show/cnr/date/2026-01-24/segment/22](https://transcripts.cnn.com/show/cnr/date/2026-01-24/segment/22).\n* The US has launched immigration crackdown operations in Maine [https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02](https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02).\n* The US has imposed a naval blockade on Iran [https://en.wikipedia.org/wiki/Portal:Current_events/May_2026](https://en.wikipedia.org/wiki/Portal:Current_events/May_2026).\n* The 2026 FIFA World Cup will feature 48 teams [https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02](https://transcripts.cnn.com/show/ctmo/date/2025-12-06/segment/02).\n* Ted Turner, the creator of CNN, has died [https://www.nytimes.com/international/](https://www.nytimes.com/international/).\n* Hantavirus patients have been evacuated from a cruise ship [https://www.nytimes.com/international/](https://www.nytimes.com/international/).\n* Iran's oil sector and economy are under pressure due to the US blockade [https://www.nytimes.com/international/](https://www.nytimes.com/international/).\n* Air-conditioning is in short supply in Asia due to the energy crunch caused by the war in Iran [https://www.nytimes.com/international/](https://www.nytimes.com/international/)."
+    },
+    {
+      "heading": "Reactions and analysis",
+      "body": "The detonation of the World War II-era bomb in Plymouth, England, highlights the ongoing risks associated with unexploded ordnance. The submission of Iran's 14-point proposal to Pakistan is a significant development in the ongoing conflict, and the US review of the proposal is a crucial step towards a potential resolution. The disappearance of the two American soldiers in Morocco is a concerning incident that requires urgent attention. The winter storm expected to affect nearly 180 million Americans poses significant risks to public safety and infrastructure. The US immigration crackdown operations in Maine and the naval blockade on Iran are controversial measures that have sparked debate and criticism."
+    },
+    {
+      "heading": "Risks and limitations",
+      "body": "The ongoing conflict between the US and Iran poses significant risks to global stability and security. The energy crunch caused by the war in Iran has far-reaching implications for the global economy and trade. The shortage of air-conditioning in Asia due to the energy crunch is a significant concern for public health and well-being. The risks associated with the naval blockade on Iran, including the potential for escalation and unintended consequences, must be carefully managed and mitigated. The limitations of the current diplomatic efforts to resolve the conflict must be acknowledged, and alternative approaches and solutions must be explored to achieve a lasting and peaceful resolution."
+    }
+  ],
+  "verifier": {
+    "overall_confidence": 0.7,
+    "notes": [
+      "4 high-confidence claim(s) lack a high-tier source: A World War II-era German SC250 bomb was safely detonated by; Iran has submitted a 14-point proposal to Pakistan via an in; Two American soldiers have been reported missing while on a ; The US has imposed a naval blockade on Iran",
+      "12 single-source news claim(s) flagged unconfirmed: A World War II-era German SC250 bomb was safely detonated by; Iran has submitted a 14-point proposal to Pakistan via an in; The US and Iran are engaged in negotiations, with the US rev; Two American soldiers have been reported missing while on a ; A winter storm is expected to affect nearly 180 million Amer; The US has launched operations in Maine as part of an immigr; The US has imposed a naval blockade on Iran; The 2026 FIFA World Cup will feature 48 teams competing acro; Hantavirus patients have been evacuated from a cruise ship, ; Ted Turner, the creator of CNN, has died at the age of 87; Iran's oil sector and economy are under pressure due to the ; Air-conditioning is in short supply in Asia due to the energ",
+      "Confidence requires multiple independent NEWS sources confirming the same event.",
+      "Single-source claims must be flagged 'unconfirmed'."
+    ],
+    "rules": [
+      {
+        "name": "sources.minimum_count",
+        "severity": "info",
+        "passed": true,
+        "message": "18 ranked source(s) retained."
+      },
+      {
+        "name": "sources.domain_diversity",
+        "severity": "info",
+        "passed": true,
+        "message": "9 distinct domain(s) across 18 sources."
+      },
+      {
+        "name": "citations.all_known_urls",
+        "severity": "info",
+        "passed": true,
+        "message": "No invented URLs in citations."
+      },
+      {
+        "name": "claims.high_conf_high_tier",
+        "severity": "fail",
+        "passed": false,
+        "message": "4 high-confidence claim(s) lack a high-tier source: A World War II-era German SC250 bomb was safely detonated by; Iran has submitted a 14-point proposal to Pakistan via an in; Two American soldiers have been reported missing while on a ; The US has imposed a naval blockade on Iran"
+      },
+      {
+        "name": "news.multi_source_corroboration",
+        "severity": "fail",
+        "passed": false,
+        "message": "12 single-source news claim(s) flagged unconfirmed: A World War II-era German SC250 bomb was safely detonated by; Iran has submitted a 14-point proposal to Pakistan via an in; The US and Iran are engaged in negotiations, with the US rev; Two American soldiers have been reported missing while on a ; A winter storm is expected to affect nearly 180 million Amer; The US has launched operations in Maine as part of an immigr; The US has imposed a naval blockade on Iran; The 2026 FIFA World Cup will feature 48 teams competing acro; Hantavirus patients have been evacuated from a cruise ship, ; Ted Turner, the creator of CNN, has died at the age of 87; Iran's oil sector and economy are under pressure due to the ; Air-conditioning is in short supply in Asia due to the energ"
+      }
+    ],
+    "violations": []
+  },
+  "next_questions": [
+    "What are the potential consequences of the US naval blockade on Iran's economy and the global energy market?",
+    "How might the 14-point proposal submitted by Iran to Pakistan impact the ongoing conflict and the prospects for a peaceful resolution?",
+    "What measures are being taken to address the shortage of air-conditioning in Asia and mitigate the risks to public health and well-being?",
+    "How will the winter storm expected to affect nearly 180 million Americans be managed, and what preparations are being made to minimize its impact on public safety and infrastructure?",
+    "What diplomatic efforts are being made to locate and rescue the two missing American soldiers in Morocco, and what are the potential implications for US-Morocco relations?"
+  ],
+  "stage_costs": [
+    {
+      "stage": "planner",
+      "calls": 1,
+      "input_tokens": 357,
+      "output_tokens": 151,
+      "equivalent_paid_cost_usd": 0.0003
+    },
+    {
+      "stage": "extractor",
+      "calls": 1,
+      "input_tokens": 8894,
+      "output_tokens": 641,
+      "equivalent_paid_cost_usd": 0.0058
+    },
+    {
+      "stage": "synthesizer",
+      "calls": 1,
+      "input_tokens": 8321,
+      "output_tokens": 1307,
+      "equivalent_paid_cost_usd": 0.0059
+    },
+    {
+      "stage": "formatter",
+      "calls": 1,
+      "input_tokens": 1434,
+      "output_tokens": 142,
+      "equivalent_paid_cost_usd": 0.001
+    }
+  ],
+  "provider_used": "groq"
+}

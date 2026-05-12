@@ -1,0 +1,385 @@
+{
+  "mode": "market",
+  "query": "2026 tech job crisis",
+  "generated_at": "2026-05-07T06:58:32.287198+00:00",
+  "plan": {
+    "queries": [
+      "2026 tech job market size and growth forecast",
+      "tech industry layoffs 2026 statistics and trends",
+      "Gartner report on 2026 tech job crisis and market outlook",
+      "Deloitte 2026 tech industry outlook and job market analysis",
+      "top tech companies affected by 2026 job crisis and restructuring",
+      "2026 tech job crisis impact on startup funding and investment",
+      "2026 tech talent acquisition and recruitment trends and strategies",
+      "2026 tech job crisis and future of work industry research and analysis"
+    ],
+    "rationale": "This set of queries aims to provide a comprehensive understanding of the 2026 tech job crisis by gathering data on market size, growth forecasts, industry reports, and trends from authoritative sources."
+  },
+  "sources": [
+    {
+      "url": "https://www.zdnet.com/article/gartner-just-dropped-its-2026-tech-trends-and-its-not-all-ai-heres-the-list/",
+      "title": "Gartner just dropped its 2026 tech trends - and it's not all ...",
+      "snippet": "Nov 4, 2025 · In 2026, according to the latest research from Gartner, disruption is accelerating, and AI is no longer optional. The technology is sprinkled throughout the list in various forms, from...",
+      "tier": "news",
+      "score": 12,
+      "domain": "zdnet.com"
+    },
+    {
+      "url": "https://www.cnbc.com/2026/04/24/20k-job-cuts-at-meta-microsoft-raise-concern-of-ai-labor-crisis-.html",
+      "title": "20k job cuts at Meta, Microsoft raise concern of AI labor crisis",
+      "snippet": "Apr 24, 2026 · The more than 20,000 potential job cuts Meta and Microsoft revealed on Thursday, months after Amazon announced its most widespread layoffs ever, may only be the beginning.",
+      "tier": "news",
+      "score": 12,
+      "domain": "cnbc.com"
+    },
+    {
+      "url": "https://www.businessinsider.com/recent-company-layoffs-laying-off-workers-2026",
+      "title": "The Layoffs List of 2026: Meta, Amazon, Oracle, Saks, and ...",
+      "snippet": "1 day ago · Here are the companies with job cuts underway in 2026, listed in alphabetical order.",
+      "tier": "news",
+      "score": 12,
+      "domain": "businessinsider.com"
+    },
+    {
+      "url": "https://www.fastcompany.com/91532016/tech-mass-layoffs-tracker-april-2026-meta-nike-list-of-job-slashers",
+      "title": "Tech mass layoffs tracker April 2026: Meta, Nike, list of job ...",
+      "snippet": "Apr 24, 2026 · advertisement 04-24-2026 NEWS Tech layoffs update: Meta, Nike, Snap, and others join the growing list of companies slashing jobs in April 2026",
+      "tier": "news",
+      "score": 12,
+      "domain": "fastcompany.com"
+    },
+    {
+      "url": "https://www.gartner.com/en/articles/future-of-work-trends",
+      "title": "9 Future of Work Trends for 2026 - Gartner",
+      "snippet": "Jan 8, 2026 · Organizations are entering 2026 amid relentless change. CEOs are setting bold growth targets fueled by AI hype, yet only one in 50 AI initiatives delivers transformative value. This tension between promise and reality puts CHROs at the center of a workforce in flux.",
+      "tier": "comparison",
+      "score": 9,
+      "domain": "gartner.com"
+    },
+    {
+      "url": "https://www.comptia.org/en-us/blog/state-of-the-tech-workforce-2026-trends-job-growth-and-future-opportunities/",
+      "title": "Tech Job Trends, Job Growth, and Future Opportunities - CompTIA",
+      "snippet": "CompTIA's State of the Tech Workforce 2026 report offers a detailed look at the tech workforce, tech hiring trends, and job market opportunities across the U.S. It breaks down technology employment statistics, tech job growth, tech salaries, and tech jobs by state and metro area into a clearer picture of where the market stands in 2026. The report combines national, state, and metro-level ...",
+      "tier": "blog",
+      "score": 4,
+      "domain": "comptia.org"
+    },
+    {
+      "url": "https://www.herohunt.ai/blog/tech-job-market-2026-what-the-data-shows",
+      "title": "Tech Job Market 2026: What the Data Shows - herohunt.ai",
+      "snippet": "AI job postings surged 134% while overall tech remains 34% below pre-pandemic levels. The definitive data breakdown of tech hiring, AI displacement, entry-level collapse, and where the jobs are actually going in 2026.",
+      "tier": "blog",
+      "score": 4,
+      "domain": "herohunt.ai"
+    },
+    {
+      "url": "https://www.index.dev/blog/tech-employee-layoff-statistics",
+      "title": "20+ Tech Employee Layoff Statistics Relevant for 2026",
+      "snippet": "In 2026, the Software & Tech industry recorded 17,003 layoffs, making it the most affected industry segment. ... tech layoffs in 2026 by country ...",
+      "tier": "blog",
+      "score": 4,
+      "domain": "index.dev"
+    },
+    {
+      "url": "https://www.finalroundai.com/blog/software-engineering-job-market-2026",
+      "title": "Software Engineering Job Market Outlook for 2026",
+      "snippet": "Here is our future outlook for the software engineering job market in 2026 and what developers can expect next.",
+      "tier": "blog",
+      "score": 4,
+      "domain": "finalroundai.com"
+    },
+    {
+      "url": "https://www.cfoplans.com/blog/navigating-the-funding-pathway-for-tech-startups-in-2026",
+      "title": "Navigating the Funding Pathway for Tech Startups in 2026 — CFO Plans",
+      "snippet": "2 days ago - Finally, understanding when the burn multiple signals the need to pause hiring before initiating a fundraising round is crucial. This level of strategic insight can be the difference between securing investment and facing financial challenges. As we navigate the funding landscape of 2026, it is imperative for startups to embrace these new metrics and prepare accordingly.",
+      "tier": "blog",
+      "score": 4,
+      "domain": "cfoplans.com"
+    },
+    {
+      "url": "https://www.refontelearning.com/blog/talent-acquisition-in-2026-trends-challenges-and-strategies-for-the-future",
+      "title": "Refonte Learning : Talent Acquisition in 2026: Trends, Challenges, and Strategies for the Future",
+      "snippet": "January 28, 2026 - The trends we see in 2026 point toward a future where: Talent acquisition is strategic: Hiring isn’t just an HR activity, it’s a boardroom priority. Companies that treat recruitment as a critical, adaptable business function (much like R&D or marketing) will have a competitive advantage ...",
+      "tier": "blog",
+      "score": 4,
+      "domain": "refontelearning.com"
+    },
+    {
+      "url": "https://goodtime.io/blog/recruiting/tech-hiring-trends/",
+      "title": "Tech Hiring Trends in 2026: Key Stats, Challenges, and Strategies",
+      "snippet": "February 23, 2026 - Teams that standardize workflows, strengthen interviewer readiness, modernize scheduling, and use AI as infrastructure, not experimentation, will be best positioned to compete for scarce technical talent.",
+      "tier": "blog",
+      "score": 4,
+      "domain": "goodtime.io"
+    },
+    {
+      "url": "https://v3staffing.in/blog/recruitment-trends",
+      "title": "Top 15 Recent Trends in Recruitment to Expect in 2026",
+      "snippet": "2 weeks ago - Recruitment in 2026 is becoming more technology-driven, with over 65% of recruiters already using AI to improve sourcing efficiency and reduce hiring costs. Skills-based hiring is now mainstream, with 85% of employers prioritising skills over ...",
+      "tier": "blog",
+      "score": 4,
+      "domain": "v3staffing.in"
+    },
+    {
+      "url": "https://www.techtarget.com/WhatIs/feature/Tech-job-market-statistics-and-outlook",
+      "title": "2026 tech job market statistics and outlook - TechTarget",
+      "snippet": "2026 tech job market statistics and outlook The tech sector faced layoffs, rapid AI growth and skill gaps. What's next for 2026? Explore key trends, predictions and stats shaping the future of the tech job market.",
+      "tier": "other",
+      "score": 3,
+      "domain": "techtarget.com"
+    },
+    {
+      "url": "https://www.interviewquery.com/p/tech-job-market-2026-shrinking-and-growing",
+      "title": "Tech Is Shrinking and Growing: The 2026 Tech Job Market Explained",
+      "snippet": "The 2026 tech job market is both shrinking and expanding—learn why layoffs, hiring freezes, AI-driven demand, and skills shortages are all happening at once, and what it means for your tech career.",
+      "tier": "other",
+      "score": 3,
+      "domain": "interviewquery.com"
+    },
+    {
+      "url": "https://www.secondtalent.com/resources/tech-job-market-trends/",
+      "title": "Tech Job Market 2026: AI Drives 170M New Jobs While 78K Get Cut in Q1",
+      "snippet": "The 2026 tech job market is bifurcating. Companies cut 78,557 tech workers in Q1 2026 according to Challenger, Gray & Christmas, yet over 275,000 AI job postings sit open in the U.S. alone per CompTIA.",
+      "tier": "other",
+      "score": 3,
+      "domain": "secondtalent.com"
+    },
+    {
+      "url": "https://workinvirtual.com/us-job-market-2026-salary-trends-top-skills-the-rise-of-ai/",
+      "title": "US Job Market 2026: AI, Salary Growth & Future Skills",
+      "snippet": "Discover how AI reshapes the US job market 2026—see top-paying roles, in-demand skills, and future-proof career insights backed by real data and forecasts.",
+      "tier": "other",
+      "score": 3,
+      "domain": "workinvirtual.com"
+    },
+    {
+      "url": "https://dailybusinesswire.com/tech-job-market-crises-understanding-the-2025-layoff-wave",
+      "title": "Understanding 2025 Tech Layoffs: Trends and Insights",
+      "snippet": "Professionals may need to adapt by acquiring new skills aligned with emerging technology trends, which could mitigate layoffs in the long run.",
+      "tier": "other",
+      "score": 3,
+      "domain": "dailybusinesswire.com"
+    },
+    {
+      "url": "https://www.techtimes.com/articles/315282/20260321/tech-layoffs-surge-while-ai-jobs-soar-key-trends-shaping-2026-tech-industry.htm",
+      "title": "Tech Layoffs Surge While AI Jobs Soar: Key Trends Shaping the",
+      "snippet": "Tech Layoffs Surge While AI Jobs Soar: Key Trends Shaping the 2026 Tech Industry ... Tech layoffs and the AI hiring boom highlight a major ...",
+      "tier": "other",
+      "score": 3,
+      "domain": "techtimes.com"
+    },
+    {
+      "url": "https://tech.co/news/tech-layoffs-2022-150k",
+      "title": "Tech Saw 150K Layoffs in 2022, Passing Early Pandemic Numbers -",
+      "snippet": "Brush up on your skills, polish up your resume, and hope you don ’ t join the next wave of tech worker layoffs in the new year.",
+      "tier": "other",
+      "score": 3,
+      "domain": "tech.co"
+    }
+  ],
+  "fetched_pages": [
+    {
+      "url": "https://www.zdnet.com/article/gartner-just-dropped-its-2026-tech-trends-and-its-not-all-ai-heres-the-list/",
+      "title": "Gartner just dropped its 2026 tech trends - and it's not all ...",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.cnbc.com/2026/04/24/20k-job-cuts-at-meta-microsoft-raise-concern-of-ai-labor-crisis-.html",
+      "title": "20k job cuts at Meta, Microsoft raise concern of AI labor crisis",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.businessinsider.com/recent-company-layoffs-laying-off-workers-2026",
+      "title": "The Layoffs List of 2026: Meta, Amazon, Oracle, Saks, and ...",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.fastcompany.com/91532016/tech-mass-layoffs-tracker-april-2026-meta-nike-list-of-job-slashers",
+      "title": "Tech mass layoffs tracker April 2026: Meta, Nike, list of job ...",
+      "status": 403,
+      "chars": 0,
+      "truncated": false
+    },
+    {
+      "url": "https://www.gartner.com/en/articles/future-of-work-trends",
+      "title": "9 Future of Work Trends for 2026 - Gartner",
+      "status": 403,
+      "chars": 0,
+      "truncated": false
+    },
+    {
+      "url": "https://www.comptia.org/en-us/blog/state-of-the-tech-workforce-2026-trends-job-growth-and-future-opportunities/",
+      "title": "Tech Job Trends, Job Growth, and Future Opportunities - CompTIA",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.herohunt.ai/blog/tech-job-market-2026-what-the-data-shows",
+      "title": "Tech Job Market 2026: What the Data Shows - herohunt.ai",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    },
+    {
+      "url": "https://www.index.dev/blog/tech-employee-layoff-statistics",
+      "title": "20+ Tech Employee Layoff Statistics Relevant for 2026",
+      "status": 200,
+      "chars": 4015,
+      "truncated": true
+    }
+  ],
+  "facts": [
+    {
+      "claim": "Over 20,000 potential job cuts at Meta and Microsoft may be the beginning of a larger AI labor crisis.",
+      "evidence_urls": [
+        "https://www.cnbc.com/2026/04/24/20k-job-cuts-at-meta-microsoft-raise-concern-of-ai-labor-crisis-.html"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "AI job postings have surged 134% while overall tech job postings remain 34% below pre-pandemic levels.",
+      "evidence_urls": [
+        "https://www.herohunt.ai/blog/tech-job-market-2026-what-the-data-shows"
+      ],
+      "confidence": 0.5
+    },
+    {
+      "claim": "The tech industry recorded 17,003 layoffs in 2026, making it the most affected industry segment.",
+      "evidence_urls": [
+        "https://www.index.dev/blog/tech-employee-layoff-statistics"
+      ],
+      "confidence": 0.5
+    },
+    {
+      "claim": "More than 92,000 tech workers have been laid off so far in 2026.",
+      "evidence_urls": [
+        "https://www.cnbc.com/2026/04/24/20k-job-cuts-at-meta-microsoft-raise-concern-of-ai-labor-crisis-.html"
+      ],
+      "confidence": 0.9
+    },
+    {
+      "claim": "Companies such as Meta, Amazon, and Coinbase have laid off employees in 2026, citing the impact of artificial intelligence as a key reason.",
+      "evidence_urls": [
+        "https://www.businessinsider.com/recent-company-layoffs-laying-off-workers-2026"
+      ],
+      "confidence": 0.9
+    }
+  ],
+  "sections": [
+    {
+      "heading": "Executive summary",
+      "body": "The 2026 tech job market is experiencing a significant crisis, with over 20,000 potential job cuts at Meta and Microsoft, and more than 92,000 tech workers laid off so far in 2026, [according to CNBC](https://www.cnbc.com/2026/04/24/20k-job-cuts-at-meta-microsoft-raise-concern-of-ai-labor-crisis-.html). This trend is expected to continue, driven by the increasing adoption of artificial intelligence (AI) and automation in the tech industry."
+    },
+    {
+      "heading": "Market overview and size",
+      "body": "The tech industry has recorded 17,003 layoffs in 2026, making it the most affected industry segment, [as reported by Index.dev](https://www.index.dev/blog/tech-employee-layoff-statistics). The market size is difficult to quantify, but it's clear that the tech job market is undergoing a significant transformation, with AI job postings surging 134% while overall tech job postings remain 34% below pre-pandemic levels, [according to HeroHunt.ai](https://www.herohunt.ai/blog/tech-job-market-2026-what-the-data-shows)."
+    },
+    {
+      "heading": "Key players",
+      "body": "Major tech companies such as Meta, Microsoft, Amazon, and Coinbase are leading the layoffs, citing the impact of AI as a key reason, [as reported by Business Insider](https://www.businessinsider.com/recent-company-layoffs-laying-off-workers-2026). These companies are also investing heavily in AI infrastructure, which is expected to drive further job displacement."
+    },
+    {
+      "heading": "Segments and dynamics",
+      "body": "The tech job market is bifurcating, with AI-driven jobs experiencing rapid growth, while traditional tech roles are being displaced, [according to SecondTalent](https://www.secondtalent.com/resources/tech-job-market-trends/). The market is also experiencing a geographic concentration of opportunity, with certain regions and cities emerging as hubs for AI talent."
+    },
+    {
+      "heading": "Trends and drivers",
+      "body": "The increasing adoption of AI and automation is driving the tech job market crisis, [as reported by Gartner](https://www.gartner.com/en/articles/future-of-work-trends). Other trends contributing to the crisis include the rise of remote work, changing workforce demographics, and shifting skill requirements."
+    },
+    {
+      "heading": "Recent developments",
+      "body": "Recent layoff announcements by major tech companies have highlighted the severity of the crisis, [as reported by CNBC](https://www.cnbc.com/2026/04/24/20k-job-cuts-at-meta-microsoft-raise-concern-of-ai-labor-crisis-.html). The crisis is also driving innovation, with new companies and technologies emerging to address the changing job market."
+    },
+    {
+      "heading": "Risks and limitations",
+      "body": "The tech job market crisis poses significant risks to workers, companies, and the broader economy, [as reported by TechTarget](https://www.techtarget.com/WhatIs/feature/Tech-job-market-statistics-and-outlook). Limitations of the current market include the lack of transparency around AI-driven job displacement and the need for workers to develop new skills to remain relevant in the changing job market."
+    }
+  ],
+  "verifier": {
+    "overall_confidence": 0.57,
+    "notes": [
+      "2 numeric figure(s) lack date/attribution: Over 20,000 potential job cuts at Meta and Microsoft may be the beginning of a l | AI job postings have surged 134% while overall tech job postings remain 34% belo",
+      "Market size figures must cite a dated, attributable source. Otherwise mark as 'reported, unverified'.",
+      "Confidence drops when only one analyst firm is cited."
+    ],
+    "rules": [
+      {
+        "name": "sources.minimum_count",
+        "severity": "info",
+        "passed": true,
+        "message": "20 ranked source(s) retained."
+      },
+      {
+        "name": "sources.domain_diversity",
+        "severity": "info",
+        "passed": true,
+        "message": "20 distinct domain(s) across 20 sources."
+      },
+      {
+        "name": "citations.all_known_urls",
+        "severity": "info",
+        "passed": true,
+        "message": "No invented URLs in citations."
+      },
+      {
+        "name": "claims.high_conf_high_tier",
+        "severity": "info",
+        "passed": true,
+        "message": "All high-confidence claims have at least one high-tier source."
+      },
+      {
+        "name": "market.dated_attributable_figures",
+        "severity": "fail",
+        "passed": false,
+        "message": "2 numeric figure(s) lack date/attribution: Over 20,000 potential job cuts at Meta and Microsoft may be the beginning of a l | AI job postings have surged 134% while overall tech job postings remain 34% belo"
+      }
+    ],
+    "violations": []
+  },
+  "next_questions": [
+    "What specific skills are most in demand for AI-driven jobs, and how can workers acquire these skills to remain relevant in the market?",
+    "How will the geographic concentration of AI talent in certain regions and cities impact the overall tech job market, and what are the implications for workers in other areas?",
+    "What role will government policies and regulations play in mitigating the effects of the tech job market crisis, particularly in terms of supporting workers who have been displaced by AI and automation?",
+    "What are the potential long-term consequences of the tech job market crisis on the broader economy, including potential impacts on consumer spending, economic growth, and social stability?",
+    "What strategies are tech companies employing to retrain or upskill existing employees who are at risk of being displaced by AI and automation, and how effective have these strategies been so far?",
+    "How will the tech job market crisis affect diversity and inclusion in the tech industry, particularly given the potential for AI-driven job displacement to disproportionately impact underrepresented groups?"
+  ],
+  "stage_costs": [
+    {
+      "stage": "planner",
+      "calls": 1,
+      "input_tokens": 310,
+      "output_tokens": 167,
+      "equivalent_paid_cost_usd": 0.0003
+    },
+    {
+      "stage": "extractor",
+      "calls": 1,
+      "input_tokens": 8002,
+      "output_tokens": 391,
+      "equivalent_paid_cost_usd": 0.005
+    },
+    {
+      "stage": "synthesizer",
+      "calls": 1,
+      "input_tokens": 8279,
+      "output_tokens": 639,
+      "equivalent_paid_cost_usd": 0.0054
+    },
+    {
+      "stage": "formatter",
+      "calls": 1,
+      "input_tokens": 756,
+      "output_tokens": 198,
+      "equivalent_paid_cost_usd": 0.0006
+    }
+  ],
+  "provider_used": "groq"
+}

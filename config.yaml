@@ -1,0 +1,23 @@
+provider:
+  default: ollama
+  fallback_chain:
+  - groq
+  - ollama
+models:
+  groq: llama-3.3-70b-versatile
+  gemini: gemini-2.0-flash-exp
+  ollama: llama3.2:3b
+  openai: gpt-4o-mini
+  anthropic: claude-haiku-4-5-20251001
+search:
+  engines:
+  - duckduckgo
+  max_results_per_query: 6
+  max_total_sources: 18
+report:
+  output_folder: reports
+  default_format: markdown
+  include_recent_developments: true
+verbosity:
+  default: normal
+  hide_http_logs_unless_debug: true

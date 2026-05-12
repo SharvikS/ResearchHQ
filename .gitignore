@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Eval results (keep benchmarks, exclude run output)
+evals/results/
+
+# Docker volumes
+postgres_data/
+redis_data/
+langfuse_data/
+
+# Build
+dist/
+build/
+*.whl
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
