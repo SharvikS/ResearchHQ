@@ -4,12 +4,18 @@ A general-purpose multi-agent research assistant. Two surfaces, one engine:
 
 - **CLI** — `research <mode> "<query>"`. Scriptable, deterministic, CI-friendly.
 - **ResearchHQ Studio (GUI)** — desktop workstation built on PySide6: dashboard,
-  live agent pipeline, source intelligence, history with search/filter,
-  side-by-side compare, multi-format export including PDF.
+live agent pipeline, source intelligence, history with search/filter,
+side-by-side compare, multi-format export including PDF.
 
 Built on free-tier providers (Groq, Gemini, local Ollama). Operational cost: **$0**.
 
 > **Heritage**: this project began as `competiq`, a competitor-only intelligence tool. The legacy `competiq` CLI is preserved for backward compatibility (see [Backward compatibility](#backward-compatibility)).
+
+<br>
+<p align="center">
+  <img src="assets/demo-pipeline.gif" alt="ResearchHQ Live Agent Pipeline" width="800" style="border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);"/>
+</p>
+<br>
 
 ## Launching ResearchHQ Studio
 
@@ -26,8 +32,17 @@ researchhq-gui
 **Pages**
 
 - **Dashboard** — Quick stats (total reports, sources collected, last-run cost), provider/model status, recent reports, saved exports, "+ New Research" CTA.
+
+  <img src="assets/dashboard.png" alt="Dashboard View" width="800" style="border-radius: 8px; margin: 10px 0;"/>
+
 - **New Research** — Query input, mode + provider + max sources + search depth + format selectors, presets dropdown, Run/Cancel, **live stats** (elapsed, current agent, sources, LLM calls, tokens, cost), pipeline chip view, report tabs (Executive Summary / Full Report / Sources / Evidence / JSON / Logs), live log console with debug toggle, exports (.md / .json / .html / .pdf / copy summary / copy full).
+
+  <img src="assets/research.png" alt="New Research Flow" width="800" style="border-radius: 8px; margin: 10px 0;"/>
+
 - **History** — DB-backed; search by query/mode/provider, filter by workspace and mode, open or duplicate-to-research, delete with sibling exports.
+
+  <img src="assets/reports.png" alt="Report History" width="800" style="border-radius: 8px; margin: 10px 0;"/>
+
 - **Compare** — Pick two saved reports and view them side-by-side; export a combined markdown.
 - **Settings** — Default provider/model, search engines, max sources, max results per query, output folder, default format, theme (dark only today; light + accent picker coming soon).
 
@@ -45,15 +60,17 @@ Verifies Python version, required deps, provider keys, router init, output folde
 
 Give it a query in any of these modes and get back a structured, source-cited report:
 
-| Mode | Use it for |
-|------|------------|
-| `topic` | Open-ended research on a topic, idea, trend, or person |
-| `company` | Profile a company (product, market, momentum) |
-| `competitor` | Competitive landscape around a target company |
-| `tech` | A technology / framework / platform |
-| `market` | Industry / market sizing & dynamics |
-| `news` | Recent / breaking developments |
-| `academic` | Research-paper survey on an area |
+
+| Mode         | Use it for                                             |
+| ------------ | ------------------------------------------------------ |
+| `topic`      | Open-ended research on a topic, idea, trend, or person |
+| `company`    | Profile a company (product, market, momentum)          |
+| `competitor` | Competitive landscape around a target company          |
+| `tech`       | A technology / framework / platform                    |
+| `market`     | Industry / market sizing & dynamics                    |
+| `news`       | Recent / breaking developments                         |
+| `academic`   | Research-paper survey on an area                       |
+
 
 Every report includes:
 
@@ -146,15 +163,17 @@ python -m pip install -e ".[anthropic]"
 
 Place these in a `.env` file at the project root:
 
-| Variable | Purpose |
-|---|---|
-| `GROQ_API_KEY` | Groq API key (recommended primary) |
-| `GEMINI_API_KEY` | Gemini API key |
-| `OPENAI_API_KEY` | (optional) OpenAI |
-| `ANTHROPIC_API_KEY` | (optional) Anthropic |
-| `OLLAMA_HOST` | Ollama URL (default `http://localhost:11434`) |
-| `LOG_LEVEL` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
-| `RESEARCHHQ_CONFIG` | Override path to a `config.yaml` |
+
+| Variable            | Purpose                                       |
+| ------------------- | --------------------------------------------- |
+| `GROQ_API_KEY`      | Groq API key (recommended primary)            |
+| `GEMINI_API_KEY`    | Gemini API key                                |
+| `OPENAI_API_KEY`    | (optional) OpenAI                             |
+| `ANTHROPIC_API_KEY` | (optional) Anthropic                          |
+| `OLLAMA_HOST`       | Ollama URL (default `http://localhost:11434`) |
+| `LOG_LEVEL`         | `DEBUG` / `INFO` / `WARNING` / `ERROR`        |
+| `RESEARCHHQ_CONFIG` | Override path to a `config.yaml`              |
+
 
 ## Configuration: `config.yaml`
 
@@ -308,12 +327,12 @@ The pipeline is a flat sequence rather than a graph (intentionally — easier to
 ## Adding a new research mode
 
 1. Create `src/researchhq/modes/<mymode>.py`. Subclass `ResearchMode` from `modes.base` and define a `ModeConfig` with:
-   - `name`, `description`
-   - `seed_query_templates` — list of `"{q} ..."` formatters
-   - `preferred_tiers`, `drop_tiers`, `tier_weights`
-   - `report_sections` — section headings for the synthesizer
-   - `confidence_rules` — strings appended to verifier notes
-   - `synthesizer_persona` — first-person system-prompt persona
+  - `name`, `description`
+  - `seed_query_templates` — list of `"{q} ..."` formatters
+  - `preferred_tiers`, `drop_tiers`, `tier_weights`
+  - `report_sections` — section headings for the synthesizer
+  - `confidence_rules` — strings appended to verifier notes
+  - `synthesizer_persona` — first-person system-prompt persona
 2. Implement `seed_queries(self, query)`.
 3. Register the mode in `researchhq/modes/__init__.py` (`MODES` dict).
 4. Add a Typer subcommand in `researchhq/cli.py` that delegates to `_execute("<mymode>", ...)`.
@@ -341,3 +360,4 @@ pytest -q
 - **Source-aware** — every URL classified and ranked; confidence reflects evidence quality
 - **Free tier** — runs on $0 if you use Groq + Gemini + Ollama
 - **Structured output** — markdown / json / html exports, ready to feed downstream tools
+
