@@ -19,7 +19,52 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
+import urllib.request
 from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Bootstrap: when piped (curl|python / irm|python), stdin is the script so
+# input() returns EOF immediately.  Fix: download to a temp file and re-exec
+# with the real terminal as stdin.
+# ---------------------------------------------------------------------------
+
+_INSTALLER_URL = "https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.py"
+
+
+def _bootstrap_interactive() -> None:
+    if sys.stdin.isatty():
+        return  # Already running interactively — nothing to do
+
+    print("Downloading installer for interactive setup...")
+    tmp = tempfile.mktemp(suffix="_rhq_install.py")
+    try:
+        urllib.request.urlretrieve(_INSTALLER_URL, tmp)
+    except Exception as e:
+        print(f"Download failed: {e}")
+        sys.exit(1)
+
+    try:
+        if sys.platform == "win32":
+            con = open("CONIN$")
+        else:
+            con = open("/dev/tty")
+        result = subprocess.run([sys.executable, tmp], stdin=con)
+        con.close()
+    except Exception as e:
+        print(f"Could not attach terminal: {e}")
+        print(f"Run directly instead:  python {tmp}")
+        sys.exit(1)
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+    sys.exit(result.returncode)
+
+
+_bootstrap_interactive()
 
 # ---------------------------------------------------------------------------
 # ANSI colours (disabled automatically on Windows without ANSI support)
