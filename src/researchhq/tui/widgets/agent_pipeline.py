@@ -22,6 +22,12 @@ AGENT_ORDER = [
     "extractor", "synthesizer", "verifier", "formatter",
 ]
 
+# When ensemble mode is on, "ensemble" replaces "synthesizer" visually
+ENSEMBLE_AGENT_ORDER = [
+    "planner", "searcher", "source_ranker", "fetcher",
+    "extractor", "ensemble", "verifier", "formatter",
+]
+
 SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 
@@ -101,16 +107,35 @@ class AgentPipeline(Vertical):
 
     DEFAULT_ID = "agent_pipeline"
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, ensemble_mode: bool = False, **kwargs) -> None:
         kwargs.setdefault("id", "agent_pipeline")
         super().__init__(**kwargs)
+        self._ensemble_mode = ensemble_mode
         self._rows: dict[str, AgentRow] = {}
 
+    @property
+    def _active_order(self) -> list[str]:
+        return ENSEMBLE_AGENT_ORDER if self._ensemble_mode else AGENT_ORDER
+
     def compose(self):
-        for name in AGENT_ORDER:
+        for name in self._active_order:
             row = AgentRow(name=name, id=f"row_{name}")
             self._rows[name] = row
             yield row
+
+    def set_ensemble_mode(self, enabled: bool) -> None:
+        """Switch between standard and ensemble agent row sets."""
+        if enabled == self._ensemble_mode:
+            return
+        self._ensemble_mode = enabled
+        # Rebuild rows for the new order
+        for child in list(self.children):
+            child.remove()
+        self._rows.clear()
+        for name in self._active_order:
+            row = AgentRow(name=name, id=f"row_{name}")
+            self._rows[name] = row
+            self.mount(row)
 
     def reset(self) -> None:
         for name, row in self._rows.items():
@@ -127,6 +152,22 @@ class AgentPipeline(Vertical):
         if type_ == "agent_started":
             row.update_state(status="active", detail=detail or "running",
                              started_at=time.monotonic())
-        elif type_ == "agent_finished":
+        elif type_ in ("agent_finished", "ensemble_merge_done"):
             row.update_state(status="done", detail=detail or "complete",
                              finished_at=time.monotonic())
+        elif type_ in ("agent_progress", "ensemble_claims_extracted",
+                       "ensemble_consensus_ready", "ensemble_confidence_scored",
+                       "ensemble_providers_done"):
+            if row._state.status == "active":
+                row.update_state(detail=detail or "—")
+        elif type_ == "ensemble_provider_finished":
+            provider = data.get("provider", "?")
+            status_icon = "✓" if data.get("status") == "success" else "✗"
+            elapsed = data.get("elapsed", 0)
+            row.update_state(
+                detail=f"{status_icon} {provider} {elapsed:.1f}s"
+            )
+        elif type_ == "ensemble_disagreements_found":
+            n_major = data.get("major", 0)
+            if n_major and row._state.status == "active":
+                row.update_state(detail=f"⚠ {n_major} major conflicts")

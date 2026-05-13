@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -63,6 +63,48 @@ class StageCost(BaseModel):
     equivalent_paid_cost_usd: float = 0.0
 
 
+class EnsembleProviderSummary(BaseModel):
+    provider: str
+    model: str = ""
+    status: str = "success"
+    elapsed: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    error: Optional[str] = None
+
+
+class EnsembleReportSection(BaseModel):
+    """Serialisable summary of the ensemble run, attached to ResearchReport."""
+    enabled: bool = True
+    ensemble_mode: str = "balanced"
+    providers_attempted: list[str] = Field(default_factory=list)
+    providers_succeeded: list[str] = Field(default_factory=list)
+    providers_failed: list[str] = Field(default_factory=list)
+    provider_summaries: list[EnsembleProviderSummary] = Field(default_factory=list)
+    # Consensus stats
+    consensus_groups: int = 0
+    contested_groups: int = 0
+    unique_groups: int = 0
+    overall_agreement_rate: float = 0.0
+    # Confidence breakdown
+    overall_confidence: float = 0.0
+    adjusted_confidence: float = 0.0
+    provider_agreement_score: float = 0.0
+    source_quality_score: float = 0.0
+    factual_consistency_score: float = 0.0
+    hallucination_risk: float = 0.0
+    confidence_label: str = "medium"
+    support_strength: str = "medium"
+    # Disagreements
+    total_disagreements: int = 0
+    major_disagreements: int = 0
+    disagreement_summary: str = ""
+    # Misc
+    total_elapsed: float = 0.0
+    uncertainty_notes: list[str] = Field(default_factory=list)
+    provider_scores: dict[str, float] = Field(default_factory=dict)
+
+
 class ResearchReport(BaseModel):
     mode: str
     query: str
@@ -79,3 +121,4 @@ class ResearchReport(BaseModel):
     stage_costs: list[StageCost] = Field(default_factory=list)
 
     provider_used: str = ""
+    ensemble: Optional[EnsembleReportSection] = None

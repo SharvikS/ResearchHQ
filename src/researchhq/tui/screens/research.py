@@ -25,6 +25,8 @@ from researchhq.reports.exporter import save as save_report
 from researchhq.tui.widgets.agent_pipeline import AgentPipeline
 from researchhq.tui.widgets.effort_selector import EffortChanged, EffortSelector
 
+_ENSEMBLE_BADGE = "[bold #7c5cff]⬡ ENSEMBLE[/]"
+
 
 MODE_CHOICES = [
     ("topic",      "topic"),
@@ -87,7 +89,11 @@ class ResearchView(Container):
                 yield Select(options=MODE_CHOICES, value="topic",
                              id="mode_select", allow_blank=False)
                 yield EffortSelector(current=self._effort, id="effort_selector")
-            yield AgentPipeline()
+                yield Static(
+                    _ENSEMBLE_BADGE if settings.ensemble_enabled else "",
+                    id="ensemble_badge",
+                )
+            yield AgentPipeline(ensemble_mode=settings.ensemble_enabled)
         with Horizontal(id="research_bottom", classes="research_split"):
             with Vertical(id="log_card", classes="scroll_card"):
                 yield Static("LIVE LOG", classes="card_title")
@@ -135,7 +141,9 @@ class ResearchView(Container):
             self._log("[#fbbf24]a run is already in progress — Esc to cancel[/]")
             return
         self._cancel_flag = False
-        self.query_one(AgentPipeline).reset()
+        pipeline = self.query_one(AgentPipeline)
+        pipeline.set_ensemble_mode(settings.ensemble_enabled)
+        pipeline.reset()
         self.query_one(_ReportPane).reset_placeholder("[dim italic]planning queries…[/]")
         self._log(
             f"[#34d4bb]▶  start[/] [bold]{self._mode}[/]  ·  effort=[bold]{self._effort}[/]  ·  {query}"
@@ -215,27 +223,88 @@ class ResearchView(Container):
                 header.cost_usd += float(ev.data.get("equivalent_cost_usd", 0))
         except Exception:
             pass
+
         if ev.type == "run_started":
-            self._log(f"[dim]· planning…[/]")
+            self._log("[dim]· planning…[/]")
         elif ev.type == "agent_started":
-            self._log(f"  [#34d4bb]▸[/] {ev.stage}  [dim]{ev.detail}[/]")
+            if ev.stage == "ensemble":
+                providers = ev.data.get("providers", [])
+                providers_str = " + ".join(providers) if providers else "configured providers"
+                self._log(
+                    f"  [#7c5cff]⬡[/] [bold]ensemble[/]  "
+                    f"[dim][{providers_str}] launching in parallel…[/]"
+                )
+            else:
+                self._log(f"  [#34d4bb]▸[/] {ev.stage}  [dim]{ev.detail}[/]")
         elif ev.type == "agent_finished":
             self._log(f"  [#4ade80]✓[/] {ev.stage}  [dim]{ev.detail}[/]")
         elif ev.type == "source_found":
-            url = ev.data.get("url", "")
-            self._log(f"     [dim]+ {url}[/]")
+            self._log(f"     [dim]+ {ev.data.get('url', '')}[/]")
         elif ev.type == "report_section_ready":
-            heading = ev.data.get("heading", "?")
-            self._log(f"  [#7c5cff]§[/] {heading}")
+            self._log(f"  [#7c5cff]§[/] {ev.data.get('heading', '?')}")
         elif ev.type == "llm_call_finished":
             stage = ev.data.get("stage_tag", ev.stage)
             cost = ev.data.get("equivalent_cost_usd", 0)
-            tin = ev.data.get("input_tokens", 0); tout = ev.data.get("output_tokens", 0)
+            tin = ev.data.get("input_tokens", 0)
+            tout = ev.data.get("output_tokens", 0)
             self._log(f"     [dim]llm {stage}: {tin}↑ {tout}↓  ${cost:.4f}[/]")
+        # ── Ensemble-specific events ──────────────────────────────────────────
+        elif ev.type == "ensemble_provider_finished":
+            provider = ev.data.get("provider", "?")
+            status = ev.data.get("status", "?")
+            elapsed = ev.data.get("elapsed", 0.0)
+            tin = ev.data.get("tokens_in", 0)
+            tout = ev.data.get("tokens_out", 0)
+            icon = "[#4ade80]✓[/]" if status == "success" else "[#f87171]✗[/]"
+            self._log(
+                f"     {icon} [dim]{provider}[/]  "
+                f"[dim]{elapsed:.1f}s  {tin}↑ {tout}↓[/]"
+            )
+        elif ev.type == "ensemble_providers_done":
+            n_ok = ev.data.get("successful", 0)
+            n_fail = ev.data.get("failed", 0)
+            elapsed = ev.data.get("elapsed", 0.0)
+            self._log(
+                f"  [#7c5cff]⬡[/] providers done  "
+                f"[dim]{n_ok} ok · {n_fail} failed · {elapsed:.1f}s[/]"
+            )
+        elif ev.type == "ensemble_claims_extracted":
+            n = ev.data.get("total_claims", 0)
+            self._log(f"     [dim]extracted {n} claims[/]")
+        elif ev.type == "ensemble_consensus_ready":
+            c = ev.data.get("consensus", 0)
+            contested = ev.data.get("contested", 0)
+            u = ev.data.get("unique", 0)
+            rate = ev.data.get("agreement_rate", 0.0)
+            self._log(
+                f"     [dim]consensus: {c}✓ · {contested}⚠ · {u}? "
+                f"· agreement {rate:.0%}[/]"
+            )
+        elif ev.type == "ensemble_confidence_scored":
+            conf = ev.data.get("confidence", 0.0)
+            label = ev.data.get("label", "")
+            self._log(f"     [dim]confidence → {conf:.0%} ({label})[/]")
+        elif ev.type == "ensemble_disagreements_found":
+            major = ev.data.get("major", 0)
+            self._log(
+                f"  [#fbbf24]⚠[/]  [dim]{major} major disagreement(s) — "
+                "cross-check statistics[/]"
+            )
+        elif ev.type == "ensemble_merge_done":
+            sections = ev.data.get("sections", 0)
+            self._log(f"     [dim]merge complete → {sections} sections[/]")
         elif ev.type == "run_completed":
             elapsed = ev.data.get("elapsed_s", 0.0)
             conf = ev.data.get("confidence", 0)
-            self._log(f"[#4ade80]●  run completed[/]  · {elapsed}s  · conf {conf:.2f}")
+            ensemble_on = ev.data.get("ensemble_enabled", False)
+            mode_label = ev.data.get("ensemble_mode", "")
+            if ensemble_on:
+                self._log(
+                    f"[#4ade80]●  run completed[/]  · {elapsed}s  · conf {conf:.2f}  "
+                    f"[#7c5cff]⬡ ensemble:{mode_label}[/]"
+                )
+            else:
+                self._log(f"[#4ade80]●  run completed[/]  · {elapsed}s  · conf {conf:.2f}")
 
     def _log(self, message: str) -> None:
         try:

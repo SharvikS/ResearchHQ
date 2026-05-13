@@ -9,6 +9,13 @@ Event types we emit:
 - source_found
 - llm_call_started, llm_call_finished
 - report_section_ready
+- ensemble_provider_finished  — one parallel provider completed (or failed)
+- ensemble_providers_done     — all parallel providers finished
+- ensemble_claims_extracted   — claim extraction complete
+- ensemble_consensus_ready    — consensus analysis complete
+- ensemble_confidence_scored  — confidence score computed
+- ensemble_disagreements_found— major disagreements detected
+- ensemble_merge_done         — meta-synthesis finished
 
 Consumers can ignore types they don't care about. Any unrecognized event type is
 treated as an agent_progress for legacy renderers (CLI's progress() display).
@@ -32,6 +39,14 @@ EventType = Literal[
     "llm_call_started",
     "llm_call_finished",
     "report_section_ready",
+    # Ensemble-specific events
+    "ensemble_provider_finished",
+    "ensemble_providers_done",
+    "ensemble_claims_extracted",
+    "ensemble_consensus_ready",
+    "ensemble_confidence_scored",
+    "ensemble_disagreements_found",
+    "ensemble_merge_done",
 ]
 
 

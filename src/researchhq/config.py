@@ -43,6 +43,17 @@ DEFAULT_YAML: dict[str, Any] = {
         "default": "normal",
         "hide_http_logs_unless_debug": True,
     },
+    "ensemble": {
+        "enabled": False,
+        "providers": [],           # empty → derived from mode profile
+        "mode": "balanced",        # cheap | balanced | max_confidence
+        "provider_timeout": 60.0,
+        "max_parallel_providers": 5,
+        "consensus_threshold": 0.35,
+        "min_providers_consensus": 2,
+        "use_llm_extraction": False,  # True only recommended for max_confidence
+        "cost_optimize": True,
+    },
 }
 
 
@@ -69,6 +80,17 @@ class Settings:
     hide_http_logs_unless_debug: bool = True
 
     log_level: str = "INFO"
+
+    # Ensemble settings
+    ensemble_enabled: bool = False
+    ensemble_providers: list[str] = field(default_factory=list)
+    ensemble_mode: str = "balanced"
+    ensemble_provider_timeout: float = 60.0
+    ensemble_max_parallel_providers: int = 5
+    ensemble_consensus_threshold: float = 0.35
+    ensemble_min_providers_consensus: int = 2
+    ensemble_use_llm_extraction: bool = False
+    ensemble_cost_optimize: bool = True
 
 
 def _deep_merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
@@ -122,6 +144,19 @@ def load_settings() -> Settings:
         verbosity_default=raw["verbosity"]["default"],
         hide_http_logs_unless_debug=bool(raw["verbosity"]["hide_http_logs_unless_debug"]),
         log_level=os.environ.get("LOG_LEVEL", "INFO"),
+        # Ensemble
+        ensemble_enabled=bool(
+            raw.get("ensemble", {}).get("enabled", False)
+            or os.environ.get("ENSEMBLE_ENABLED", "").lower() in ("1", "true", "yes")
+        ),
+        ensemble_providers=list(raw.get("ensemble", {}).get("providers", [])),
+        ensemble_mode=str(raw.get("ensemble", {}).get("mode", "balanced")),
+        ensemble_provider_timeout=float(raw.get("ensemble", {}).get("provider_timeout", 60.0)),
+        ensemble_max_parallel_providers=int(raw.get("ensemble", {}).get("max_parallel_providers", 5)),
+        ensemble_consensus_threshold=float(raw.get("ensemble", {}).get("consensus_threshold", 0.35)),
+        ensemble_min_providers_consensus=int(raw.get("ensemble", {}).get("min_providers_consensus", 2)),
+        ensemble_use_llm_extraction=bool(raw.get("ensemble", {}).get("use_llm_extraction", False)),
+        ensemble_cost_optimize=bool(raw.get("ensemble", {}).get("cost_optimize", True)),
     )
     return s
 
@@ -157,6 +192,15 @@ def save_settings(updates: dict[str, Any], path: Path | None = None) -> Path:
         "default_format":     ("report", "default_format"),
         "include_recent_developments": ("report", "include_recent_developments"),
         "verbosity_default":  ("verbosity", "default"),
+        "ensemble_enabled":              ("ensemble", "enabled"),
+        "ensemble_providers":            ("ensemble", "providers"),
+        "ensemble_mode":                 ("ensemble", "mode"),
+        "ensemble_provider_timeout":     ("ensemble", "provider_timeout"),
+        "ensemble_max_parallel_providers": ("ensemble", "max_parallel_providers"),
+        "ensemble_consensus_threshold":  ("ensemble", "consensus_threshold"),
+        "ensemble_min_providers_consensus": ("ensemble", "min_providers_consensus"),
+        "ensemble_use_llm_extraction":   ("ensemble", "use_llm_extraction"),
+        "ensemble_cost_optimize":        ("ensemble", "cost_optimize"),
     }
     for k, v in updates.items():
         section_key = section_for.get(k)

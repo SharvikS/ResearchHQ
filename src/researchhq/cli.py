@@ -67,14 +67,35 @@ def _execute(
     verbose: bool,
     debug: bool,
     effort: Optional[str] = None,
+    ensemble: Optional[bool] = None,
+    ensemble_mode: Optional[str] = None,
 ) -> None:
     verbosity = _resolve_verbosity(quiet, verbose, debug)
     effort_resolved = _resolve_effort(effort)
     configure_logging(verbosity)
 
+    # Override ensemble settings from CLI flags
+    if ensemble is not None:
+        settings.ensemble_enabled = ensemble
+    if ensemble_mode is not None:
+        valid_modes = ("cheap", "balanced", "max_confidence")
+        if ensemble_mode not in valid_modes:
+            raise typer.BadParameter(
+                f"--ensemble-mode must be one of {valid_modes}; got '{ensemble_mode}'."
+            )
+        settings.ensemble_mode = ensemble_mode
+
     show_progress = verbosity in ("verbose", "debug")
 
-    banner(query, mode)
+    if settings.ensemble_enabled:
+        banner(query, mode)
+        from researchhq.utils.rich_ui import console as _console
+        _console.print(
+            f"[bold #7c5cff]⬡ ENSEMBLE MODE[/]: {settings.ensemble_mode} "
+            f"(providers: {', '.join(settings.ensemble_providers) or 'auto'})"
+        )
+    else:
+        banner(query, mode)
 
     def on_event(ev: StageEvent) -> None:
         progress(ev.stage, ev.detail, show_progress)
@@ -117,6 +138,14 @@ _EffortOpt = typer.Option(
     None, "--effort", "-e",
     help="Research depth: low (fast scan), medium (default, balanced), high (deep dive).",
 )
+_EnsembleOpt = typer.Option(
+    None, "--ensemble/--no-ensemble",
+    help="Enable parallel multi-model ensemble synthesis (overrides config).",
+)
+_EnsembleModeOpt = typer.Option(
+    None, "--ensemble-mode",
+    help="Ensemble profile: cheap, balanced, max_confidence.",
+)
 
 
 @research_app.command("topic")
@@ -127,9 +156,11 @@ def topic(
     verbose: bool = _VerboseOpt,
     debug: bool = _DebugOpt,
     effort: Optional[str] = _EffortOpt,
+    ensemble: Optional[bool] = _EnsembleOpt,
+    ensemble_mode: Optional[str] = _EnsembleModeOpt,
 ) -> None:
     """General topic research."""
-    _execute("topic", query, fmt, quiet, verbose, debug, effort)
+    _execute("topic", query, fmt, quiet, verbose, debug, effort, ensemble, ensemble_mode)
 
 
 @research_app.command("company")
@@ -140,9 +171,11 @@ def company(
     verbose: bool = _VerboseOpt,
     debug: bool = _DebugOpt,
     effort: Optional[str] = _EffortOpt,
+    ensemble: Optional[bool] = _EnsembleOpt,
+    ensemble_mode: Optional[str] = _EnsembleModeOpt,
 ) -> None:
     """Company profile research."""
-    _execute("company", query, fmt, quiet, verbose, debug, effort)
+    _execute("company", query, fmt, quiet, verbose, debug, effort, ensemble, ensemble_mode)
 
 
 @research_app.command("competitor")
@@ -153,9 +186,11 @@ def competitor(
     verbose: bool = _VerboseOpt,
     debug: bool = _DebugOpt,
     effort: Optional[str] = _EffortOpt,
+    ensemble: Optional[bool] = _EnsembleOpt,
+    ensemble_mode: Optional[str] = _EnsembleModeOpt,
 ) -> None:
     """Competitor analysis."""
-    _execute("competitor", query, fmt, quiet, verbose, debug, effort)
+    _execute("competitor", query, fmt, quiet, verbose, debug, effort, ensemble, ensemble_mode)
 
 
 @research_app.command("tech")
@@ -166,9 +201,11 @@ def tech(
     verbose: bool = _VerboseOpt,
     debug: bool = _DebugOpt,
     effort: Optional[str] = _EffortOpt,
+    ensemble: Optional[bool] = _EnsembleOpt,
+    ensemble_mode: Optional[str] = _EnsembleModeOpt,
 ) -> None:
     """Technology research."""
-    _execute("technology", query, fmt, quiet, verbose, debug, effort)
+    _execute("technology", query, fmt, quiet, verbose, debug, effort, ensemble, ensemble_mode)
 
 
 @research_app.command("market")
@@ -179,9 +216,11 @@ def market(
     verbose: bool = _VerboseOpt,
     debug: bool = _DebugOpt,
     effort: Optional[str] = _EffortOpt,
+    ensemble: Optional[bool] = _EnsembleOpt,
+    ensemble_mode: Optional[str] = _EnsembleModeOpt,
 ) -> None:
     """Market research."""
-    _execute("market", query, fmt, quiet, verbose, debug, effort)
+    _execute("market", query, fmt, quiet, verbose, debug, effort, ensemble, ensemble_mode)
 
 
 @research_app.command("news")
@@ -192,9 +231,11 @@ def news(
     verbose: bool = _VerboseOpt,
     debug: bool = _DebugOpt,
     effort: Optional[str] = _EffortOpt,
+    ensemble: Optional[bool] = _EnsembleOpt,
+    ensemble_mode: Optional[str] = _EnsembleModeOpt,
 ) -> None:
     """News and recent developments."""
-    _execute("news", query, fmt, quiet, verbose, debug, effort)
+    _execute("news", query, fmt, quiet, verbose, debug, effort, ensemble, ensemble_mode)
 
 
 @research_app.command("academic")
@@ -205,9 +246,11 @@ def academic(
     verbose: bool = _VerboseOpt,
     debug: bool = _DebugOpt,
     effort: Optional[str] = _EffortOpt,
+    ensemble: Optional[bool] = _EnsembleOpt,
+    ensemble_mode: Optional[str] = _EnsembleModeOpt,
 ) -> None:
     """Academic / paper research."""
-    _execute("academic", query, fmt, quiet, verbose, debug, effort)
+    _execute("academic", query, fmt, quiet, verbose, debug, effort, ensemble, ensemble_mode)
 
 
 @app.command()
