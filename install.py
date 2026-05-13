@@ -207,35 +207,38 @@ def choose_extras() -> list[str]:
 # Step 3 — Run install
 # ---------------------------------------------------------------------------
 
+PACKAGE_NAME = "researchhq"
+
+
 def run_install(source: str, extras: list[str], managers: dict[str, bool]) -> None:
     _section("Installing ResearchHQ")
 
-    extras_str = ",".join(extras)
-    spec = f"{source}[{extras_str}]" if source.startswith("git+") else f"{source}[{extras_str}]"
     is_local = not source.startswith("git+")
+    extras_str = ",".join(extras)
 
-    if managers["uv"]:
-        # uv tool install for isolated global CLI tools
-        cmd = ["uv", "tool", "install", "--python", "python3"]
-        if is_local:
-            cmd += ["--editable", source]
-        else:
-            cmd += [spec]
-        # uv tool doesn't support extras via the same spec when using --editable;
-        # fall back to uv pip for local installs
-        if is_local:
-            cmd = ["uv", "pip", "install", "--system", "-e", spec]
-    elif managers["pipx"]:
-        if is_local:
-            cmd = ["pipx", "install", "--editable", spec]
-        else:
-            cmd = ["pipx", "install", spec]
+    # Build a PEP 508 spec that every modern tool understands
+    if is_local:
+        # e.g.  /path/to/repo[tui,anthropic]
+        local_spec = f".[{extras_str}]" if extras_str else "."
     else:
-        pip = "pip3" if shutil.which("pip3") else "pip"
-        if is_local:
-            cmd = [pip, "install", "--user", "-e", spec]
-        else:
-            cmd = [pip, "install", "--user", spec]
+        # e.g.  researchhq[tui] @ git+https://github.com/SharvikS/ResearchHQ.git
+        pkg = f"{PACKAGE_NAME}[{extras_str}]" if extras_str else PACKAGE_NAME
+        remote_spec = f"{pkg} @ {source}"
+
+    pip = shutil.which("pip3") or shutil.which("pip")
+
+    if is_local:
+        # Local installs: always use pip -e (works universally)
+        cmd = [pip, "install", "-e", local_spec]
+    elif managers["pipx"]:
+        # pipx gives an isolated env + automatic PATH wiring — best for CLI tools
+        cmd = ["pipx", "install", remote_spec, "--force"]
+    elif managers["uv"]:
+        # uv tool install with PEP 508 spec
+        cmd = ["uv", "tool", "install", remote_spec]
+    else:
+        # Plain pip --user as last resort
+        cmd = [pip, "install", "--user", remote_spec]
 
     _info(f"Running: {' '.join(cmd)}")
     print()
