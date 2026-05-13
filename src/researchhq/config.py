@@ -9,7 +9,11 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load global user config (~/.researchhq/.env) first, then local .env overrides it.
+_global_env = Path.home() / ".researchhq" / ".env"
+if _global_env.exists():
+    load_dotenv(_global_env)
+load_dotenv(override=True)
 
 try:
     import yaml
@@ -103,28 +107,42 @@ def _deep_merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _find_yaml() -> Path | None:
+def _load_yaml_chain() -> dict[str, Any]:
+    """Load YAML config: defaults <- global (~/.researchhq/config.yaml) <- local."""
+    raw = dict(DEFAULT_YAML)
+    if yaml is None:
+        return raw
+
+    def _try_merge(path: Path) -> None:
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                user = yaml.safe_load(f) or {}
+            raw.update(_deep_merge(raw, user))
+        except Exception:
+            pass
+
+    # 1. Global user config
+    global_yaml = Path.home() / ".researchhq" / "config.yaml"
+    if global_yaml.exists():
+        _try_merge(global_yaml)
+
+    # 2. Explicit override or local project config
     explicit = os.environ.get("RESEARCHHQ_CONFIG")
     if explicit:
-        p = Path(explicit)
-        return p if p.exists() else None
-    for candidate in (Path("config.yaml"), Path("researchhq.yaml")):
-        if candidate.exists():
-            return candidate
-    return None
+        local = Path(explicit)
+        if local.exists():
+            _try_merge(local)
+    else:
+        for candidate in (Path("config.yaml"), Path("researchhq.yaml")):
+            if candidate.exists():
+                _try_merge(candidate)
+                break
+
+    return raw
 
 
 def load_settings() -> Settings:
-    raw = dict(DEFAULT_YAML)
-    yaml_path = _find_yaml()
-    if yaml_path and yaml is not None:
-        try:
-            with yaml_path.open("r", encoding="utf-8") as f:
-                user = yaml.safe_load(f) or {}
-            raw = _deep_merge(raw, user)
-        except Exception:
-            # Bad YAML: fall back to defaults silently; CLI --debug will show traces.
-            pass
+    raw = _load_yaml_chain()
 
     s = Settings(
         groq_api_key=os.environ.get("GROQ_API_KEY", ""),
@@ -175,7 +193,8 @@ def save_settings(updates: dict[str, Any], path: Path | None = None) -> Path:
     if yaml is None:
         raise RuntimeError("PyYAML is required to persist settings.")
 
-    target = path or _find_yaml() or Path("config.yaml")
+    default_path = Path.home() / ".researchhq" / "config.yaml"
+    target = path or default_path
     current: dict[str, Any] = {}
     if target.exists():
         with target.open("r", encoding="utf-8") as f:
