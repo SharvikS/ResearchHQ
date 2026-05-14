@@ -54,9 +54,17 @@ class ConnectionManager:
 ws_manager = ConnectionManager()
 
 
-async def ws_endpoint(query_id: str, websocket: WebSocket) -> None:
+async def ws_endpoint(
+    query_id: str,
+    websocket: WebSocket,
+    api_key: str | None = None,
+) -> None:
     """WebSocket endpoint handler. Attach to a FastAPI route via APIRouter."""
     from researchhq.api import db
+    from researchhq.api.auth import ws_validate
+
+    if not await ws_validate(websocket, api_key):
+        return
 
     await ws_manager.connect(query_id, websocket)
     try:

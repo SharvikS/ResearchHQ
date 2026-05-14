@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from researchhq.api.auth import require_auth
 from researchhq.api.schemas import AgentInfo, AgentsResponse
 from researchhq.ensemble.pipeline_specs import PIPELINE_SPECS, select_slots
 
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/api/v1", tags=["agents"])
 
 
 @router.get("/agents", response_model=AgentsResponse)
-async def list_agents() -> AgentsResponse:
+async def list_agents(_: str = Depends(require_auth)) -> AgentsResponse:
     """Return all available pipeline agents and the slot sets per pipeline mode."""
     agents = [
         AgentInfo(

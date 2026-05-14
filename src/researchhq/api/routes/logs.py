@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from researchhq.api import db
+from researchhq.api.auth import require_auth
 from researchhq.api.schemas import LogEntry, LogsResponse
 
 router = APIRouter(prefix="/api/v1", tags=["logs"])
@@ -28,6 +29,7 @@ async def get_logs(
     level: Optional[str] = Query(None, description="Filter by log level: debug|info|warn|error"),
     stage: Optional[str] = Query(None, description="Filter by pipeline stage"),
     limit: int = Query(200, ge=1, le=1000),
+    _: str = Depends(require_auth),
 ) -> LogsResponse:
     """Return structured execution logs for a query, with optional filters."""
     row = db.get_query(query_id)

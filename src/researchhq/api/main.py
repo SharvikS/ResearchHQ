@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from researchhq.api import db
@@ -49,13 +49,20 @@ def create_app() -> FastAPI:
 
     # WebSocket progress streaming
     @app.websocket("/ws/{query_id}")
-    async def websocket_route(query_id: str, websocket: WebSocket) -> None:
-        await ws_endpoint(query_id, websocket)
+    async def websocket_route(
+        query_id: str,
+        websocket: WebSocket,
+        api_key: str | None = Query(None),
+    ) -> None:
+        await ws_endpoint(query_id, websocket, api_key=api_key)
 
     @app.on_event("startup")
     async def on_startup() -> None:
         db.init_db()
+        from researchhq.api.auth import _RATE_LIMIT_RPM, _REQUIRE_AUTH
+        auth_msg = "enabled (X-API-Key header)" if _REQUIRE_AUTH else "disabled — set RHQ_REQUIRE_AUTH=true to enable"
         logger.info("ResearchHQ API started. DB at %s", db.get_db_path())
+        logger.info("Auth: %s | Rate limit: %d req/min", auth_msg, _RATE_LIMIT_RPM)
 
     return app
 

@@ -6,9 +6,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from researchhq.api import db, runner
+from researchhq.api.auth import require_auth
 from researchhq.api.schemas import (
     ConfidenceBreakdown,
     ConfidenceResult,
@@ -35,7 +36,7 @@ def _parse_dt(s: Optional[str]) -> datetime:
 
 
 @router.post("/query", status_code=202)
-async def submit_query(body: QueryRequest) -> dict:
+async def submit_query(body: QueryRequest, _: str = Depends(require_auth)) -> dict:
     """Submit a new research query. Returns a query_id for polling or WebSocket."""
     cleaned, warnings = sanitize_query(body.query)
     if not cleaned:
@@ -77,7 +78,7 @@ async def submit_query(body: QueryRequest) -> dict:
 
 
 @router.get("/query/{query_id}/status", response_model=QueryStatusResponse)
-async def get_query_status(query_id: str) -> QueryStatusResponse:
+async def get_query_status(query_id: str, _: str = Depends(require_auth)) -> QueryStatusResponse:
     """Poll execution status and per-pipeline progress."""
     row = db.get_query(query_id)
     if not row:
@@ -117,7 +118,7 @@ async def get_query_status(query_id: str) -> QueryStatusResponse:
 
 
 @router.get("/query/{query_id}/result", response_model=QueryResultResponse)
-async def get_query_result(query_id: str) -> QueryResultResponse:
+async def get_query_result(query_id: str, _: str = Depends(require_auth)) -> QueryResultResponse:
     """Retrieve the complete final response. Returns 202 body if still running."""
     row = db.get_query(query_id)
     if not row:
