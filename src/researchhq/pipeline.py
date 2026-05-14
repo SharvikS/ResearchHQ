@@ -49,11 +49,14 @@ async def _run_ensemble_synthesis(
     pages: list,
     profile,
     emit: Callable,
+    query_intent=None,
 ) -> tuple[list, str, list, "EnsembleReportSection | None"]:
     """Run parallel multi-model synthesis. Returns (sections, provider, violations, meta).
 
-    Falls back to single-provider synthesis if no ensemble providers are available.
-    Returns meta=None on fallback so the caller can detect which path was taken.
+    When query_intent is provided (the normal path), uses differentiated slot execution:
+    each slot gets its own system prompt and best-fit model, delivering genuine diversity
+    of approach. Without query_intent falls back to the legacy run_parallel path.
+    Returns meta=None on single-provider fallback so the caller can detect which path was taken.
     """
     from researchhq.ensemble.claim_extractor import extract_all_claims
     from researchhq.ensemble.confidence import score_confidence
@@ -64,39 +67,14 @@ async def _run_ensemble_synthesis(
         ENSEMBLE_PROFILES,
         EnsembleRun,
         build_ensemble_providers,
+        build_slot_executions,
         run_parallel,
+        run_slots,
     )
+    from researchhq.ensemble.pipeline_specs import select_slots
     from researchhq.ensemble.verifier import verify_synthesis as ensemble_verify
 
-    # Resolve which providers to use
-    provider_names = (
-        settings.ensemble_providers
-        or ENSEMBLE_PROFILES.get(settings.ensemble_mode, ["groq", "gemini"])
-    )
-    providers = build_ensemble_providers(
-        provider_names,
-        max_providers=settings.ensemble_max_parallel_providers,
-    )
-
-    if not providers:
-        logger.warning("Ensemble enabled but no providers available; falling back to single-provider.")
-        sections, prov, violations = await synthesizer.synthesize(
-            mode, query, ranked, facts, pages,
-            max_tokens=profile.synth_max_tokens,
-            depth_directive=synth_directive(profile),
-            page_budget_chars=profile.synth_page_budget_chars,
-        )
-        return sections, prov, violations, None
-
-    provider_names_label = " + ".join(p.name for p in providers)
-    emit(
-        "agent_started", stage="ensemble",
-        detail=f"[ensemble: {provider_names_label}] running in parallel",
-        providers=[p.name for p in providers],
-        ensemble_mode=settings.ensemble_mode,
-    )
-
-    # Build the synthesis prompt (same content as synthesizer.synthesize)
+    # Build the synthesis prompt — shared by both the slot path and the legacy path
     from researchhq.agents.synthesizer import (
         _format_facts,
         _format_pages,
@@ -115,34 +93,128 @@ async def _run_ensemble_synthesis(
     )
 
     # ── 1. Parallel provider execution ────────────────────────────────────────
-    def _on_provider_done(result) -> None:
-        icon = "✓" if result.status == "success" else "✗"
-        emit(
-            "ensemble_provider_finished", stage="ensemble",
-            detail=f"{icon} {result.provider} ({result.elapsed:.1f}s, {result.status})",
-            provider=result.provider,
-            status=result.status,
-            elapsed=result.elapsed,
-            tokens_in=result.input_tokens,
-            tokens_out=result.output_tokens,
-            error=result.error or "",
+    if query_intent is not None:
+        # Differentiated slot path: each slot gets its own system prompt + best-fit model
+        slot_names = select_slots(
+            intent_type=query_intent.intent_type,
+            complexity=query_intent.complexity,
+            requires_code=query_intent.requires_code_analysis,
+            requires_deep_reasoning=query_intent.requires_deep_reasoning,
+            mode=query_intent.recommended_pipeline_mode,
+        )
+        available_provider_names = (
+            query_intent.preferred_providers
+            or settings.ensemble_providers
+            or ENSEMBLE_PROFILES.get(settings.ensemble_mode, ["groq", "gemini"])
+        )
+        slot_executions = build_slot_executions(
+            slot_names=slot_names,
+            user_prompt=user_prompt,
+            available_provider_names=available_provider_names,
+            timeout=settings.ensemble_provider_timeout,
         )
 
-    ensemble_run: EnsembleRun = await run_parallel(
-        prompt=user_prompt,
-        system=sys_prompt,
-        providers=providers,
-        query=query,
-        timeout=settings.ensemble_provider_timeout,
-        max_tokens=profile.synth_max_tokens,
-        on_provider_event=_on_provider_done,
-    )
+        if not slot_executions:
+            logger.warning("No slots could be scheduled; falling back to single-provider.")
+            sections, prov, violations = await synthesizer.synthesize(
+                mode, query, ranked, facts, pages,
+                max_tokens=profile.synth_max_tokens,
+                depth_directive=synth_directive(profile),
+                page_budget_chars=profile.synth_page_budget_chars,
+            )
+            return sections, prov, violations, None
+
+        label = " + ".join(f"{s.slot_name}({s.provider.name})" for s in slot_executions)
+        emit(
+            "agent_started", stage="ensemble",
+            detail=f"[slots: {label}] running in parallel",
+            slots=[s.slot_name for s in slot_executions],
+            providers=[s.provider.name for s in slot_executions],
+            ensemble_mode=settings.ensemble_mode,
+        )
+        for slot in slot_executions:
+            emit(
+                "slot_started", stage="ensemble",
+                detail=f"[{slot.display_name}] via {slot.provider.name}",
+                slot=slot.slot_name,
+                provider=slot.provider.name,
+            )
+
+        def _on_slot_done(result) -> None:
+            icon = "✓" if result.status == "success" else "✗"
+            event_type = "slot_finished" if result.status == "success" else "slot_failed"
+            emit(
+                event_type, stage="ensemble",
+                detail=f"{icon} {result.provider} ({result.elapsed:.1f}s, {result.status})",
+                slot_provider=result.provider,
+                status=result.status,
+                elapsed=result.elapsed,
+                tokens_in=result.input_tokens,
+                tokens_out=result.output_tokens,
+                error=result.error or "",
+            )
+
+        ensemble_run: EnsembleRun = await run_slots(
+            slot_executions, query=query, on_slot_event=_on_slot_done,
+        )
+
+    else:
+        # Legacy path: same system prompt sent to all configured providers
+        provider_names = (
+            settings.ensemble_providers
+            or ENSEMBLE_PROFILES.get(settings.ensemble_mode, ["groq", "gemini"])
+        )
+        providers = build_ensemble_providers(
+            provider_names,
+            max_providers=settings.ensemble_max_parallel_providers,
+        )
+
+        if not providers:
+            logger.warning("Ensemble enabled but no providers available; falling back to single-provider.")
+            sections, prov, violations = await synthesizer.synthesize(
+                mode, query, ranked, facts, pages,
+                max_tokens=profile.synth_max_tokens,
+                depth_directive=synth_directive(profile),
+                page_budget_chars=profile.synth_page_budget_chars,
+            )
+            return sections, prov, violations, None
+
+        provider_names_label = " + ".join(p.name for p in providers)
+        emit(
+            "agent_started", stage="ensemble",
+            detail=f"[ensemble: {provider_names_label}] running in parallel",
+            providers=[p.name for p in providers],
+            ensemble_mode=settings.ensemble_mode,
+        )
+
+        def _on_provider_done(result) -> None:
+            icon = "✓" if result.status == "success" else "✗"
+            emit(
+                "ensemble_provider_finished", stage="ensemble",
+                detail=f"{icon} {result.provider} ({result.elapsed:.1f}s, {result.status})",
+                provider=result.provider,
+                status=result.status,
+                elapsed=result.elapsed,
+                tokens_in=result.input_tokens,
+                tokens_out=result.output_tokens,
+                error=result.error or "",
+            )
+
+        ensemble_run: EnsembleRun = await run_parallel(
+            prompt=user_prompt,
+            system=sys_prompt,
+            providers=providers,
+            query=query,
+            timeout=settings.ensemble_provider_timeout,
+            max_tokens=profile.synth_max_tokens,
+            on_provider_event=_on_provider_done,
+        )
 
     n_ok = len(ensemble_run.successful)
     n_fail = len(ensemble_run.failed)
     emit(
         "ensemble_providers_done", stage="ensemble",
-        detail=f"{n_ok}/{len(providers)} succeeded in {ensemble_run.elapsed_total:.1f}s",
+        detail=f"{n_ok}/{len(ensemble_run.results)} succeeded in {ensemble_run.elapsed_total:.1f}s",
         successful=n_ok, failed=n_fail,
         elapsed=ensemble_run.elapsed_total,
     )
@@ -156,7 +228,7 @@ async def _run_ensemble_synthesis(
         meta = EnsembleReportSection(
             enabled=True,
             ensemble_mode=settings.ensemble_mode,
-            providers_attempted=[p.name for p in providers],
+            providers_attempted=ensemble_run.provider_names,
             providers_failed=[r.provider for r in ensemble_run.failed],
         )
         return [stub], "ensemble(0)", [], meta
@@ -268,7 +340,7 @@ async def _run_ensemble_synthesis(
     meta = EnsembleReportSection(
         enabled=True,
         ensemble_mode=settings.ensemble_mode,
-        providers_attempted=[p.name for p in providers],
+        providers_attempted=ensemble_run.provider_names,
         providers_succeeded=[r.provider for r in ensemble_run.successful],
         providers_failed=[r.provider for r in ensemble_run.failed],
         provider_summaries=provider_summaries,
@@ -431,7 +503,7 @@ async def run(
     ensemble_meta = None
     if settings.ensemble_enabled:
         sections, provider, synth_violations, ensemble_meta = await _run_ensemble_synthesis(
-            mode, query, ranked, facts, pages, profile, emit
+            mode, query, ranked, facts, pages, profile, emit, query_intent
         )
         emit_llm_delta("ensemble")
     else:
