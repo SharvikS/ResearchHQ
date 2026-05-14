@@ -48,10 +48,12 @@ gui = ["PySide6>=6.7.0"]
 tui = ["textual>=0.86.0"]
 
 [project.scripts]
+# Premium CLI (interactive + all subcommands):
+research-hq = "researchhq.cli:app"
 # Interactive terminal workspace (requires the [tui] extra):
 researchhq = "researchhq.tui.entry:main"
 rhq = "researchhq.tui.entry:main"
-# Classic non-interactive CLI:
+# Classic non-interactive CLI (preserved, points to same reworked cli):
 research = "researchhq.cli:app"
 researchhq-cli = "researchhq.cli:app"
 # Desktop GUI (requires the [gui] extra: pip install -e ".[gui]")
