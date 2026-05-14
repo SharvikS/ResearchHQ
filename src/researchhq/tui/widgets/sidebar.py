@@ -4,68 +4,68 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from textual.containers import Vertical
+from textual.app import ComposeResult
 from textual.message import Message
+from textual.widget import Widget
 from textual.widgets import Button, Static
 
-
+# ── Nav sections ──────────────────────────────────────────────────────
+# (target, label, number_key, icon)
 SECTIONS = [
-    ("dashboard", "Dashboard", "1"),
-    ("research", "Research",  "2"),
-    ("reports",  "Reports",   "3"),
-    ("settings", "Settings",  "4"),
+    ("dashboard", "Dashboard", "1", "◈"),
+    ("research",  "Research",  "2", "⌖"),
+    ("reports",   "Reports",   "3", "⊞"),
+    ("settings",  "Settings",  "4", "◎"),
 ]
 
+SHORTCUTS = [
+    ("ctrl+/",  "Query"),
+    ("ctrl+r",  "Research"),
+    ("ctrl+h",  "History"),
+    ("ctrl+,",  "Settings"),
+    ("ctrl+t",  "Theme"),
+    ("ctrl+q",  "Quit"),
+]
+
+
+# ── Messages ──────────────────────────────────────────────────────────
 
 @dataclass
 class NavRequest(Message):
     target: str
 
 
-class Sidebar(Vertical):
+# ── Sidebar widget ────────────────────────────────────────────────────
+
+class Sidebar(Widget):
     DEFAULT_ID = "sidebar"
 
-    def __init__(self, **kwargs) -> None:
-        kwargs.setdefault("id", "sidebar")
-        super().__init__(**kwargs)
-        self._active = "dashboard"
-
-    def compose(self):
-        # Every row encodes its OWN leading whitespace (2 chars) directly in
-        # the text so alignment is independent of any per-widget-type default
-        # padding (Button vs Static can disagree). CSS contributes zero
-        # horizontal padding on these widgets.
+    def compose(self) -> ComposeResult:
         yield Static("  WORKSPACE", classes="sidebar_section")
-        for key, label, hot in SECTIONS:
-            btn = Button(f"  {hot}  {label}", id=f"nav_{key}")
-            if key == self._active:
-                btn.add_class("-active")
-            yield btn
+        for target, label, key, icon in SECTIONS:
+            yield Button(
+                f"  {icon}  {label}",
+                id=f"nav_{target}",
+            )
+
         yield Static("  SHORTCUTS", classes="sidebar_section")
-        for key, label in (
-            ("ctrl+/",  "Query"),
-            ("ctrl+r",  "Research"),
-            ("ctrl+h",  "History"),
-            ("ctrl+,",  "Settings"),
-            ("ctrl+t",  "Theme"),
-            ("ctrl+q",  "Quit"),
-        ):
-            yield Static(f"  {key:<7} {label}", classes="kv_label sidebar_hint")
+        for keys, action in SHORTCUTS:
+            yield Static(
+                f"  [dim]{keys:<10}[/dim]  [dim]{action}[/dim]",
+                classes="kv_label sidebar_hint",
+            )
 
     def set_active(self, target: str) -> None:
-        self._active = target
-        for key, _label, _hot in SECTIONS:
-            try:
-                btn = self.query_one(f"#nav_{key}", Button)
-            except Exception:
-                continue
-            if key == target:
+        for t, _, _, _ in SECTIONS:
+            btn = self.query_one(f"#nav_{t}", Button)
+            if t == target:
                 btn.add_class("-active")
             else:
                 btn.remove_class("-active")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id and event.button.id.startswith("nav_"):
-            target = event.button.id[len("nav_"):]
+        btn_id = event.button.id or ""
+        if btn_id.startswith("nav_"):
+            target = btn_id[4:]
             self.set_active(target)
             self.post_message(NavRequest(target=target))

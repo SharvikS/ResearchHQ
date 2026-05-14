@@ -38,7 +38,7 @@ class StatusHeader(Static):
     cost_usd: reactive[float] = reactive(0.0)
     runtime_s: reactive[float] = reactive(0.0)
 
-    def __init__(self, theme_name: str = "default", **kwargs) -> None:
+    def __init__(self, theme_name: str = "deep_space", **kwargs) -> None:
         kwargs.setdefault("id", "header_bar")
         super().__init__("ResearchHQ HQ", **kwargs)
         self._theme_name = theme_name
@@ -86,7 +86,7 @@ class StatusHeader(Static):
         provider_limit = 18 if w < 100 else 28
         provider_value = _ellipsize(f"{self.provider}/{self.model}", provider_limit)
 
-        # Brand: "Research" in teal/accent + "HQ" in purple/accent_2.
+        # Brand mark — split color: "Research" (accent) + "HQ" (accent_2).
         line = Text("Research", style=f"bold {p.accent}")
         line.append("HQ", style=f"bold {p.accent_2}")
         line.append(sep)

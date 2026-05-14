@@ -1,173 +1,246 @@
 """Live multi-agent pipeline visualization.
 
-One row per agent. Each row tracks state (pending → active → done | fail),
-elapsed time, and a free-form status note ("12 sources", "1.4k tokens", …).
-
-Driven by `PipelineEvent`s from researchhq.events; an event handler outside
-this widget updates the rows. The widget itself is purely presentational.
+One row per agent. State machine: pending → active → done | fail.
+Each row shows a glyph, stage name, live status note, and elapsed time.
+The synthesizer row expands into an "ensemble" variant with provider sub-rows.
 """
 
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from textual.app import ComposeResult
+from textual.widget import Widget
+from textual.widgets import Static
 
-from rich.text import Text
-from textual.containers import Vertical
-from textual.widgets import Label
-
+# ── Stage metadata ────────────────────────────────────────────────────
 
 AGENT_ORDER = [
     "planner", "searcher", "source_ranker", "fetcher",
     "extractor", "synthesizer", "verifier", "formatter",
 ]
 
-# When ensemble mode is on, "ensemble" replaces "synthesizer" visually
 ENSEMBLE_AGENT_ORDER = [
     "planner", "searcher", "source_ranker", "fetcher",
     "extractor", "ensemble", "verifier", "formatter",
 ]
 
-SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+# Geometric glyphs: pending ○, active spinner, done ◆, fail ✕
+# Premium aesthetic — geometric over ASCII characters.
+SPINNER     = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+GLYPH_DONE  = "◆"
+GLYPH_FAIL  = "✕"
+GLYPH_IDLE  = "○"
+
+# Stage display names (right-pad to 14 chars)
+STAGE_LABELS: dict[str, str] = {
+    "planner":      "planner",
+    "searcher":     "searcher",
+    "source_ranker": "ranker",
+    "fetcher":      "fetcher",
+    "extractor":    "extractor",
+    "synthesizer":  "synthesizer",
+    "ensemble":     "ensemble",
+    "verifier":     "verifier",
+    "formatter":    "formatter",
+}
+
+# Per-stage accent colors (Textual Rich markup) — cool color ramp
+STAGE_COLORS: dict[str, str] = {
+    "planner":      "#7c5cff",   # violet
+    "searcher":     "#4a9eff",   # blue
+    "source_ranker": "#38bdf8",  # sky
+    "fetcher":      "#34d4bb",   # teal
+    "extractor":    "#a3e635",   # lime
+    "synthesizer":  "#f59e0b",   # amber
+    "ensemble":     "#f59e0b",   # amber
+    "verifier":     "#10b981",   # emerald
+    "formatter":    "#e879f9",   # fuchsia
+}
 
 
-@dataclass
-class _AgentRowState:
-    name: str
-    status: str = "pending"   # pending | active | done | fail
-    detail: str = "queued"
-    started_at: float | None = None
-    finished_at: float | None = None
-    extra: dict = field(default_factory=dict)
+# ── AgentRow ──────────────────────────────────────────────────────────
 
+class AgentRow(Static):
+    """Single pipeline stage row.
 
-class AgentRow(Label):
-    """Single line: ● <agent>   <status note>   <elapsed>"""
+    Renders as:
+      <glyph>  <name:13>  <detail>  <elapsed:6>
+    """
+
+    DEFAULT_CSS = "AgentRow { height: 1; padding: 0 1; }"
 
     def __init__(self, name: str, **kwargs) -> None:
-        self._state = _AgentRowState(name=name)
+        super().__init__("", **kwargs)
+        self._name      = name
+        self._label     = STAGE_LABELS.get(name, name)
+        self._state     = "pending"   # pending | active | done | fail
+        self._detail    = ""
+        self._started   = 0.0
+        self._elapsed   = 0.0
+        self._spin_idx  = 0
+        self._tick_ref  = None
+
+    # ── Public API ────────────────────────────────────────────────────
+
+    def set_pending(self) -> None:
+        self._state = "pending"
+        self._detail = ""
+        self._elapsed = 0.0
+        self._stop_tick()
+        self._render()
+
+    def set_active(self, detail: str = "") -> None:
+        self._state   = "active"
+        self._detail  = detail
+        self._started = time.monotonic()
         self._spin_idx = 0
-        super().__init__(self._compose_text(), classes="agent_row -pending", **kwargs)
+        self._stop_tick()
+        self._tick_ref = self.set_interval(0.09, self._tick)
+        self.add_class("-active")
+        self.remove_class("-pending", "-done", "-fail")
+        self._render()
 
-    def on_mount(self) -> None:
-        self.set_interval(0.08, self._spin)
+    def set_progress(self, detail: str) -> None:
+        self._detail = detail
+        if self._state == "active":
+            self._render()
 
-    def update_state(
-        self, *, status: str | None = None, detail: str | None = None,
-        started_at: float | None = None, finished_at: float | None = None,
-    ) -> None:
-        s = self._state
-        if status is not None:
-            s.status = status
-            self.remove_class("-pending", "-active", "-done", "-fail")
-            self.add_class(f"-{status}")
-        if detail is not None:
-            s.detail = detail
-        if started_at is not None:
-            s.started_at = started_at
-        if finished_at is not None:
-            s.finished_at = finished_at
-        self.update(self._compose_text())
+    def set_done(self, detail: str = "") -> None:
+        self._state   = "done"
+        self._elapsed = time.monotonic() - self._started
+        self._detail  = detail
+        self._stop_tick()
+        self.add_class("-done")
+        self.remove_class("-active", "-pending", "-fail")
+        self._render()
 
-    def _spin(self) -> None:
+    def set_fail(self, detail: str = "") -> None:
+        self._state   = "fail"
+        self._elapsed = time.monotonic() - self._started
+        self._detail  = detail or "failed"
+        self._stop_tick()
+        self.add_class("-fail")
+        self.remove_class("-active", "-pending", "-done")
+        self._render()
+
+    def reset(self) -> None:
+        self.set_pending()
+
+    # ── Internal ──────────────────────────────────────────────────────
+
+    def _stop_tick(self) -> None:
+        if self._tick_ref is not None:
+            try:
+                self._tick_ref.stop()
+            except Exception:  # noqa: BLE001
+                pass
+            self._tick_ref = None
+
+    def _tick(self) -> None:
         self._spin_idx = (self._spin_idx + 1) % len(SPINNER)
-        if self._state.status == "active":
-            self.update(self._compose_text())
+        self._render()
 
-    def _glyph(self) -> str:
-        s = self._state.status
-        if s == "active":
-            return SPINNER[self._spin_idx]
-        if s == "done":
-            return "✓"
-        if s == "fail":
-            return "✗"
-        return "·"
+    def _render(self) -> None:
+        state   = self._state
+        label   = self._label
+        detail  = self._detail
+        elapsed = self._elapsed
+        color   = STAGE_COLORS.get(self._name, "#888888")
 
-    def _elapsed(self) -> str:
-        s = self._state
-        if s.started_at is None:
-            return ""
-        end = s.finished_at or time.monotonic()
-        return f"{end - s.started_at:.1f}s"
+        if state == "done":
+            glyph       = f"[bold {color}]{GLYPH_DONE}[/]"
+            name_markup = f"[dim]{label:<13}[/dim]"
+            detail_mu   = f"[dim]{detail[:50]}[/dim]"
+            elapsed_mu  = f"[dim]{elapsed:5.1f}s[/dim]"
+        elif state == "fail":
+            glyph       = f"[bold red]{GLYPH_FAIL}[/]"
+            name_markup = f"[bold red]{label:<13}[/bold red]"
+            detail_mu   = f"[red]{detail[:50]}[/red]"
+            elapsed_mu  = f"[dim red]{elapsed:5.1f}s[/dim red]"
+        elif state == "active":
+            spin        = SPINNER[self._spin_idx]
+            glyph       = f"[bold {color}]{spin}[/]"
+            name_markup = f"[bold {color}]{label:<13}[/bold {color}]"
+            detail_mu   = f"[{color}]{detail[:50]}[/{color}]"
+            now         = time.monotonic() - self._started
+            elapsed_mu  = f"[dim]{now:5.1f}s[/dim]"
+        else:  # pending
+            glyph       = f"[dim]{GLYPH_IDLE}[/dim]"
+            name_markup = f"[dim]{label:<13}[/dim]"
+            detail_mu   = ""
+            elapsed_mu  = ""
 
-    def _compose_text(self) -> Text:
-        s = self._state
-        line = Text()
-        line.append(f" {self._glyph()}  ")
-        line.append(f"{s.name:<14}", style="bold")
-        line.append("  ")
-        line.append(s.detail or "—")
-        line.append(f"   {self._elapsed():>6}")
-        return line
+        self.update(f"{glyph} {name_markup}  {detail_mu:<50}  {elapsed_mu}")
 
 
-class AgentPipeline(Vertical):
-    """Container holding one AgentRow per pipeline stage."""
+# ── AgentPipeline ─────────────────────────────────────────────────────
+
+class AgentPipeline(Widget):
+    """Vertical stack of AgentRow widgets, one per pipeline stage."""
 
     DEFAULT_ID = "agent_pipeline"
 
     def __init__(self, ensemble_mode: bool = False, **kwargs) -> None:
-        kwargs.setdefault("id", "agent_pipeline")
         super().__init__(**kwargs)
-        self._ensemble_mode = ensemble_mode
+        self._ensemble   = ensemble_mode
+        self._order      = ENSEMBLE_AGENT_ORDER if ensemble_mode else AGENT_ORDER
         self._rows: dict[str, AgentRow] = {}
 
-    @property
-    def _active_order(self) -> list[str]:
-        return ENSEMBLE_AGENT_ORDER if self._ensemble_mode else AGENT_ORDER
+    # ── Composition ───────────────────────────────────────────────────
 
-    def compose(self):
-        for name in self._active_order:
-            row = AgentRow(name=name, id=f"row_{name}")
+    def compose(self) -> ComposeResult:
+        for name in self._order:
+            row = AgentRow(name, id=f"row_{name}", classes="agent_row -pending")
             self._rows[name] = row
             yield row
 
+    # ── Public API ────────────────────────────────────────────────────
+
+    def reset(self) -> None:
+        for row in self._rows.values():
+            row.reset()
+
     def set_ensemble_mode(self, enabled: bool) -> None:
-        """Switch between standard and ensemble agent row sets."""
-        if enabled == self._ensemble_mode:
+        if enabled == self._ensemble:
             return
-        self._ensemble_mode = enabled
-        # Rebuild rows for the new order
-        for child in list(self.children):
-            child.remove()
-        self._rows.clear()
-        for name in self._active_order:
-            row = AgentRow(name=name, id=f"row_{name}")
+        self._ensemble = enabled
+        self._order    = ENSEMBLE_AGENT_ORDER if enabled else AGENT_ORDER
+        self._rows     = {}
+        self.remove_children()
+        for name in self._order:
+            row = AgentRow(name, id=f"row_{name}", classes="agent_row -pending")
             self._rows[name] = row
             self.mount(row)
 
-    def reset(self) -> None:
-        for name, row in self._rows.items():
-            row._state = _AgentRowState(name=name)
-            row.remove_class("-active", "-done", "-fail")
-            row.add_class("-pending")
-            row.update(row._compose_text())
+    def on_pipeline_event(
+        self,
+        type_: str,
+        stage: str,
+        detail: str,
+        data: dict,
+    ) -> None:
+        """Route a PipelineEvent to the appropriate AgentRow."""
+        # "synthesizer" and "ensemble" share the same slot depending on mode
+        canonical = stage
+        if stage == "synthesizer" and "ensemble" in self._rows:
+            canonical = "ensemble"
+        elif stage == "ensemble" and "synthesizer" in self._rows:
+            canonical = "synthesizer"
 
-    def on_pipeline_event(self, *, type_: str, stage: str, detail: str, data: dict) -> None:
-        """Hook from the running pipeline. Translates events into row updates."""
-        row = self._rows.get(stage)
-        if not row:
+        row = self._rows.get(canonical)
+        if row is None:
             return
+
         if type_ == "agent_started":
-            row.update_state(status="active", detail=detail or "running",
-                             started_at=time.monotonic())
-        elif type_ in ("agent_finished", "ensemble_merge_done"):
-            row.update_state(status="done", detail=detail or "complete",
-                             finished_at=time.monotonic())
-        elif type_ in ("agent_progress", "ensemble_claims_extracted",
-                       "ensemble_consensus_ready", "ensemble_confidence_scored",
-                       "ensemble_providers_done"):
-            if row._state.status == "active":
-                row.update_state(detail=detail or "—")
-        elif type_ == "ensemble_provider_finished":
-            provider = data.get("provider", "?")
-            status_icon = "✓" if data.get("status") == "success" else "✗"
-            elapsed = data.get("elapsed", 0)
-            row.update_state(
-                detail=f"{status_icon} {provider} {elapsed:.1f}s"
-            )
-        elif type_ == "ensemble_disagreements_found":
-            n_major = data.get("major", 0)
-            if n_major and row._state.status == "active":
-                row.update_state(detail=f"⚠ {n_major} major conflicts")
+            row.set_active(detail or "…")
+        elif type_ == "agent_progress":
+            row.set_progress(detail)
+        elif type_ == "agent_finished":
+            row.set_done(detail)
+        elif type_ == "agent_failed":
+            row.set_fail(detail)
+        elif type_ in ("ensemble_provider_finished", "ensemble_providers_done"):
+            # Update ensemble row detail with provider count
+            count = len(data.get("providers", [])) if "providers" in data else ""
+            suffix = f"provider done · {count}" if count else "provider done"
+            row.set_progress(suffix)

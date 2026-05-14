@@ -33,14 +33,15 @@ from textual.widgets import Button, Input, Label, RadioButton, RadioSet, Select,
 
 from researchhq.config import reload_settings, save_settings, settings
 from researchhq.effort import PROFILES
-from researchhq.tui.theme import PALETTES
+from researchhq.tui.theme import PALETTES, THEME_CYCLE
 
 
 PROVIDERS = ["groq", "gemini", "openai", "anthropic", "ollama"]
 MODES = ["topic", "company", "competitor", "technology", "market", "news", "academic"]
 FORMATS = ["markdown", "json", "html"]
 VERBOSITY = ["quiet", "normal", "verbose", "debug"]
-THEMES = list(PALETTES.keys())
+# Show premium themes first, then legacy extras
+THEMES = THEME_CYCLE + [t for t in PALETTES if t not in THEME_CYCLE]
 
 
 class SettingsView(Container):

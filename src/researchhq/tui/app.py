@@ -34,7 +34,7 @@ from researchhq.tui.screens.reports import ReportsView
 from researchhq.tui.screens.research import ResearchView
 from researchhq.tui.screens.settings import SettingsView
 from researchhq.tui.screens.splash import SplashScreen
-from researchhq.tui.theme import DEFAULT_THEME, PALETTES, render_css
+from researchhq.tui.theme import DEFAULT_THEME, PALETTES, THEME_CYCLE, render_css
 from researchhq.tui.widgets.header import StatusHeader
 from researchhq.tui.widgets.sidebar import NavRequest, Sidebar
 
@@ -222,10 +222,13 @@ class ResearchHQApp(App):
     # --- live settings application -------------------------------------------
 
     def action_cycle_theme(self) -> None:
-        """Cycle through palettes — applied live (no restart)."""
-        names = list(PALETTES.keys())
-        idx = (names.index(self._theme_name) + 1) % len(names)
-        self.apply_theme(names[idx])
+        """Cycle through the premium theme quartet — applied live (no restart)."""
+        current = self._theme_name
+        # Normalise legacy aliases to their canonical names
+        if current not in THEME_CYCLE:
+            current = THEME_CYCLE[0]
+        idx = (THEME_CYCLE.index(current) + 1) % len(THEME_CYCLE)
+        self.apply_theme(THEME_CYCLE[idx])
 
     def apply_theme(self, theme_name: str) -> bool:
         """Hot-swap the active theme. Returns True on success.

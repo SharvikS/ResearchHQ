@@ -1,45 +1,68 @@
-"""Animated startup splash. Auto-dismisses to dashboard after the wordmark
-has finished revealing."""
+"""Premium startup splash screen.
+
+Full-screen animated wordmark reveal + tagline. Auto-dismisses after
+the animation completes. User can skip early with Escape / Enter / Space.
+"""
 
 from __future__ import annotations
 
 from textual.app import ComposeResult
-from textual.containers import Center, Middle
+from textual.binding import Binding
 from textual.screen import Screen
 from textual.widgets import Static
+from textual.containers import Center, Middle
 
+from researchhq.tui.theme import DEFAULT_THEME, get_palette
 from researchhq.tui.widgets.logo import AnimatedWordmark
 
 
 class SplashScreen(Screen):
-    """Boot screen — wordmark + tagline. ~0.7s."""
+    """Full-screen animated boot splash."""
 
-    BINDINGS = [("escape,enter,space", "dismiss_splash", "skip")]
+    BINDINGS = [
+        Binding("escape,enter,space", "action_dismiss_splash", "skip", show=False),
+    ]
 
-    def __init__(self, theme_name: str = "default", duration: float = 0.7, **kwargs) -> None:
+    def __init__(
+        self,
+        theme_name: str = DEFAULT_THEME,
+        duration: float = 0.65,
+        **kwargs,
+    ) -> None:
         super().__init__(**kwargs)
         self._theme_name = theme_name
-        self._duration = duration
+        self._duration   = duration
 
     def compose(self) -> ComposeResult:
-        with Middle():
-            with Center():
-                yield AnimatedWordmark(self._theme_name, duration=self._duration)
-            with Center():
-                yield Static(" ")  # spacer
-            with Center():
-                yield Static("[dim]initializing workspace…[/dim]")
+        p = get_palette(self._theme_name)
+        yield Middle(
+            Center(
+                AnimatedWordmark(
+                    theme_name=self._theme_name,
+                    duration=self._duration,
+                    id="splash_logo",
+                ),
+            ),
+            Center(
+                Static(" ", id="splash_spacer"),
+            ),
+            Center(
+                Static(
+                    f"[dim]initializing workspace …[/dim]",
+                    id="splash_hint",
+                ),
+            ),
+            Center(
+                Static(
+                    f"[dim]press [bold]Enter[/bold] to skip[/dim]",
+                    id="splash_skip",
+                ),
+            ),
+        )
 
     def on_mount(self) -> None:
-        # Dismiss slightly after the wordmark animation finishes; this reveals
-        # the persistent shell + dashboard underneath.
-        self.set_timer(self._duration + 0.4, self._dismiss)
+        # Auto-dismiss after animation + brief pause
+        self.set_timer(self._duration + 0.5, self.action_dismiss_splash)
 
     def action_dismiss_splash(self) -> None:
-        self._dismiss()
-
-    def _dismiss(self) -> None:
-        try:
-            self.app.pop_screen()
-        except Exception:
-            pass
+        self.dismiss()
