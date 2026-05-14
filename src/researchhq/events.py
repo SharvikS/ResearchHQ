@@ -39,6 +39,13 @@ EventType = Literal[
     "llm_call_started",
     "llm_call_finished",
     "report_section_ready",
+    # Query understanding
+    "query_understood",
+    # Differentiated slot pipeline events
+    "slot_started",
+    "slot_finished",
+    "slot_failed",
+    "slots_all_done",
     # Ensemble-specific events
     "ensemble_provider_finished",
     "ensemble_providers_done",

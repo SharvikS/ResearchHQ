@@ -54,6 +54,9 @@ rhq = "researchhq.tui.entry:main"
 # Classic non-interactive CLI:
 research = "researchhq.cli:app"
 researchhq-cli = "researchhq.cli:app"
+# REST + WebSocket API server:
+researchhq-api = "researchhq.api.main:serve"
+rhq-api = "researchhq.api.main:serve"
 # Desktop GUI (requires the [gui] extra: pip install -e ".[gui]")
 researchhq-gui = "researchhq.gui.app:main"
 # Legacy CLI preserved for backward compatibility:

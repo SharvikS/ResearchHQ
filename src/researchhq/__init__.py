@@ -1,3 +1,3 @@
-"""researchhq — general-purpose multi-agent research CLI."""
+"""researchhq — multi-agent research system with parallel pipelines."""
 
-__version__ = "0.2.0"
+__version__ = "0.4.0"

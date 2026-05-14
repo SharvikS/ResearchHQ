@@ -349,6 +349,25 @@ async def run(
 
     emit("run_started", detail=query, mode=mode.name, query=query, effort=profile.name)
 
+    # ----- Query Understanding -----
+    from researchhq.agents.query_understanding import classify as classify_query
+    emit("agent_started", stage="query_understanding", detail="classifying intent and complexity")
+    query_intent = await classify_query(query)
+    emit(
+        "agent_finished", stage="query_understanding",
+        detail=(
+            f"intent={query_intent.intent_type} domain={query_intent.domain} "
+            f"complexity={query_intent.complexity} mode={query_intent.recommended_pipeline_mode}"
+        ),
+        intent_type=query_intent.intent_type,
+        domain=query_intent.domain,
+        complexity=query_intent.complexity,
+        recommended_mode=query_intent.recommended_pipeline_mode,
+        requires_web=query_intent.requires_web_search,
+        requires_code=query_intent.requires_code_analysis,
+    )
+    _check_cancel()
+
     # ----- Planner -----
     emit("agent_started", stage="planner", detail=f"decomposing query (effort={profile.name})")
     plan = await planner.plan(
