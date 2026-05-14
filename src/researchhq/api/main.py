@@ -13,9 +13,12 @@ from fastapi import FastAPI, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from researchhq.api import db
+from researchhq.api.metrics import metrics_app
 from researchhq.api.routes import agents, health, logs, query
 from researchhq.api.ws import ws_endpoint
+from researchhq.logging_config import configure as configure_logging
 
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -47,6 +50,9 @@ def create_app() -> FastAPI:
     app.include_router(agents.router)
     app.include_router(logs.router)
 
+    # Prometheus metrics scraping endpoint (no auth — Prometheus pulls this)
+    app.mount("/metrics", metrics_app)
+
     # WebSocket progress streaming
     @app.websocket("/ws/{query_id}")
     async def websocket_route(
@@ -60,9 +66,16 @@ def create_app() -> FastAPI:
     async def on_startup() -> None:
         db.init_db()
         from researchhq.api.auth import _RATE_LIMIT_RPM, _REQUIRE_AUTH
-        auth_msg = "enabled (X-API-Key header)" if _REQUIRE_AUTH else "disabled — set RHQ_REQUIRE_AUTH=true to enable"
-        logger.info("ResearchHQ API started. DB at %s", db.get_db_path())
-        logger.info("Auth: %s | Rate limit: %d req/min", auth_msg, _RATE_LIMIT_RPM)
+        auth_msg = "enabled (X-API-Key header)" if _REQUIRE_AUTH else "disabled (set RHQ_REQUIRE_AUTH=true)"
+        logger.info(
+            "ResearchHQ API started",
+            extra={
+                "db_path": str(db.get_db_path()),
+                "auth": auth_msg,
+                "rate_limit_rpm": _RATE_LIMIT_RPM,
+            },
+        )
+        logger.info("Auth: %s | Rate limit: %d req/min | Metrics: /metrics", auth_msg, _RATE_LIMIT_RPM)
 
     return app
 

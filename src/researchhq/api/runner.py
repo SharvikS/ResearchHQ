@@ -16,7 +16,7 @@ import logging
 import time
 from typing import Any
 
-from researchhq.api import db
+from researchhq.api import db, metrics
 from researchhq.api.ws import ws_manager
 from researchhq.events import PipelineEvent
 
@@ -152,8 +152,10 @@ async def run_query(
     import researchhq.pipeline as pipeline_mod
     from researchhq.config import settings as cfg
 
+    _run_started_at = time.monotonic()
     db.update_query_status(query_id, "running")
     await ws_manager.broadcast(query_id, {"event": "run_started", "query": query})
+    metrics.record_run_started()
 
     # Override ensemble settings for this run
     original_ensemble_enabled = cfg.ensemble_enabled
@@ -194,6 +196,13 @@ async def run_query(
                 error=ev.detail,
             )
 
+        # Provider-level error metrics
+        elif ev.type in ("ensemble_provider_finished", "slot_finished", "slot_failed"):
+            status = ev.data.get("status", "")
+            if status and status != "success":
+                provider = ev.data.get("provider") or ev.data.get("slot_provider", "unknown")
+                metrics.record_provider_error(provider, error_type=status)
+
     try:
         report = await pipeline_mod.run(
             mode_name=mode,
@@ -206,6 +215,15 @@ async def run_query(
         db.save_result(query_id, result_data)
         db.update_query_status(query_id, "complete")
 
+        metrics.record_run_finished(
+            mode=mode,
+            status="success",
+            elapsed_s=time.monotonic() - _run_started_at,
+            ensemble_mode=ensemble_mode,
+            confidence=result_data.get("confidence_score", 0.0),
+            stage_costs=getattr(report, "stage_costs", []),
+        )
+
         await ws_manager.broadcast(query_id, {
             "event": "result_ready",
             "query_id": query_id,
@@ -215,12 +233,22 @@ async def run_query(
 
     except asyncio.CancelledError:
         db.update_query_status(query_id, "failed", error="Query was cancelled.")
+        metrics.record_run_finished(
+            mode=mode, status="canceled",
+            elapsed_s=time.monotonic() - _run_started_at,
+            ensemble_mode=ensemble_mode, confidence=0.0, stage_costs=[],
+        )
         await ws_manager.broadcast(query_id, {"event": "run_canceled", "query_id": query_id})
         raise
 
     except Exception as e:
         logger.exception("Pipeline failed for query %s", query_id)
         db.update_query_status(query_id, "failed", error=str(e))
+        metrics.record_run_finished(
+            mode=mode, status="failed",
+            elapsed_s=time.monotonic() - _run_started_at,
+            ensemble_mode=ensemble_mode, confidence=0.0, stage_costs=[],
+        )
         await ws_manager.broadcast(query_id, {
             "event": "run_failed",
             "query_id": query_id,

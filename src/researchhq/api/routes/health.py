@@ -19,8 +19,9 @@ async def health() -> HealthResponse:
 
 @router.get("/ready", response_model=HealthResponse)
 async def ready() -> HealthResponse:
-    """Readiness probe — checks which LLM providers are configured."""
+    """Readiness probe — checks which LLM providers are configured and circuit breakers."""
     from researchhq import __version__ as ver
+    from researchhq.llm.circuit_breaker import all_breakers
 
     available: list[str] = []
     for name in ["groq", "gemini", "openai", "anthropic", "ollama"]:
@@ -31,4 +32,13 @@ async def ready() -> HealthResponse:
         from fastapi import HTTPException
         raise HTTPException(503, detail="No LLM providers are configured.")
 
-    return HealthResponse(status="ready", version=ver, providers_available=available)
+    breakers = all_breakers()
+    open_breakers = [name for name, cb in breakers.items() if cb.is_open]
+    status = "degraded" if open_breakers else "ready"
+
+    return HealthResponse(
+        status=status,
+        version=ver,
+        providers_available=available,
+        circuit_breakers_open=open_breakers,
+    )

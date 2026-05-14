@@ -163,3 +163,4 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     providers_available: List[str]
+    circuit_breakers_open: List[str] = Field(default_factory=list)

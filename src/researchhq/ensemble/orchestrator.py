@@ -19,12 +19,22 @@ from dataclasses import dataclass, field
 from typing import Callable, Optional
 
 from researchhq.config import settings
+from researchhq.llm.circuit_breaker import get_breaker
 from researchhq.llm.cost_tracker import tracker
 from researchhq.llm.providers.base import LLMProvider, LLMResponse
 
 logger = logging.getLogger(__name__)
 
 PROVIDER_TIMEOUT_S = 60.0
+
+
+def _update_cb_metric(provider: str, *, is_open: bool) -> None:
+    """Update the Prometheus circuit-breaker gauge without hard-wiring metrics import."""
+    try:
+        from researchhq.api.metrics import update_circuit_breaker_gauge
+        update_circuit_breaker_gauge(provider, is_open)
+    except Exception:  # noqa: BLE001 — metrics are optional; never crash the pipeline
+        pass
 
 # Provider lists by cost/quality profile
 ENSEMBLE_PROFILES: dict[str, list[str]] = {
@@ -135,6 +145,17 @@ async def run_parallel(
     async def _run_one(provider: LLMProvider) -> ProviderResult:
         t0 = time.monotonic()
         result: ProviderResult
+        breaker = get_breaker(provider.name)
+
+        if not breaker.allow_request():
+            elapsed = time.monotonic() - t0
+            _update_cb_metric(provider.name, is_open=True)
+            return ProviderResult(
+                provider=provider.name, model="", text="",
+                elapsed=elapsed, status="error",
+                error="circuit breaker open — provider skipped",
+            )
+
         try:
             response: LLMResponse = await asyncio.wait_for(
                 provider.complete(prompt, system=system, max_tokens=max_tokens),
@@ -152,6 +173,8 @@ async def run_parallel(
                 status=status,
             )
             tracker.record(response, stage="ensemble")
+            breaker.record_success()
+            _update_cb_metric(provider.name, is_open=False)
             logger.info(
                 "Ensemble %s: %s in %.1fs (%d+%d tokens)",
                 provider.name, status, elapsed,
@@ -164,6 +187,8 @@ async def run_parallel(
                 elapsed=elapsed, status="timeout",
                 error=f"timed out after {elapsed:.1f}s",
             )
+            breaker.record_failure()
+            _update_cb_metric(provider.name, is_open=breaker.is_open)
             logger.warning("Ensemble %s timed out after %.1fs", provider.name, elapsed)
         except Exception as e:  # noqa: BLE001
             elapsed = time.monotonic() - t0
@@ -171,6 +196,8 @@ async def run_parallel(
                 provider=provider.name, model="", text="",
                 elapsed=elapsed, status="error", error=str(e),
             )
+            breaker.record_failure()
+            _update_cb_metric(provider.name, is_open=breaker.is_open)
             logger.warning("Ensemble %s failed: %s", provider.name, e)
 
         if on_provider_event:
@@ -227,6 +254,17 @@ async def run_slots(
     async def _run_slot(slot: SlotExecution) -> "ProviderResult":
         t0 = time.monotonic()
         slot_label = f"{slot.slot_name}({slot.provider.name})"
+        breaker = get_breaker(slot.provider.name)
+
+        if not breaker.allow_request():
+            elapsed = time.monotonic() - t0
+            _update_cb_metric(slot.provider.name, is_open=True)
+            return ProviderResult(
+                provider=slot_label, model="", text="",
+                elapsed=elapsed, status="error",
+                error="circuit breaker open — provider skipped",
+            )
+
         try:
             response: LLMResponse = await asyncio.wait_for(
                 slot.provider.complete(
@@ -248,6 +286,8 @@ async def run_slots(
                 status=status,
             )
             tracker.record(response, stage=f"slot_{slot.slot_name}")
+            breaker.record_success()
+            _update_cb_metric(slot.provider.name, is_open=False)
             logger.info(
                 "Slot %s via %s: %s in %.1fs (%d+%d tokens)",
                 slot.slot_name, slot.provider.name, status, elapsed,
@@ -260,6 +300,8 @@ async def run_slots(
                 elapsed=elapsed, status="timeout",
                 error=f"timed out after {elapsed:.1f}s",
             )
+            breaker.record_failure()
+            _update_cb_metric(slot.provider.name, is_open=breaker.is_open)
             logger.warning("Slot %s timed out after %.1fs", slot.slot_name, elapsed)
         except Exception as e:  # noqa: BLE001
             elapsed = time.monotonic() - t0
@@ -267,6 +309,8 @@ async def run_slots(
                 provider=slot_label, model="", text="",
                 elapsed=elapsed, status="error", error=str(e),
             )
+            breaker.record_failure()
+            _update_cb_metric(slot.provider.name, is_open=breaker.is_open)
             logger.warning("Slot %s failed: %s", slot.slot_name, e)
 
         if on_slot_event:
