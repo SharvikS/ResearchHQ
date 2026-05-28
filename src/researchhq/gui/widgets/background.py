@@ -1,31 +1,76 @@
-"""Painted background widget for the main window.
+"""Painted background for the main window — animated.
 
-Replaces the flat ``QWidget`` central pane with one that overrides
-``paintEvent`` to draw a subtle radial-gradient halo from the top-left
-quadrant — exactly the dimensional touch the QSS can't express on its
-own. Repaints on theme change.
+Two radial halos float in slow orbits behind the workspace. The motion
+is extremely subtle (one full revolution per 90 s for the primary halo,
+120 s for the secondary one) so it never distracts but the desktop
+feels alive when you stop to look.
 
-Layout is added through the standard Qt API (``setLayout`` /
-``QHBoxLayout(self)``) — children sit on top of the painted background.
+Implementation notes
+--------------------
+* A single ``QTimer`` ticks at ~20 Hz and advances two phase floats;
+  ``paintEvent`` reads them to compute halo centres. No widget
+  layouts are touched per-tick — cheap.
+* Each halo is a ``QRadialGradient`` painted into a transparent buffer.
+* When ``reduce_motion.is_reduced()`` is on the timer doesn't run and
+  the halos sit at their starting positions.
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import QPointF, Qt
+import math
+
+from PySide6.QtCore import QPointF, QTimer, Qt
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QRadialGradient
 from PySide6.QtWidgets import QWidget
 
+from researchhq.gui.reduce_motion import ReduceMotion, is_reduced
 from researchhq.gui.theme import ThemeManager, theme
 
 
+# Period (seconds) for each halo's slow orbit. Big numbers — this is
+# ambient drift, not motion the user actively perceives.
+_PRIMARY_PERIOD_S   = 90.0
+_SECONDARY_PERIOD_S = 120.0
+_TICK_INTERVAL_MS   = 50    # 20 fps is plenty for ambient drift
+
+
 class BackgroundWidget(QWidget):
-    """Central widget that paints a deep-navy field with an accent halo."""
+    """Central widget that paints a deep field + two orbiting halos."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        # Paint a flat fill first; the gradient is composited on top.
         self.setAutoFillBackground(False)
+        # Phase accumulators (radians). Driven by a single QTimer so
+        # the orbits stay in lockstep regardless of widget resizes.
+        self._phase_primary = 0.0
+        self._phase_secondary = math.pi  # start opposite for visual variety
+        self._tick_seconds = _TICK_INTERVAL_MS / 1000.0
+
+        self._timer = QTimer(self)
+        self._timer.setInterval(_TICK_INTERVAL_MS)
+        self._timer.timeout.connect(self._tick)
+        if not is_reduced():
+            self._timer.start()
+
+        # Toggle the timer if the user flips reduce-motion at runtime.
+        ReduceMotion().changed.connect(self._on_reduce_motion_changed)
         ThemeManager.instance().theme_changed.connect(self.update)
+
+    def _on_reduce_motion_changed(self, reduced: bool) -> None:
+        if reduced:
+            self._timer.stop()
+            self.update()
+        elif not self._timer.isActive():
+            self._timer.start()
+
+    def _tick(self) -> None:
+        # Advance phases by (2pi / period) * tick_seconds — a tiny
+        # nudge per frame, totalling one full revolution every period.
+        self._phase_primary   = (self._phase_primary   + (2 * math.pi / _PRIMARY_PERIOD_S)   * self._tick_seconds) % (2 * math.pi)
+        self._phase_secondary = (self._phase_secondary + (2 * math.pi / _SECONDARY_PERIOD_S) * self._tick_seconds) % (2 * math.pi)
+        self.update()
+
+    # ── painting ───────────────────────────────────────────────────────────
 
     def paintEvent(self, _ev) -> None:  # noqa: N802 - Qt method
         t = theme()
@@ -35,15 +80,18 @@ class BackgroundWidget(QWidget):
         if w <= 0 or h <= 0:
             return
 
-        # ── Base fill — solid deep colour so child widgets read crisply.
+        # Base fill — solid deep colour so child widgets read crisply.
         p.fillRect(self.rect(), QColor(t.bg_base))
 
-        # ── Top-left halo — soft radial bloom in the accent colour.
-        # Placed at ~25% from the left edge, ~20% from the top, so it
-        # peeks out behind the sidebar without dominating the workspace.
-        halo_center = QPointF(w * 0.18, h * 0.12)
+        # ── Primary halo: orbits a small ellipse near the top-left ─────
+        # Base centre at (18%, 12%); orbit radius ~6% of the smaller
+        # window dimension so the halo doesn't drift far enough to look
+        # animated, only enough to feel alive.
+        orbit_r = min(w, h) * 0.06
+        cx1 = w * 0.18 + orbit_r * math.cos(self._phase_primary)
+        cy1 = h * 0.12 + orbit_r * 0.6 * math.sin(self._phase_primary)
         halo_radius = max(w, h) * 0.55
-        radial = QRadialGradient(halo_center, halo_radius)
+        radial = QRadialGradient(QPointF(cx1, cy1), halo_radius)
         accent_glow = QColor(t.accent)
         accent_glow.setAlpha(60)
         accent_clear = QColor(t.accent)
@@ -52,12 +100,10 @@ class BackgroundWidget(QWidget):
         radial.setColorAt(1.0, accent_clear)
         p.fillRect(self.rect(), radial)
 
-        # ── Bottom-right halo — secondary accent, smaller + cooler. Adds
-        # a second focal point so the workspace doesn't read as a single
-        # tilted gradient.
-        accent2_center = QPointF(w * 0.92, h * 0.95)
-        accent2_radius = max(w, h) * 0.4
-        radial2 = QRadialGradient(accent2_center, accent2_radius)
+        # ── Secondary halo: bottom-right, opposite orbit phase ─────────
+        cx2 = w * 0.92 - orbit_r * math.cos(self._phase_secondary)
+        cy2 = h * 0.95 - orbit_r * 0.6 * math.sin(self._phase_secondary)
+        radial2 = QRadialGradient(QPointF(cx2, cy2), max(w, h) * 0.4)
         a2_glow = QColor(t.accent2)
         a2_glow.setAlpha(40)
         a2_clear = QColor(t.accent2)
@@ -66,10 +112,7 @@ class BackgroundWidget(QWidget):
         radial2.setColorAt(1.0, a2_clear)
         p.fillRect(self.rect(), radial2)
 
-        # ── Top-edge highlight — a 1 px gradient bar to suggest the
-        # window has a subtle "light from above" relationship with its
-        # chrome. Almost invisible but adds dimensionality on wide
-        # monitors.
+        # Top-edge highlight — almost invisible but adds dimensionality.
         edge = QLinearGradient(0, 0, 0, 2)
         edge_top = QColor(t.text); edge_top.setAlpha(16)
         edge_clear = QColor(t.text); edge_clear.setAlpha(0)

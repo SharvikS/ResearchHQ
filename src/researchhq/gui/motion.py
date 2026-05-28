@@ -759,6 +759,71 @@ def count_up_float(label, end_value: float, *, duration: int = 700,
     label._rhq_countup = anim  # type: ignore[attr-defined]
 
 
+# ── Page entrance choreography ─────────────────────────────────────────────
+
+
+def page_entrance(page: QWidget, *,
+                  title_widget: Optional[QWidget] = None,
+                  cards: Optional[list[QWidget]] = None,
+                  step_ms: int = 60) -> None:
+    """Wire a "title fades + cards stagger in" reveal for a page.
+
+    Call this from the page's ``showEvent`` (gated behind a once-only
+    latch so re-shows don't replay the animation). The title is fade-in
+    via the standard ``fade_in`` helper; the cards are passed through
+    ``stagger_in`` so each one slides up 18 px while easing to full
+    opacity.
+    """
+    if title_widget is not None:
+        # Title is a leaf QLabel — safe to apply an opacity effect
+        # without nesting since labels don't have their own effects.
+        fade_in(title_widget, duration=DURATION_INTRO)
+    if cards:
+        stagger_in(cards, step_ms=step_ms)
+
+
+# Aliased here so callers don't have to import DURATION constants
+# explicitly; keeps the entrance helper a single import for pages.
+DURATION_INTRO = MOTION.INTRO
+
+
+# ── Stat-number flash on update ────────────────────────────────────────────
+
+
+def flash_value_change(label: QWidget, *, duration: int = 480) -> None:
+    """Briefly tint *label* with the accent2 colour, then ease back to the
+    theme text colour. Used by StatCard.set_value when the value mutates
+    so the user sees the change actually happened."""
+    if scaled(duration) == 0:
+        return
+    t = theme()
+    start_color = QColor(t.accent2)
+    end_color = QColor(t.text)
+
+    anim = QVariantAnimation(label)
+    anim.setStartValue(0.0)
+    anim.setEndValue(1.0)
+    anim.setDuration(scaled(duration))
+    anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+    def _step(v) -> None:
+        try:
+            v = float(v)
+            r = int(start_color.red()   + (end_color.red()   - start_color.red())   * v)
+            g = int(start_color.green() + (end_color.green() - start_color.green()) * v)
+            b = int(start_color.blue()  + (end_color.blue()  - start_color.blue())  * v)
+            label.setStyleSheet(
+                f"color: rgb({r},{g},{b}); background-color: transparent;"
+            )
+        except RuntimeError:
+            pass
+
+    anim.valueChanged.connect(_step)
+    anim.finished.connect(lambda: label.setStyleSheet(""))
+    anim.start()
+    label._rhq_flash = anim  # type: ignore[attr-defined]
+
+
 # ── Global install ─────────────────────────────────────────────────────────
 
 

@@ -104,4 +104,15 @@ class StatCard(QFrame):
         return self._value
 
     def set_value(self, value: str) -> None:
+        # Flash the value to accent2 before easing back to the theme
+        # text colour — gives an obvious "this number just changed"
+        # affordance. Skip the first set so the dashboard's count_up
+        # animation isn't fighting the flash.
+        previous = self._value.text()
         self._value.setText(value)
+        if previous and previous != value:
+            try:
+                from researchhq.gui.motion import flash_value_change
+                flash_value_change(self._value)
+            except ImportError:
+                pass

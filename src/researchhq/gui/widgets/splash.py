@@ -14,8 +14,11 @@ done the caller invokes ``finish()`` to fade the window out and emit
 
 from __future__ import annotations
 
+import math
+import random
+
 from PySide6.QtCore import (
-    QEasingCurve, QPoint, QPropertyAnimation, QRect, QTimer, Qt, Signal,
+    QEasingCurve, QPoint, QPointF, QPropertyAnimation, QRect, QTimer, Qt, Signal,
 )
 from PySide6.QtGui import (
     QColor, QGuiApplication, QLinearGradient, QPainter,
@@ -25,7 +28,70 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
+from researchhq.gui.reduce_motion import is_reduced
 from researchhq.gui.theme import theme
+
+
+class _Starfield(QWidget):
+    """Twinkling dot field. Sits behind the splash card and gives the
+    splash a depth-of-space feel.
+
+    Each star has a fixed position and a slow alpha pulse with a random
+    phase so the field looks alive but never distracts. The 28 dots are
+    cheap to paint at 20 fps."""
+
+    STAR_COUNT = 28
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        # Lay stars out on a deterministic grid + a small per-cell jitter
+        # so they read as random without bunching. We seed a local Random
+        # so the layout stays identical across launches.
+        rng = random.Random(0xCAFE)
+        self._stars: list[tuple[float, float, float, float, float]] = []
+        for _ in range(self.STAR_COUNT):
+            # (x_ratio, y_ratio, base_radius, phase, frequency)
+            self._stars.append((
+                rng.random(),
+                rng.random(),
+                rng.uniform(0.6, 1.6),
+                rng.uniform(0.0, math.tau),
+                rng.uniform(0.7, 1.4),
+            ))
+        self._phase = 0.0
+        self._timer = QTimer(self)
+        self._timer.setInterval(50)  # 20 fps — plenty for ambient twinkle
+        self._timer.timeout.connect(self._tick)
+        if not is_reduced():
+            self._timer.start()
+
+    def stop(self) -> None:
+        self._timer.stop()
+
+    def _tick(self) -> None:
+        # Single global phase — each star multiplies it by its own frequency.
+        self._phase = (self._phase + 0.05) % math.tau
+        self.update()
+
+    def paintEvent(self, _ev) -> None:  # noqa: N802 - Qt method
+        t = theme()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = self.width(), self.height()
+        if w <= 0 or h <= 0:
+            return
+        p.setPen(Qt.PenStyle.NoPen)
+        for rx, ry, base_r, phase, freq in self._stars:
+            x = rx * w
+            y = ry * h
+            # Alpha modulates between 30 and 170 on a slow sine.
+            mod = (math.sin(self._phase * freq + phase) + 1.0) * 0.5
+            alpha = int(30 + 140 * mod)
+            color = QColor(t.text)
+            color.setAlpha(alpha)
+            p.setBrush(color)
+            p.drawEllipse(QPointF(x, y), base_r, base_r)
 
 
 class _AnimatedWordmark(QWidget):
@@ -168,6 +234,14 @@ class SplashScreen(QWidget):
         shadow.setColor(QColor(0, 0, 0, 180))
         self._root.setGraphicsEffect(shadow)
 
+        # Starfield: drifting low-alpha dots behind every other widget
+        # inside the card. Sits at the same geometry as _root so it
+        # exactly fills the visible surface, then we lower it so the
+        # other children (kicker / logo / wordmark / progress) sit on top.
+        self._stars = _Starfield(self._root)
+        self._stars.setGeometry(0, 0, self.WIDTH - 16, self.HEIGHT - 16)
+        self._stars.lower()
+
         # Layout inside the root card.
         outer = QVBoxLayout(self._root)
         outer.setContentsMargins(36, 36, 36, 28)
@@ -271,10 +345,14 @@ class SplashScreen(QWidget):
     def finish(self) -> None:
         """Fade the splash out, then close + emit ``finished``."""
         self._dots.stop()
-        # Stop the logo's rotation timer so the QObject doesn't keep
-        # ticking after the widget is destroyed.
+        # Stop the logo and starfield timers so they don't tick into
+        # destroyed widgets after the fade-out completes.
         try:
             self._logo.stop()
+        except (AttributeError, RuntimeError):
+            pass
+        try:
+            self._stars.stop()
         except (AttributeError, RuntimeError):
             pass
         self._fade_out.start()

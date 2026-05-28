@@ -115,13 +115,10 @@ class DashboardPage(QWidget):
         title.setObjectName("PageTitle")
         header.addWidget(title)
 
-        self._busy = QProgressBar()
-        self._busy.setObjectName("BusyBar")
-        self._busy.setRange(0, 0)  # indeterminate
-        self._busy.setMaximumWidth(140)
-        self._busy.setMaximumHeight(6)
-        self._busy.setTextVisible(False)
-        self._busy.hide()
+        # Custom-painted busy bar with flowing gradient — much more
+        # tactile than the stock QProgressBar(0, 0) chunk.
+        from researchhq.gui.widgets.animated_busy import AnimatedBusyBar
+        self._busy = AnimatedBusyBar()
         header.addWidget(self._busy)
 
         header.addStretch(1)
@@ -204,7 +201,7 @@ class DashboardPage(QWidget):
         if self._refresh_inflight:
             return
         self._refresh_inflight = True
-        self._busy.show()
+        self._busy.start()
 
         job = DbCallable(_build_snapshot, job_id="dashboard.snapshot")
         job.signals.result.connect(self._on_snapshot_ready)
@@ -280,7 +277,7 @@ class DashboardPage(QWidget):
 
     def _on_snapshot_finished(self, _job_id: str) -> None:
         self._refresh_inflight = False
-        self._busy.hide()
+        self._busy.stop()
 
     def _render_recent(self, rows: list[Any]) -> None:
         self._recent_list.clear()
