@@ -401,27 +401,81 @@ def cross_fade(stack: QStackedWidget, new_index: int,
                duration: int = MOTION.PAGE_FADE) -> None:
     """Animated swap from the current page to *new_index*.
 
-    The outgoing widget gets a brief opacity fade-out, then the new index
-    is shown and faded in. Uses a window-level effect on the new widget
-    so the underlying layout isn't disturbed."""
+    Pages in this app contain instrumented buttons / inputs that already
+    wear their own ``QGraphicsEffect`` (drop-shadow glow). Stacking a
+    ``QGraphicsOpacityEffect`` on the parent page makes Qt re-enter
+    painting on descendants — that crashes the splash. So we keep the
+    swap snappy and lean on a brief "pixmap shroud" overlay to soften
+    the cut: paint a snapshot of the old page over the new one, then
+    fade the snapshot out at the WM-level via an animated label
+    opacity. The snapshot has no children, no effects, so it never
+    nests.
+    """
     if new_index == stack.currentIndex():
         return
+
     old = stack.currentWidget()
+    snapshot = None
+    if old is not None and old.size().width() > 0 and old.size().height() > 0:
+        from PySide6.QtGui import QPixmap
+        from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel
+
+        pm = QPixmap(old.size())
+        pm.fill(Qt.GlobalColor.transparent)
+        old.render(pm)
+
+        snapshot = QLabel(stack)
+        snapshot.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        snapshot.setPixmap(pm)
+        snapshot.setGeometry(0, 0, old.size().width(), old.size().height())
+        snapshot.raise_()
+        snapshot.show()
+
+        eff = QGraphicsOpacityEffect(snapshot)
+        eff.setOpacity(1.0)
+        snapshot.setGraphicsEffect(eff)
+
+        anim = QPropertyAnimation(eff, b"opacity", snapshot)
+        anim.setDuration(duration)
+        anim.setStartValue(1.0)
+        anim.setEndValue(0.0)
+        anim.setEasingCurve(MOTION.EASE_PAGE)
+        anim.finished.connect(snapshot.deleteLater)
+        anim.start()
+        snapshot._rhq_fade = anim  # type: ignore[attr-defined]
+
     stack.setCurrentIndex(new_index)
-    new = stack.currentWidget()
-    if new is None:
-        return
-    fade_in(new, duration)
-    # Don't animate the old widget — it's already off-screen after
-    # setCurrentIndex. The fade-in alone reads as a clean transition.
-    _ = old
 
 
 def fade_in(widget: QWidget, duration: int = MOTION.INTRO) -> None:
     """Briefly fade *widget* from transparent to fully opaque.
 
-    Useful for first-mount reveal of the main window and for swapping in
-    a page mid-app. Cleans up its own QGraphicsOpacityEffect."""
+    Top-level windows fade via ``setWindowOpacity`` (window-manager level)
+    so we don't stack a QGraphicsOpacityEffect on top of inner widgets
+    that have their own effects (drop-shadows on buttons / inputs).
+    Stacking effects is unsupported by Qt and segfaults under the splash.
+
+    For child widgets we still use ``QGraphicsOpacityEffect`` — but only
+    when the widget has no existing effect. If it already has one we
+    skip the fade rather than risk crashing.
+    """
+    if widget.isWindow():
+        widget.setWindowOpacity(0.0)
+        anim = QPropertyAnimation(widget, b"windowOpacity", widget)
+        anim.setDuration(duration)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(MOTION.EASE_PAGE)
+        anim.start()
+        widget._rhq_fade_in = anim  # type: ignore[attr-defined]
+        return
+
+    if widget.graphicsEffect() is not None:
+        # Widget already wears an effect — skipping the fade is safer than
+        # nesting effects and crashing the painter.
+        logger.debug("fade_in skipped on %r: graphicsEffect already set", widget)
+        return
+
     from PySide6.QtWidgets import QGraphicsOpacityEffect
 
     effect = QGraphicsOpacityEffect(widget)
@@ -442,7 +496,6 @@ def fade_in(widget: QWidget, duration: int = MOTION.INTRO) -> None:
 
     anim.finished.connect(_cleanup)
     anim.start()
-    # Hold a reference so GC doesn't kill it mid-flight.
     widget._rhq_fade_in = anim  # type: ignore[attr-defined]
 
 
@@ -529,6 +582,180 @@ class PulseGlow(QObject):
 
     def stop(self) -> None:
         self._anim.stop()
+
+
+# ── Card hover-lift glow ───────────────────────────────────────────────────
+
+
+def attach_card_hover(card: QWidget) -> None:
+    """Add an animated drop-shadow that lifts the card on hover.
+
+    Different from button motion: the shadow always carries a small ambient
+    offset to give cards a settled "resting" elevation, then deepens + widens
+    on hover. Idempotent — safe to call repeatedly.
+    """
+    if card.property(_INSTRUMENTED + "_card"):
+        return
+    card.setProperty(_INSTRUMENTED + "_card", True)
+
+    from PySide6.QtWidgets import QGraphicsDropShadowEffect
+
+    shadow = QGraphicsDropShadowEffect(card)
+    shadow.setBlurRadius(14.0)
+    shadow.setOffset(0, 4)
+    base = QColor(0, 0, 0, 120)
+    shadow.setColor(base)
+    card.setGraphicsEffect(shadow)
+
+    blur_anim = QPropertyAnimation(shadow, b"blurRadius", card)
+    blur_anim.setDuration(MOTION.HOVER_IN)
+    blur_anim.setEasingCurve(MOTION.EASE_IN)
+
+    card._rhq_card_shadow = shadow         # type: ignore[attr-defined]
+    card._rhq_card_blur_anim = blur_anim   # type: ignore[attr-defined]
+    card.installEventFilter(_card_filter())
+
+
+class _CardHoverFilter(QObject):
+    """Routes Enter/Leave events on instrumented cards into blur ramps."""
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        if not isinstance(obj, QWidget):
+            return False
+        anim = getattr(obj, "_rhq_card_blur_anim", None)
+        if anim is None:
+            return False
+        try:
+            et = event.type()
+            if et == QEvent.Type.Enter:
+                anim.stop()
+                anim.setDuration(MOTION.HOVER_IN)
+                anim.setEasingCurve(MOTION.EASE_IN)
+                anim.setEndValue(34.0)
+                anim.start()
+            elif et == QEvent.Type.Leave:
+                anim.stop()
+                anim.setDuration(MOTION.HOVER_OUT)
+                anim.setEasingCurve(MOTION.EASE_OUT)
+                anim.setEndValue(14.0)
+                anim.start()
+        except RuntimeError:
+            logger.debug("card event on dying widget", exc_info=True)
+        return False
+
+
+_CARD_FILTER_SINGLETON: Optional[_CardHoverFilter] = None
+
+
+def _card_filter() -> _CardHoverFilter:
+    global _CARD_FILTER_SINGLETON
+    if _CARD_FILTER_SINGLETON is None:
+        app = QApplication.instance()
+        _CARD_FILTER_SINGLETON = _CardHoverFilter(app)
+    return _CARD_FILTER_SINGLETON
+
+
+# ── Staggered slide-in entrance ────────────────────────────────────────────
+
+
+def stagger_in(widgets: list[QWidget], *, step_ms: int = 60,
+               distance_px: int = 18, duration: int = 320) -> None:
+    """Animate *widgets* into place one after another.
+
+    Each widget starts shifted down by ``distance_px`` and at zero
+    opacity, then slides up to its final position. The stagger lets the
+    dashboard read like it's settling into place rather than appearing
+    all at once.
+
+    Implementation note — we animate ``pos`` (window-relative) instead of
+    geometry to avoid fighting the layout. Opacity goes through a fresh
+    ``QGraphicsOpacityEffect`` and we only attach it if the widget has
+    no existing graphics effect (otherwise we skip to preserve hover
+    glow already attached by ``attach_card_hover``).
+    """
+    from PySide6.QtCore import QPoint
+    from PySide6.QtWidgets import QGraphicsOpacityEffect
+
+    for i, w in enumerate(widgets):
+        if w is None:
+            continue
+        final_pos = w.pos()
+        start_pos = QPoint(final_pos.x(), final_pos.y() + distance_px)
+        w.move(start_pos)
+
+        # Position animation — always safe.
+        pos_anim = QPropertyAnimation(w, b"pos", w)
+        pos_anim.setDuration(duration)
+        pos_anim.setEasingCurve(MOTION.EASE_PAGE)
+        pos_anim.setStartValue(start_pos)
+        pos_anim.setEndValue(final_pos)
+
+        # Opacity — only if no other effect is in play (cards have the
+        # hover-shadow effect; we'd be stacking otherwise).
+        if w.graphicsEffect() is None:
+            eff = QGraphicsOpacityEffect(w)
+            eff.setOpacity(0.0)
+            w.setGraphicsEffect(eff)
+            op_anim = QPropertyAnimation(eff, b"opacity", w)
+            op_anim.setDuration(duration)
+            op_anim.setEasingCurve(MOTION.EASE_PAGE)
+            op_anim.setStartValue(0.0)
+            op_anim.setEndValue(1.0)
+            op_anim.finished.connect(lambda _w=w: _w.setGraphicsEffect(None))
+
+            def _start_both(_p=pos_anim, _o=op_anim) -> None:
+                _p.start(); _o.start()
+            QTimer.singleShot(i * step_ms, _start_both)
+            w._rhq_stagger = (pos_anim, op_anim)  # type: ignore[attr-defined]
+        else:
+            QTimer.singleShot(i * step_ms, pos_anim.start)
+            w._rhq_stagger = (pos_anim,)  # type: ignore[attr-defined]
+
+
+# ── Animated integer count-up ──────────────────────────────────────────────
+
+
+def count_up(label, end_value: int, *, duration: int = 700,
+             prefix: str = "", suffix: str = "") -> None:
+    """Tween the ``setText`` of *label* from 0 → ``end_value``.
+
+    Used for the dashboard stat cards so big numbers animate in instead
+    of snapping. Easing decelerates so the final digits "settle"."""
+    anim = QVariantAnimation(label)
+    anim.setStartValue(0)
+    anim.setEndValue(int(end_value))
+    anim.setDuration(duration)
+    anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+    def _step(v) -> None:
+        try:
+            label.setText(f"{prefix}{int(v)}{suffix}")
+        except RuntimeError:
+            pass
+
+    anim.valueChanged.connect(_step)
+    anim.start()
+    label._rhq_countup = anim  # type: ignore[attr-defined]
+
+
+def count_up_float(label, end_value: float, *, duration: int = 700,
+                   fmt: str = "{:.4f}", prefix: str = "$") -> None:
+    """Float variant of count_up — used for currency / confidence values."""
+    anim = QVariantAnimation(label)
+    anim.setStartValue(0.0)
+    anim.setEndValue(float(end_value))
+    anim.setDuration(duration)
+    anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+    def _step(v) -> None:
+        try:
+            label.setText(f"{prefix}{fmt.format(float(v))}")
+        except RuntimeError:
+            pass
+
+    anim.valueChanged.connect(_step)
+    anim.start()
+    label._rhq_countup = anim  # type: ignore[attr-defined]
 
 
 # ── Global install ─────────────────────────────────────────────────────────

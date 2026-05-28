@@ -1,16 +1,30 @@
-"""Card primitive: a rounded, bordered panel with title + optional subtitle and body."""
+"""Card primitives: rounded, bordered panels with title + optional subtitle and body.
+
+Cards auto-instrument with a hover-lift drop-shadow (see
+``motion.attach_card_hover``) so they feel tactile across the app
+without each call site needing to wire it up.
+"""
 
 from __future__ import annotations
 
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
+)
 
 
 class Card(QFrame):
-    def __init__(self, title: str = "", subtitle: str = "", parent: QWidget | None = None) -> None:
+    """Generic content card with an optional title + subtitle header."""
+
+    def __init__(
+        self,
+        title: str = "",
+        subtitle: str = "",
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("Card")
         self._outer = QVBoxLayout(self)
-        self._outer.setContentsMargins(16, 14, 16, 14)
+        self._outer.setContentsMargins(18, 16, 18, 16)
         self._outer.setSpacing(8)
 
         if title:
@@ -23,9 +37,21 @@ class Card(QFrame):
             self._outer.addWidget(s)
 
         self._body = QVBoxLayout()
-        self._body.setContentsMargins(0, 4, 0, 0)
+        self._body.setContentsMargins(0, 6, 0, 0)
         self._body.setSpacing(8)
         self._outer.addLayout(self._body)
+
+        # Hover-lift drop shadow. Lazy-imported so card.py stays usable
+        # in environments that haven't installed the GUI extras yet.
+        self._attach_hover()
+
+    def _attach_hover(self) -> None:
+        try:
+            from researchhq.gui.motion import attach_card_hover
+            attach_card_hover(self)
+        except ImportError:
+            # Motion module not available — card still renders, just no glow.
+            pass
 
     def add(self, w: QWidget) -> None:
         self._body.addWidget(w)
@@ -35,15 +61,26 @@ class Card(QFrame):
 
 
 class StatCard(QFrame):
-    """Small card for dashboard quick stats: big number + label."""
+    """Compact dashboard stat: a small label kicker over a big value.
 
-    def __init__(self, label: str, value: str, parent: QWidget | None = None) -> None:
+    The label uses the theme's `StatLabel` style (muted, uppercase, tight
+    tracking), the value uses `StatValue` (large, accent-coloured). The
+    `value_label` attribute is exposed so callers can drive ``count_up``
+    or ``count_up_float`` animations against it.
+    """
+
+    def __init__(
+        self,
+        label: str,
+        value: str,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setObjectName("Card")
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(2)
+        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setSpacing(4)
 
         self._label = QLabel(label)
         self._label.setObjectName("StatLabel")
@@ -52,6 +89,19 @@ class StatCard(QFrame):
 
         layout.addWidget(self._label)
         layout.addWidget(self._value)
+
+        # Hover-lift parity with Card.
+        try:
+            from researchhq.gui.motion import attach_card_hover
+            attach_card_hover(self)
+        except ImportError:
+            pass
+
+    @property
+    def value_label(self) -> QLabel:
+        """Public reference to the big-value label so callers can run
+        count-up animations against it."""
+        return self._value
 
     def set_value(self, value: str) -> None:
         self._value.setText(value)

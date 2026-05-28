@@ -43,6 +43,11 @@ def main() -> int:
     from researchhq.gui.theme import render_qss
     app.setStyleSheet(render_qss())
 
+    # Window / dock icon — rasterised from the brand mark so the splash,
+    # main window and macOS dock all show the same identity.
+    from researchhq.gui.widgets.logo import logo_icon
+    app.setWindowIcon(logo_icon(size=128))
+
     # 2. Global motion — instruments existing + future buttons/inputs.
     from researchhq.gui.motion import install_global_motion
     install_global_motion(app)

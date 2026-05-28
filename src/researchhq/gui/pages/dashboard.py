@@ -170,9 +170,30 @@ class DashboardPage(QWidget):
 
         layout.addStretch(1)
 
+        # Track the cards in display order so we can stagger them in on
+        # the first show. We intentionally store widget refs *after* the
+        # layout has been built so positions are final when we read them.
+        self._entrance_cards = [
+            self._stat_reports, self._stat_sources, self._stat_cost,
+            providers_card, recent_card, exports_card,
+        ]
+        self._did_entrance = False
+
         # Render synchronous bits immediately; kick off async DB query.
         self._refresh_providers()
         self.refresh()
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt method
+        super().showEvent(event)
+        # Stagger the cards into place on the first reveal. We defer to
+        # a one-shot timer so Qt has finished its first layout pass — the
+        # initial positions we capture inside stagger_in then come from a
+        # settled layout.
+        if not self._did_entrance:
+            self._did_entrance = True
+            from PySide6.QtCore import QTimer
+            from researchhq.gui.motion import stagger_in
+            QTimer.singleShot(40, lambda: stagger_in(self._entrance_cards, step_ms=70))
 
     # ------------- public -------------
     def refresh(self) -> None:
@@ -255,9 +276,23 @@ class DashboardPage(QWidget):
             self._recent_list.addItem(it)
 
     def _render_aggregate(self, agg: dict[str, Any]) -> None:
-        self._stat_reports.set_value(str(agg.get("total_reports", 0)))
-        self._stat_sources.set_value(str(agg.get("total_sources", 0)))
-        self._stat_cost.set_value(f"${agg.get('last_run_cost', 0.0):.4f}")
+        # Count-up animations on first render so the dashboard reads like
+        # it's settling into place instead of snapping. After the first
+        # snapshot we just hard-set values to avoid replaying the count
+        # on every refresh tick.
+        from researchhq.gui.motion import count_up, count_up_float
+        reports = int(agg.get("total_reports", 0))
+        sources = int(agg.get("total_sources", 0))
+        cost = float(agg.get("last_run_cost", 0.0))
+        if not getattr(self, "_did_count_up", False):
+            self._did_count_up = True
+            count_up(self._stat_reports.value_label, reports)
+            count_up(self._stat_sources.value_label, sources)
+            count_up_float(self._stat_cost.value_label, cost, fmt="{:.4f}", prefix="$")
+        else:
+            self._stat_reports.set_value(str(reports))
+            self._stat_sources.set_value(str(sources))
+            self._stat_cost.set_value(f"${cost:.4f}")
 
     def _render_exports(self, snap: _DashboardSnapshot) -> None:
         self._exports_list.clear()

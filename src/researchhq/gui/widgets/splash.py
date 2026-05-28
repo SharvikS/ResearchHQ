@@ -18,14 +18,13 @@ from PySide6.QtCore import (
     QEasingCurve, QPoint, QPropertyAnimation, QRect, QTimer, Qt, Signal,
 )
 from PySide6.QtGui import (
-    QColor, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen,
+    QColor, QGuiApplication, QLinearGradient, QPainter,
 )
 from PySide6.QtWidgets import (
-    QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QHBoxLayout, QLabel,
-    QProgressBar, QVBoxLayout, QWidget,
+    QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QProgressBar,
+    QVBoxLayout, QWidget,
 )
 
-from researchhq.gui.motion import MOTION, PulseGlow
 from researchhq.gui.theme import theme
 
 
@@ -144,8 +143,8 @@ class SplashScreen(QWidget):
 
     finished = Signal()
 
-    WIDTH = 520
-    HEIGHT = 320
+    WIDTH = 560
+    HEIGHT = 400
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -182,7 +181,18 @@ class SplashScreen(QWidget):
 
         outer.addStretch(1)
 
-        # Animated wordmark.
+        # Animated brand mark — rotating concentric arcs around a diamond
+        # node. Sits above the wordmark and gives the splash its identity.
+        # The mark animates itself via an internal QTimer (24 Hz, two
+        # rings drifting in opposite directions); we just hand it to the
+        # layout.
+        from researchhq.gui.widgets.logo import LogoMark
+        self._logo = LogoMark(size=88, animated=True)
+        outer.addWidget(self._logo, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        outer.addSpacing(6)
+
+        # Animated wordmark — gradient sweep reveal.
         self._wordmark = _AnimatedWordmark()
         outer.addWidget(self._wordmark, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -223,21 +233,22 @@ class SplashScreen(QWidget):
         self._reveal.valueChanged.connect(
             lambda v: self._wordmark.set_progress(float(v))
         )
-        self._reveal.finished.connect(self._start_breathing)
-        self._pulse: PulseGlow | None = None
+        self._reveal.finished.connect(self._on_reveal_done)
 
-        # Opacity effect so we can fade the whole splash in/out cleanly.
-        self._opacity = QGraphicsOpacityEffect(self)
-        self._opacity.setOpacity(0.0)
-        self.setGraphicsEffect(self._opacity)
+        # Fade the whole window via setWindowOpacity (window-manager level).
+        # We avoid QGraphicsOpacityEffect here because the inner widgets
+        # already use their own QGraphicsEffects (drop shadow on _root,
+        # PulseGlow on _wordmark) — nesting effects is not supported by
+        # Qt and produces a flood of "painter not active" warnings.
+        self.setWindowOpacity(0.0)
 
-        self._fade_in = QPropertyAnimation(self._opacity, b"opacity", self)
+        self._fade_in = QPropertyAnimation(self, b"windowOpacity", self)
         self._fade_in.setStartValue(0.0)
         self._fade_in.setEndValue(1.0)
         self._fade_in.setDuration(240)
         self._fade_in.setEasingCurve(QEasingCurve.Type.OutCubic)
 
-        self._fade_out = QPropertyAnimation(self._opacity, b"opacity", self)
+        self._fade_out = QPropertyAnimation(self, b"windowOpacity", self)
         self._fade_out.setStartValue(1.0)
         self._fade_out.setEndValue(0.0)
         self._fade_out.setDuration(260)
@@ -261,8 +272,12 @@ class SplashScreen(QWidget):
     def finish(self) -> None:
         """Fade the splash out, then close + emit ``finished``."""
         self._dots.stop()
-        if self._pulse is not None:
-            self._pulse.stop()
+        # Stop the logo's rotation timer so the QObject doesn't keep
+        # ticking after the widget is destroyed.
+        try:
+            self._logo.stop()
+        except (AttributeError, RuntimeError):
+            pass
         self._fade_out.start()
 
     # ─── internals ──────────────────────────────────────────────────────────
@@ -276,45 +291,16 @@ class SplashScreen(QWidget):
         y = geo.y() + (geo.height() - self.HEIGHT) // 2
         self.move(x, y)
 
-    def _start_breathing(self) -> None:
-        # After the reveal completes, kick off the slow breathing glow on
-        # the wordmark so the splash feels alive while boot work continues.
+    def _on_reveal_done(self) -> None:
+        # Reveal animation finished — just pin the wordmark to fully visible.
+        # We don't attach a QGraphicsEffect to the wordmark because the
+        # widget already has a custom paintEvent; combining the two causes
+        # Qt to re-enter its painter during effect rendering and segfault.
         self._wordmark.set_progress(1.0)
-        self._pulse = PulseGlow(
-            self._wordmark,
-            QColor(theme().accent),
-            min_alpha=20,
-            max_alpha=140,
-            blur=44.0,
-            duration=MOTION.PULSE,
-        )
-        self._pulse.start()
 
     def _on_faded_out(self) -> None:
         self.finished.emit()
         self.close()
-
-    # Painter for the outer rounded-rect surface — gives the card a faint
-    # gradient inner stroke that hints at the accent palette without
-    # competing with the wordmark.
-    def paintEvent(self, _ev) -> None:  # noqa: N802 - Qt method
-        t = theme()
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # The visible card is self._root via QSS; this paint pass adds a
-        # soft halo behind it so the drop-shadow plays into the desktop
-        # nicely on dark wallpapers.
-        halo_rect = QRect(0, 0, self.WIDTH, self.HEIGHT)
-        path = QPainterPath()
-        path.addRoundedRect(halo_rect, 18, 18)
-        grad = QLinearGradient(0, 0, 0, self.HEIGHT)
-        c_top = QColor(t.accent); c_top.setAlpha(22)
-        c_mid = QColor(t.accent2); c_mid.setAlpha(10)
-        c_bot = QColor(t.bg_deep); c_bot.setAlpha(0)
-        grad.setColorAt(0.0, c_top)
-        grad.setColorAt(0.5, c_mid)
-        grad.setColorAt(1.0, c_bot)
-        p.fillPath(path, grad)
 
     # Reveal progress property — driven by the QPropertyAnimation.
     def _get_reveal_progress(self) -> float:
