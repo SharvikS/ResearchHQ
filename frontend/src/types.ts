@@ -101,6 +101,20 @@ export interface HistoryEntry {
   created_at: string;
   mode?: string;
   pipeline_mode?: string;
+  /** Run cost summary surfaced on the History cards / Analytics totals. */
+  estimated_cost_usd?: number;
+  /** End-to-end wall-clock latency in ms. */
+  total_latency_ms?: number;
+  /** Number of sources that landed in the final report. */
+  sources_count?: number;
+}
+
+/** Shape returned by GET /ready — used by the System Health panel. */
+export interface ReadyResponse {
+  status: string;
+  version: string;
+  providers_available: string[];
+  circuit_breakers_open: string[];
 }
 
 export interface AppSettings {
