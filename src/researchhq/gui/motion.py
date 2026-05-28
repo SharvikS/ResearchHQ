@@ -45,6 +45,7 @@ from PySide6.QtWidgets import (
     QToolButton, QWidget,
 )
 
+from researchhq.gui.reduce_motion import is_reduced, scaled
 from researchhq.gui.theme import ThemeManager, theme
 
 logger = logging.getLogger(__name__)
@@ -198,9 +199,9 @@ def _hover_in(btn: QWidget) -> None:
         return
     blur, alpha = anims
     blur.stop(); alpha.stop()
-    blur.setDuration(MOTION.HOVER_IN); blur.setEasingCurve(MOTION.EASE_IN)
+    blur.setDuration(scaled(MOTION.HOVER_IN)); blur.setEasingCurve(MOTION.EASE_IN)
     blur.setEndValue(_hover_blur(btn))
-    alpha.setDuration(MOTION.HOVER_IN); alpha.setEasingCurve(MOTION.EASE_IN)
+    alpha.setDuration(scaled(MOTION.HOVER_IN)); alpha.setEasingCurve(MOTION.EASE_IN)
     alpha.setStartValue(int(btn._rhq_glow.color().alpha()))  # type: ignore[attr-defined]
     alpha.setEndValue(_hover_alpha(btn))
     blur.start(); alpha.start()
@@ -212,9 +213,9 @@ def _hover_out(btn: QWidget) -> None:
         return
     blur, alpha = anims
     blur.stop(); alpha.stop()
-    blur.setDuration(MOTION.HOVER_OUT); blur.setEasingCurve(MOTION.EASE_OUT)
+    blur.setDuration(scaled(MOTION.HOVER_OUT)); blur.setEasingCurve(MOTION.EASE_OUT)
     blur.setEndValue(0.0)
-    alpha.setDuration(MOTION.HOVER_OUT); alpha.setEasingCurve(MOTION.EASE_OUT)
+    alpha.setDuration(scaled(MOTION.HOVER_OUT)); alpha.setEasingCurve(MOTION.EASE_OUT)
     alpha.setStartValue(int(btn._rhq_glow.color().alpha()))  # type: ignore[attr-defined]
     alpha.setEndValue(0)
     blur.start(); alpha.start()
@@ -226,7 +227,7 @@ def _press_pulse(btn: QWidget) -> None:
         return
     _, alpha = anims
     alpha.stop()
-    alpha.setDuration(MOTION.PRESS); alpha.setEasingCurve(MOTION.EASE_PRESS)
+    alpha.setDuration(scaled(MOTION.PRESS)); alpha.setEasingCurve(MOTION.EASE_PRESS)
     alpha.setStartValue(int(btn._rhq_glow.color().alpha()))  # type: ignore[attr-defined]
     alpha.setEndValue(_press_alpha(btn))
     alpha.start()

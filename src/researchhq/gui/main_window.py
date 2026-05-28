@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, Signal
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -29,6 +29,7 @@ from researchhq.gui.pages.dashboard import DashboardPage
 from researchhq.gui.pages.history_page import HistoryPage
 from researchhq.gui.pages.research_page import ResearchPage
 from researchhq.gui.pages.settings_page import SettingsPage
+from researchhq.gui.widgets.background import BackgroundWidget
 from researchhq.gui.widgets.divider import WorkspaceDivider
 from researchhq.gui.widgets.sidebar import Sidebar
 from researchhq.gui.workers.log_handler import QtLogBridge
@@ -59,8 +60,10 @@ class MainWindow(QMainWindow):
         # Restore persisted preferences before pages read settings.
         self._restore_persisted_settings()
 
-        # Layout: sidebar | stacked pages
-        central = QWidget()
+        # Layout: sidebar | stacked pages, sitting on top of a painted
+        # background so the workspace has a soft accent halo rather than
+        # being a flat colour fill.
+        central = BackgroundWidget()
         self.setCentralWidget(central)
         layout = QHBoxLayout(central)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -106,6 +109,90 @@ class MainWindow(QMainWindow):
         self._log_bridge.line.connect(self._research.append_log)
         self._log_bridge.enable(debug=False)
         self._research.log_debug_changed.connect(self._log_bridge.set_debug)
+
+        # ⌘K command palette — built lazily on first show so the
+        # registration phase has visibility of the fully constructed
+        # window.
+        from researchhq.gui.widgets.command_palette import (
+            Command, CommandPalette,
+        )
+        self._palette = CommandPalette(self)
+        self._register_default_commands(Command)
+
+        # Two shortcut bindings so the palette responds to both ⌘K and
+        # Ctrl+K depending on the platform.
+        QShortcut(QKeySequence("Ctrl+K"), self, activated=self._palette.show_palette)
+        QShortcut(QKeySequence("Meta+K"), self, activated=self._palette.show_palette)
+
+    def _register_default_commands(self, Command) -> None:
+        """Populate the ⌘K palette with built-in navigation and global
+        actions. Page-specific commands can register through
+        ``self._palette.register`` later."""
+        from researchhq.gui.reduce_motion import is_reduced, set_reduced
+        from researchhq.gui.theme import THEMES, ThemeManager
+        from researchhq.gui.widgets.toast import Toast
+
+        # ── Navigation ─────────────────────────────────────────────────
+        for key, label, glyph in [
+            ("dashboard", "Open Dashboard", "◈"),
+            ("research",  "Open Research",  "⌖"),
+            ("history",   "Open History",   "⊞"),
+            ("compare",   "Open Compare",   "⇌"),
+            ("settings",  "Open Settings",  "◎"),
+        ]:
+            self._palette.register(Command(
+                title=f"{glyph}  {label}",
+                section="Navigate",
+                action=lambda k=key: self._sidebar.select(k),
+                keywords=(key, label.lower()),
+            ))
+
+        # ── Actions ────────────────────────────────────────────────────
+        self._palette.register(Command(
+            title="+  New Research",
+            section="Actions",
+            action=lambda: self._sidebar.select("research"),
+            keywords=("new", "create", "run", "ask"),
+            shortcut="⌘+R",
+        ))
+
+        # ── Theme switches — one row per available theme.
+        def _switch_theme(key: str) -> None:
+            ok = ThemeManager.instance().set_theme(key)
+            if not ok:
+                return
+            # Re-apply the rendered QSS app-wide so every widget picks
+            # up the new palette immediately.
+            from PySide6.QtWidgets import QApplication
+            from researchhq.gui.theme import render_qss
+            app = QApplication.instance()
+            if app is not None:
+                app.setStyleSheet(render_qss())
+            Toast.show_message(self, f"Theme: {THEMES[key].name}", kind="info")
+
+        for key, palette in THEMES.items():
+            self._palette.register(Command(
+                title=f"Theme · {palette.name}",
+                section="Appearance",
+                action=lambda k=key: _switch_theme(k),
+                keywords=("theme", "palette", "colors", key),
+            ))
+
+        # ── Reduce motion toggle ───────────────────────────────────────
+        def _toggle_reduce_motion() -> None:
+            now = not is_reduced()
+            set_reduced(now)
+            Toast.show_message(
+                self,
+                f"Reduce motion: {'on' if now else 'off'}",
+                kind="info",
+            )
+        self._palette.register(Command(
+            title="Toggle reduce motion",
+            section="Accessibility",
+            action=_toggle_reduce_motion,
+            keywords=("accessibility", "a11y", "animations", "motion"),
+        ))
 
     # ---------- nav ----------
     def _on_nav(self, key: str) -> None:
@@ -212,6 +299,14 @@ class MainWindow(QMainWindow):
                 page.refresh()
             except RuntimeError:
                 logger.exception("Refresh after run_finished failed for %s", type(page).__name__)
+
+        # Non-blocking toast so the user sees a success affirmation even
+        # if they navigate away from the Research page mid-run.
+        try:
+            from researchhq.gui.widgets.toast import Toast
+            Toast.show_message(self, "Research complete — report saved", kind="ok")
+        except RuntimeError:
+            logger.exception("Could not show run-finished toast")
 
     # ---------- close ----------
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - Qt method

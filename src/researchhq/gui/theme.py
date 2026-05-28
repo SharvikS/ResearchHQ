@@ -308,12 +308,13 @@ QMainWindow {{ background-color: {bg_base}; }}
     background-color: {bg_hover};
     color: {text};
 }}
+/* Active nav item: only colour + weight changes here. The sliding
+   indicator widget (_NavIndicator in sidebar.py) draws the accent
+   bar on the left, so we don't want a per-button border doubling it.*/
 #Sidebar QPushButton[active="true"] {{
     background-color: {accent_bg};
     color: {accent};
     font-weight: 600;
-    border-left: 2px solid {accent};
-    padding-left: 14px;
 }}
 #SidebarBrand {{
     color: {text};

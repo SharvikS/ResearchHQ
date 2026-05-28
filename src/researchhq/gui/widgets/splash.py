@@ -181,13 +181,12 @@ class SplashScreen(QWidget):
 
         outer.addStretch(1)
 
-        # Animated brand mark — rotating concentric arcs around a diamond
-        # node. Sits above the wordmark and gives the splash its identity.
-        # The mark animates itself via an internal QTimer (24 Hz, two
-        # rings drifting in opposite directions); we just hand it to the
-        # layout.
+        # Animated brand mark — six agent nodes converge to a bright
+        # central core. On the splash the mark runs its full assembly
+        # animation: nodes fade in staggered → filaments draw inward →
+        # core pulses up → settles into idle breathing.
         from researchhq.gui.widgets.logo import LogoMark
-        self._logo = LogoMark(size=88, animated=True)
+        self._logo = LogoMark(size=96, mode="assemble")
         outer.addWidget(self._logo, alignment=Qt.AlignmentFlag.AlignCenter)
 
         outer.addSpacing(6)

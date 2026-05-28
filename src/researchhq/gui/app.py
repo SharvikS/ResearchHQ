@@ -39,6 +39,12 @@ def main() -> int:
     app.setApplicationName("ResearchHQ Studio")
     app.setOrganizationName("researchhq")
 
+    # 0. Bundled fonts — register any TTF/OTF dropped into the assets
+    # dir so the QSS family stack can resolve "Geist" / "Inter" /
+    # "JetBrains Mono" before falling back to system fonts.
+    from researchhq.gui.fonts import load_bundled_fonts
+    load_bundled_fonts()
+
     # 1. Theme — render fresh QSS for the active palette and apply.
     from researchhq.gui.theme import render_qss
     app.setStyleSheet(render_qss())

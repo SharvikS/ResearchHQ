@@ -219,7 +219,17 @@ class DashboardPage(QWidget):
             it = self._providers_grid.takeAt(0)
             w = it.widget()
             if w:
+                # PulseDot owns a QPropertyAnimation; stop it first so
+                # the loop doesn't tick into a freed widget.
+                stop = getattr(w, "stop", None)
+                if callable(stop):
+                    try:
+                        stop()
+                    except RuntimeError:
+                        pass
                 w.deleteLater()
+
+        from researchhq.gui.widgets.pulse_dot import PulseDot
 
         rows = [
             ("Groq",      bool(settings.groq_api_key),      settings.models.get("groq", "")),
@@ -229,14 +239,28 @@ class DashboardPage(QWidget):
             ("Ollama",    True,                              settings.models.get("ollama", "")),
         ]
         for r, (name, configured, model) in enumerate(rows):
+            # Wrap the pulse dot in a small horizontal layout next to the
+            # text label so the visual reads as one status pill.
+            dot = PulseDot(state="on" if configured else "off", size=14)
+            label_text = "configured" if configured else "not configured"
             n = QLabel(name)
             n.setObjectName("ProviderName")
-            status = QLabel("● configured" if configured else "○ not configured")
-            status.setObjectName("StatusOk" if configured else "StatusOff")
+            status_text = QLabel(label_text)
+            status_text.setObjectName("StatusOk" if configured else "StatusOff")
             m = QLabel(model or "-")
             m.setObjectName("Muted")
+
+            status_box = QHBoxLayout()
+            status_box.setContentsMargins(0, 0, 0, 0)
+            status_box.setSpacing(8)
+            status_box.addWidget(dot)
+            status_box.addWidget(status_text)
+            status_box.addStretch(1)
+            status_w = QWidget()
+            status_w.setLayout(status_box)
+
             self._providers_grid.addWidget(n, r, 0)
-            self._providers_grid.addWidget(status, r, 1)
+            self._providers_grid.addWidget(status_w, r, 1)
             self._providers_grid.addWidget(m, r, 2)
 
     def _on_snapshot_ready(self, _job_id: str, payload: object) -> None:
