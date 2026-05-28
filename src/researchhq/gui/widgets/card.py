@@ -2,7 +2,10 @@
 
 Cards auto-instrument with a hover-lift drop-shadow (see
 ``motion.attach_card_hover``) so they feel tactile across the app
-without each call site needing to wire it up.
+without each call site needing to wire it up. They also fire a soft
+ripple from the click point on mousePressEvent so the whole card
+reads as a tactile surface — useful even for cards that don't have a
+dedicated click handler (the ripple is harmless visual feedback).
 
 The card title is rendered through ``SectionTitle`` so each card has a
 slow accent gradient sweep painted under its heading — a quiet
@@ -11,6 +14,7 @@ ambient touch that ties the cards into the rest of the animated UI.
 
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
 )
@@ -66,6 +70,21 @@ class Card(QFrame):
 
     def add_layout(self, layout) -> None:
         self._body.addLayout(layout)
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt method
+        # Spawn a soft ripple at the click point. The ripple is purely
+        # cosmetic — we don't consume the event, so any layout-level
+        # click handlers still see it.
+        try:
+            from researchhq.gui.motion import Ripple
+            try:
+                pt = event.position().toPoint()
+            except (AttributeError, TypeError):
+                pt = event.pos()
+            Ripple.spawn(self, pt)
+        except (ImportError, RuntimeError):
+            pass
+        super().mousePressEvent(event)
 
 
 class StatCard(QFrame):

@@ -18,6 +18,7 @@ Implementation notes
 from __future__ import annotations
 
 import math
+import random
 
 from PySide6.QtCore import QPointF, QTimer, Qt
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QRadialGradient
@@ -33,6 +34,10 @@ _PRIMARY_PERIOD_S   = 90.0
 _SECONDARY_PERIOD_S = 120.0
 _TICK_INTERVAL_MS   = 50    # 20 fps is plenty for ambient drift
 
+# Count of drifting dust motes painted on top of the radial halos.
+# Kept low so the workspace reads quiet — these are barely visible.
+_DUST_COUNT = 14
+
 
 class BackgroundWidget(QWidget):
     """Central widget that paints a deep field + two orbiting halos."""
@@ -45,6 +50,24 @@ class BackgroundWidget(QWidget):
         self._phase_primary = 0.0
         self._phase_secondary = math.pi  # start opposite for visual variety
         self._tick_seconds = _TICK_INTERVAL_MS / 1000.0
+
+        # Dust motes — laid out on a deterministic seeded grid so the
+        # workspace looks "lived in" without dependency on luck. Each
+        # mote carries its own velocity and an alpha phase so the
+        # field doesn't pulse in unison.
+        rng = random.Random(0xDADA)
+        self._motes: list[dict] = []
+        for _ in range(_DUST_COUNT):
+            self._motes.append({
+                "x_ratio": rng.random(),
+                "y_ratio": rng.random(),
+                "vx": rng.uniform(-0.04, 0.04),  # ratio per second
+                "vy": rng.uniform(-0.03, 0.03),
+                "radius": rng.uniform(0.8, 1.8),
+                "phase": rng.uniform(0.0, math.tau),
+                "freq":  rng.uniform(0.7, 1.4),
+            })
+        self._mote_clock = 0.0
 
         self._timer = QTimer(self)
         self._timer.setInterval(_TICK_INTERVAL_MS)
@@ -68,6 +91,15 @@ class BackgroundWidget(QWidget):
         # nudge per frame, totalling one full revolution every period.
         self._phase_primary   = (self._phase_primary   + (2 * math.pi / _PRIMARY_PERIOD_S)   * self._tick_seconds) % (2 * math.pi)
         self._phase_secondary = (self._phase_secondary + (2 * math.pi / _SECONDARY_PERIOD_S) * self._tick_seconds) % (2 * math.pi)
+
+        # Drift the dust motes. Velocities are ratios per second — at
+        # 20 fps, displacement per tick = vx * 0.05. Wrap around screen
+        # edges so motes never run out.
+        self._mote_clock = (self._mote_clock + self._tick_seconds) % 1000.0
+        for m in self._motes:
+            m["x_ratio"] = (m["x_ratio"] + m["vx"] * self._tick_seconds) % 1.0
+            m["y_ratio"] = (m["y_ratio"] + m["vy"] * self._tick_seconds) % 1.0
+
         self.update()
 
     # ── painting ───────────────────────────────────────────────────────────
@@ -119,3 +151,19 @@ class BackgroundWidget(QWidget):
         edge.setColorAt(0.0, edge_top)
         edge.setColorAt(1.0, edge_clear)
         p.fillRect(0, 0, w, 2, edge)
+
+        # ── Dust motes: slow-drifting low-alpha specks. Each mote's
+        # alpha breathes with its own sine phase so the field doesn't
+        # twinkle in unison. Painted on top of the halos so they read
+        # as floating particles in the volume of the workspace.
+        p.setPen(Qt.PenStyle.NoPen)
+        for m in self._motes:
+            mod = (math.sin(self._mote_clock * m["freq"] + m["phase"]) + 1.0) * 0.5
+            alpha = int(20 + 60 * mod)
+            c = QColor(t.text)
+            c.setAlpha(alpha)
+            p.setBrush(c)
+            x = m["x_ratio"] * w
+            y = m["y_ratio"] * h
+            r = m["radius"] * (0.6 + 0.4 * mod)
+            p.drawEllipse(QPointF(x, y), r, r)

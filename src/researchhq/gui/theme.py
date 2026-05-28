@@ -455,6 +455,13 @@ QComboBox::drop-down {{
     border: none;
     width: 22px;
 }}
+/* AnimatedComboBox paints its own chevron in paintEvent. Suppress
+   Qt's native one so the two don't double up. */
+QComboBox#AnimatedComboBox::down-arrow {{
+    image: none;
+    width: 0;
+    height: 0;
+}}
 QComboBox QAbstractItemView {{
     background-color: {bg_raised};
     border: 1px solid {border_lt};
