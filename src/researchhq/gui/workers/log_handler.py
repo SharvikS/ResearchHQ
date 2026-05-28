@@ -60,9 +60,13 @@ class _BridgeHandler(logging.Handler):
         self._bridge = bridge
 
     def emit(self, record: logging.LogRecord) -> None:
+        # A logging handler must never raise — exceptions here would
+        # recurse into the logger and could crash the process. Use the
+        # stdlib's handler-error hook so the user can still see the
+        # failure when stderr is attached.
         try:
             msg = self.format(record)
             # Qt signals are thread-safe across QObjects; emitting from worker thread is fine.
             self._bridge.line.emit(record.levelname, msg)
-        except Exception:  # noqa: BLE001 - logging must never raise
-            pass
+        except Exception:  # noqa: BLE001 - intentional: logging handlers must never raise
+            self.handleError(record)

@@ -67,6 +67,13 @@ class LogConsole(QWidget):
     def clear(self) -> None:
         self._view.clear()
 
+    def text(self) -> str:
+        """Return the current console contents as plain text.
+
+        Public accessor so callers (e.g. ReportViewer) don't reach into the
+        private QPlainTextEdit field."""
+        return self._view.toPlainText()
+
     @property
     def debug_toggle(self) -> QCheckBox:
         return self._debug_toggle

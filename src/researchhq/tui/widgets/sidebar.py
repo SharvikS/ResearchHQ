@@ -38,7 +38,13 @@ class NavRequest(Message):
 # ── Sidebar widget ────────────────────────────────────────────────────
 
 class Sidebar(Widget):
-    DEFAULT_ID = "sidebar"
+    # Default the DOM id to "sidebar" so the CSS selector #sidebar in
+    # theme.py actually matches. Textual does NOT honour a class-level
+    # DEFAULT_ID attribute; we have to set it via kwargs in __init__ —
+    # same pattern StatusHeader uses for #header_bar.
+    def __init__(self, **kwargs) -> None:
+        kwargs.setdefault("id", "sidebar")
+        super().__init__(**kwargs)
 
     def compose(self) -> ComposeResult:
         yield Static("  WORKSPACE", classes="sidebar_section")

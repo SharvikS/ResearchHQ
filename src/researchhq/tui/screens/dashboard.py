@@ -57,9 +57,14 @@ class RecentReportsCard(_Card):
 
     def compose(self):
         yield from super().compose()
+        import logging
+        import sqlite3
         try:
             rows = list_runs(limit=6)
-        except Exception:
+        except sqlite3.Error:
+            logging.getLogger(__name__).exception(
+                "TUI dashboard: history DB unavailable"
+            )
             rows = []
         if not rows:
             yield Static("[dim]No reports yet — start one with [bold]/research[/bold] or [bold]Ctrl+R[/].[/]")

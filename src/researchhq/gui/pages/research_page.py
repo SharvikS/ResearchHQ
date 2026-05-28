@@ -1,17 +1,24 @@
-"""Research page: query input, mode selector, run/cancel, live pipeline + stats + report."""
+"""Research page: query input, mode selector, run/cancel, live pipeline + stats + report.
+
+PDF export runs on a worker thread (QTextDocument render → QPrinter) so the
+window stays responsive on large reports. Pause/Resume is hidden until the
+pipeline supports mid-stage checkpointing — see `_PAUSE_AVAILABLE`.
+"""
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer, Signal
+import logging
+
+from PySide6.QtCore import QThreadPool, Qt, Signal
 from PySide6.QtGui import QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
+    QProgressBar,
     QPushButton,
     QSpinBox,
     QSplitter,
@@ -26,9 +33,17 @@ from researchhq.gui.widgets.card import Card
 from researchhq.gui.widgets.log_console import LogConsole
 from researchhq.gui.widgets.pipeline_status import PipelineStatus
 from researchhq.gui.widgets.report_viewer import ReportViewer
+from researchhq.gui.workers.db_worker import DbCallable
 from researchhq.gui.workers.research_worker import ResearchWorker
 from researchhq.reports.exporter import to_html, to_json, to_markdown
 from researchhq.reports.schema import ResearchReport
+
+logger = logging.getLogger(__name__)
+
+# Pause/Resume needs mid-stage checkpointing in async LLM calls. Until the
+# pipeline supports it, the button is hidden entirely instead of dangling
+# disabled in the toolbar.
+_PAUSE_AVAILABLE = False
 
 MODES = [
     ("topic",      "General topic"),
@@ -57,8 +72,20 @@ class ResearchPage(QWidget):
         # ---- Header ----
         header = QHBoxLayout()
         title = QLabel("New research")
-        title.setStyleSheet("font-size: 20px; font-weight: 700; background: transparent;")
+        title.setObjectName("PageTitle")
         header.addWidget(title)
+
+        # Inline busy indicator: shown during long-running exports (PDF) so
+        # the user knows the app hasn't frozen.
+        self._busy = QProgressBar()
+        self._busy.setObjectName("BusyBar")
+        self._busy.setRange(0, 0)
+        self._busy.setMaximumWidth(140)
+        self._busy.setMaximumHeight(6)
+        self._busy.setTextVisible(False)
+        self._busy.hide()
+        header.addWidget(self._busy)
+
         header.addStretch(1)
 
         self._preset_box = QComboBox()
@@ -74,7 +101,7 @@ class ResearchPage(QWidget):
         form = QVBoxLayout()
         self._query = QLineEdit()
         self._query.setPlaceholderText("e.g. AI agents in cybersecurity, or 'Supabase'")
-        self._query.setStyleSheet("font-size: 14px; padding: 12px;")
+        self._query.setObjectName("QueryInput")
         form.addWidget(self._query)
 
         params = QHBoxLayout()
@@ -136,10 +163,13 @@ class ResearchPage(QWidget):
         self._run_btn.clicked.connect(self._on_run)
         params.addWidget(self._run_btn)
 
+        # Pause is gated behind a feature flag — the pipeline needs mid-stage
+        # checkpointing in async LLM calls before this is meaningful. We keep
+        # a reference so it can be toggled live once the backend lands.
         self._pause_btn = QPushButton("Pause")
-        self._pause_btn.setEnabled(False)
-        self._pause_btn.setToolTip("Pause/Resume coming soon.")
-        params.addWidget(self._pause_btn)
+        self._pause_btn.setVisible(_PAUSE_AVAILABLE)
+        if _PAUSE_AVAILABLE:
+            params.addWidget(self._pause_btn)
 
         self._cancel_btn = QPushButton("Cancel")
         self._cancel_btn.setObjectName("Danger")
@@ -165,9 +195,13 @@ class ResearchPage(QWidget):
             ("cost",    "Equiv $"),
         ]:
             block = QVBoxLayout(); block.setSpacing(2)
-            l = QLabel(label); l.setObjectName("StatLabel"); block.addWidget(l)
-            v = QLabel("-"); v.setObjectName("StatValue"); v.setStyleSheet("font-size: 16px;")
-            self._stat_widgets[key] = v; block.addWidget(v)
+            label_widget = QLabel(label)
+            label_widget.setObjectName("StatLabel")
+            block.addWidget(label_widget)
+            value_widget = QLabel("-")
+            value_widget.setObjectName("StatValueInline")
+            self._stat_widgets[key] = value_widget
+            block.addWidget(value_widget)
             stats_row.addLayout(block)
         stats_row.addStretch(1)
         self._stats_card.add_layout(stats_row)
@@ -220,6 +254,7 @@ class ResearchPage(QWidget):
 
         self._worker: ResearchWorker | None = None
         self._last_report: ResearchReport | None = None
+        self._pool = QThreadPool.globalInstance()
 
         # Keyboard shortcuts (page-scoped)
         QShortcut(QKeySequence("Ctrl+Return"), self, activated=self._on_run)
@@ -227,6 +262,23 @@ class ResearchPage(QWidget):
         QShortcut(QKeySequence("Esc"),         self, activated=self._on_cancel)
         QShortcut(QKeySequence("Ctrl+S"),      self, activated=self._on_save_default)
         QShortcut(QKeySequence("Ctrl+K"),      self, activated=self._query.setFocus)
+
+    # --------------- shutdown ---------------
+    def shutdown(self) -> None:
+        """Public slot connected to MainWindow.about_to_close. Drains any
+        running worker so the process can exit cleanly. Replaces the old
+        pattern of MainWindow calling our private _on_cancel."""
+        worker = self._worker
+        if worker is None or not worker.isRunning():
+            return
+        try:
+            worker.request_cancel()
+            # Wait briefly for graceful exit; if the worker is mid-LLM-call
+            # and won't return in time, Qt will still tear down the QThread
+            # on app exit (the worker is daemonised through QThread).
+            worker.wait(2000)
+        except RuntimeError:
+            logger.exception("Shutting down ResearchWorker raised")
 
     # --------------- external API ---------------
     def append_log(self, level: str, msg: str) -> None:
@@ -281,12 +333,21 @@ class ResearchPage(QWidget):
         provider_choice = self._provider.currentText()
         if provider_choice != "auto":
             settings.default_provider = provider_choice
-            # Rebuild router for the new preference order
+            # Rebuild router for the new preference order. If router init
+            # fails we surface it as an error rather than silently dropping
+            # the provider change — the user just chose a provider and
+            # expects it to take effect on the next run.
             try:
                 from researchhq.llm import router as _r
                 _r.router = _r.LLMRouter()
-            except Exception:  # noqa: BLE001
-                pass
+            except (ImportError, RuntimeError, ValueError) as exc:
+                logger.exception("Failed to rebuild LLM router for provider %s", provider_choice)
+                QMessageBox.warning(
+                    self,
+                    "Provider switch failed",
+                    f"Could not switch to provider '{provider_choice}': {exc}\n\n"
+                    "Falling back to the previously configured provider.",
+                )
 
         if not self._has_any_provider_config():
             QMessageBox.warning(
@@ -340,7 +401,7 @@ class ResearchPage(QWidget):
         self._viewer.show_report(
             report.model_dump(mode="json"),
             to_markdown(report),
-            logs_text=self._logs._view.toPlainText(),
+            logs_text=self._logs.text(),
         )
         self._enable_exports(True)
         self._logs.append("INFO", f"Saved report: {saved_path}")
@@ -409,12 +470,19 @@ class ResearchPage(QWidget):
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(text)
-            self._logs.append("INFO", f"Exported: {path}")
-        except Exception as e:  # noqa: BLE001
-            QMessageBox.critical(self, "Export failed", str(e))
+        except OSError as exc:
+            logger.exception("Failed to export report to %s", path)
+            QMessageBox.critical(self, "Export failed", str(exc))
+            return
+        self._logs.append("INFO", f"Exported: {path}")
 
     def _export_pdf(self) -> None:
-        """PDF via QTextDocument print → QPrinter (no extra deps)."""
+        """PDF via QTextDocument print → QPrinter (no extra deps).
+
+        Rendering large reports can take several seconds. We do the QTextDocument
+        composition + QPrinter print on a worker thread so the window stays
+        responsive (no "Not Responding"); the user sees the busy bar while it runs.
+        """
         if self._last_report is None:
             return
         path, _ = QFileDialog.getSaveFileName(
@@ -424,21 +492,29 @@ class ResearchPage(QWidget):
         )
         if not path:
             return
-        try:
-            from PySide6.QtGui import QPageLayout, QPageSize, QTextDocument
-            from PySide6.QtPrintSupport import QPrinter
 
-            doc = QTextDocument()
-            doc.setMarkdown(to_markdown(self._last_report))
-            printer = QPrinter(QPrinter.PrinterMode.PrinterResolution)
-            printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
-            printer.setOutputFileName(path)
-            printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
-            printer.setPageOrientation(QPageLayout.Orientation.Portrait)
-            doc.print_(printer)
-            self._logs.append("INFO", f"Exported PDF: {path}")
-        except Exception as e:  # noqa: BLE001
-            QMessageBox.critical(self, "PDF export failed", str(e))
+        markdown = to_markdown(self._last_report)
+
+        # Disable export buttons while the print runs so the user can't queue
+        # several PDF renders against the same QPrinter.
+        self._enable_exports(False)
+        self._busy.show()
+
+        job = DbCallable(
+            lambda: _render_pdf(markdown, path),
+            job_id="export.pdf",
+        )
+        job.signals.result.connect(lambda _jid, out: self._on_pdf_done(str(out)))
+        job.signals.error.connect(lambda _jid, msg, _tb: self._on_pdf_error(msg))
+        job.signals.finished.connect(lambda _jid: (self._busy.hide(), self._enable_exports(True)))
+        self._pool.start(job)
+
+    def _on_pdf_done(self, path: str) -> None:
+        self._logs.append("INFO", f"Exported PDF: {path}")
+
+    def _on_pdf_error(self, message: str) -> None:
+        logger.error("PDF export failed: %s", message)
+        QMessageBox.critical(self, "PDF export failed", message)
 
     def _copy_full(self) -> None:
         if self._last_report is None:
@@ -463,3 +539,24 @@ def _slug(s: str) -> str:
     while "__" in cleaned:
         cleaned = cleaned.replace("__", "_")
     return cleaned or "report"
+
+
+def _render_pdf(markdown: str, out_path: str) -> str:
+    """Render *markdown* to a PDF at *out_path* using QTextDocument + QPrinter.
+
+    Qt objects created here are owned by the worker thread that calls this
+    function — we never hand them back to the GUI thread or share them with
+    another worker, so thread-affinity is respected.
+    """
+    from PySide6.QtGui import QPageLayout, QPageSize, QTextDocument
+    from PySide6.QtPrintSupport import QPrinter
+
+    doc = QTextDocument()
+    doc.setMarkdown(markdown)
+    printer = QPrinter(QPrinter.PrinterMode.PrinterResolution)
+    printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+    printer.setOutputFileName(out_path)
+    printer.setPageSize(QPageSize(QPageSize.PageSizeId.A4))
+    printer.setPageOrientation(QPageLayout.Orientation.Portrait)
+    doc.print_(printer)
+    return out_path

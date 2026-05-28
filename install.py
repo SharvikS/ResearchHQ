@@ -14,19 +14,36 @@ Windows (PowerShell):
 from __future__ import annotations
 
 import getpass
+import logging
 import os
 import platform
 import random
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from dataclasses import field as _dc_field
 from pathlib import Path
+
+# Default to WARNING so the installer stays quiet on success but surfaces
+# real failures with stack traces. Set RESEARCHHQ_INSTALL_LOGLEVEL=DEBUG
+# for verbose output during troubleshooting.
+logging.basicConfig(
+    level=os.environ.get("RESEARCHHQ_INSTALL_LOGLEVEL", "WARNING").upper(),
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+log = logging.getLogger("researchhq.install")
+
+# Command-execution defaults. Network operations can hang on captive portals
+# or DNS failures; cap them so the installer never wedges silently.
+_NET_TIMEOUT = 60
+_VERIFY_TIMEOUT = 30
 
 # ---------------------------------------------------------------------------
 # Bootstrap: when piped (curl|python / irm|python), stdin is the script so
@@ -42,29 +59,47 @@ def _bootstrap_interactive() -> None:
         return  # Already running interactively — nothing to do
 
     print("Downloading installer for interactive setup...")
-    tmp = tempfile.mktemp(suffix="_rhq_install.py")
-    try:
-        urllib.request.urlretrieve(_INSTALLER_URL, tmp)
-    except Exception as e:
-        print(f"Download failed: {e}")
-        sys.exit(1)
+    # NamedTemporaryFile(delete=False) avoids tempfile.mktemp's TOCTOU race —
+    # the OS hands us a path with the file already created exclusively.
+    fd = tempfile.NamedTemporaryFile(
+        prefix="rhq_install_",
+        suffix=".py",
+        delete=False,
+    )
+    tmp = fd.name
+    fd.close()  # We're going to write to it via urlretrieve; just need the path.
 
+    con = None
     try:
-        if sys.platform == "win32":
-            con = open("CONIN$")
-        else:
-            con = open("/dev/tty")
+        try:
+            urllib.request.urlretrieve(_INSTALLER_URL, tmp)  # noqa: S310 — fixed URL we own
+        except (urllib.error.URLError, OSError) as exc:
+            log.exception("Download of installer failed")
+            print(f"Download failed: {exc}")
+            sys.exit(1)
+
+        try:
+            if sys.platform == "win32":
+                con = open("CONIN$", encoding="utf-8", errors="replace")
+            else:
+                con = open("/dev/tty", encoding="utf-8", errors="replace")
+        except OSError as exc:
+            log.exception("Could not attach a real terminal for interactive setup")
+            print(f"Could not attach terminal: {exc}")
+            print(f"Run directly instead:  python {tmp}")
+            sys.exit(1)
+
         result = subprocess.run([sys.executable, tmp], stdin=con)
-        con.close()
-    except Exception as e:
-        print(f"Could not attach terminal: {e}")
-        print(f"Run directly instead:  python {tmp}")
-        sys.exit(1)
     finally:
+        if con is not None:
+            try:
+                con.close()
+            except OSError:
+                log.debug("Closing terminal handle raised", exc_info=True)
         try:
             os.unlink(tmp)
         except OSError:
-            pass
+            log.debug("Could not remove temp installer at %s", tmp, exc_info=True)
 
     sys.exit(result.returncode)
 
@@ -77,11 +112,25 @@ _bootstrap_interactive()
 
 def _setup_encoding() -> None:
     if sys.platform == "win32":
-        os.system("chcp 65001 > nul 2>&1")
+        # subprocess.run avoids a shell hop; works on Win10/11 and Server.
+        try:
+            subprocess.run(
+                ["chcp", "65001"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                shell=True,
+                timeout=5,
+            )
+        except (subprocess.SubprocessError, OSError):
+            log.warning("Could not switch Windows codepage to UTF-8 (chcp 65001)", exc_info=True)
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
     except AttributeError:
-        pass
+        # Older Pythons or wrapped streams (e.g. captured by pytest) don't
+        # expose reconfigure. Worth a debug log so it's discoverable when
+        # diagnosing unicode rendering.
+        log.debug("sys.stdout.reconfigure() unavailable; leaving encoding as-is")
 
 _setup_encoding()
 
@@ -118,32 +167,62 @@ INSTALL_DIR = Path.home() / ".researchhq"
 
 
 def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+    """Wrap subprocess.run with a default timeout so network calls can't wedge."""
+    kwargs.setdefault("timeout", _NET_TIMEOUT)
     return subprocess.run(cmd, **kwargs)
 
 
-def _check(cmd: list[str]) -> bool:
+def _check(cmd: list[str], *, timeout: int = 5) -> bool:
     try:
-        _run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout,
+            check=False,
+        )
         return True
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, subprocess.SubprocessError):
         return False
+
+
+# --- Injectable IO ---------------------------------------------------------
+# Tests and CI runners can override these to drive the installer without a
+# real TTY. Defaults call the stdlib directly.
+_input_fn = input        # type: ignore[assignment]
+_secret_fn = getpass.getpass
+_output_fn = print       # type: ignore[assignment]
+
+
+def set_io(*, ask=None, ask_secret=None, output=None) -> None:
+    """Inject alternative IO callbacks (used by tests and library callers).
+
+    Pass None for any argument to keep its current value. This is the single
+    public seam for non-interactive scripted installs."""
+    global _input_fn, _secret_fn, _output_fn
+    if ask is not None:
+        _input_fn = ask
+    if ask_secret is not None:
+        _secret_fn = ask_secret
+    if output is not None:
+        _output_fn = output
 
 
 def _ask(prompt: str, default: str = "") -> str:
     hint = f" [{default}]" if default else ""
     try:
-        answer = input(f"  {prompt}{hint}: ").strip()
+        answer = _input_fn(f"  {prompt}{hint}: ").strip()
     except (EOFError, KeyboardInterrupt):
-        print()
+        _output_fn()
         sys.exit(0)
     return answer or default
 
 
 def _ask_secret(prompt: str) -> str:
     try:
-        return getpass.getpass(f"  {prompt}: ").strip()
+        return _secret_fn(f"  {prompt}: ").strip()
     except (EOFError, KeyboardInterrupt):
-        print()
+        _output_fn()
         sys.exit(0)
 
 
@@ -449,23 +528,42 @@ def write_config(keys: dict[str, str], provider_cfg: dict[str, str]) -> None:
     lines.append("")
 
     env_path.write_text("\n".join(lines), encoding="utf-8")
+    # Tighten permissions on POSIX so other local users can't read API keys.
+    # On Windows file ACLs are managed elsewhere; chmod is a no-op there.
+    if sys.platform != "win32":
+        try:
+            os.chmod(env_path, stat.S_IRUSR | stat.S_IWUSR)
+        except OSError:
+            log.warning("Could not tighten permissions on %s", env_path, exc_info=True)
     _ok(f"Keys written to {env_path}")
 
     # config.yaml (only if provider was chosen)
     if provider_cfg:
         try:
             import yaml  # type: ignore[import]
-            cfg_path = INSTALL_DIR / "config.yaml"
-            existing_yaml: dict = {}
-            if cfg_path.exists():
+        except ImportError:
+            log.warning("PyYAML import failed during write_config", exc_info=True)
+            _info("PyYAML not available yet — provider config will use defaults")
+            return
+
+        cfg_path = INSTALL_DIR / "config.yaml"
+        existing_yaml: dict = {}
+        if cfg_path.exists():
+            try:
                 with cfg_path.open("r", encoding="utf-8") as f:
                     existing_yaml = yaml.safe_load(f) or {}
-            existing_yaml.setdefault("provider", {})["default"] = provider_cfg["default_provider"]
+            except (OSError, yaml.YAMLError):
+                log.exception("Existing %s could not be parsed; starting fresh", cfg_path)
+                existing_yaml = {}
+        existing_yaml.setdefault("provider", {})["default"] = provider_cfg["default_provider"]
+        try:
             with cfg_path.open("w", encoding="utf-8") as f:
                 yaml.safe_dump(existing_yaml, f, sort_keys=False, default_flow_style=False)
-            _ok(f"Provider config written to {cfg_path}")
-        except ImportError:
-            _info("PyYAML not available yet — provider config will use defaults")
+        except OSError as exc:
+            log.exception("Failed to write provider config to %s", cfg_path)
+            _err(f"Could not write {cfg_path}: {exc}")
+            return
+        _ok(f"Provider config written to {cfg_path}")
 
 
 # ---------------------------------------------------------------------------
@@ -473,24 +571,66 @@ def write_config(keys: dict[str, str], provider_cfg: dict[str, str]) -> None:
 # ---------------------------------------------------------------------------
 
 def verify_install() -> None:
+    """Check the install actually exposes a working CLI.
+
+    Three rungs of escalating confidence:
+      1. The expected commands are on PATH (no functional check).
+      2. `<cmd> --help` exits 0 (command exists and Python imports succeed).
+      3. `research doctor` runs cleanly (providers reachable end-to-end).
+    """
     _section("Verifying installation")
+    found_cmd: str | None = None
     for cmd_name in ("research", "researchhq", "rhq"):
         if shutil.which(cmd_name):
             _ok(f"Command '{cmd_name}' is on PATH")
+            found_cmd = cmd_name
             break
-    else:
+
+    if found_cmd is None:
         _warn("Commands not found on PATH yet.")
         _info("If using pip --user, add ~/.local/bin to your PATH:")
         _info("  export PATH=\"$HOME/.local/bin:$PATH\"  (add to ~/.bashrc or ~/.zshrc)")
         _info("If using pipx, run: pipx ensurepath")
         return
 
-    if shutil.which("research"):
-        result = _run(
-            ["research", "doctor"],
-            capture_output=True, text=True, timeout=30
+    # Rung 2 — confirm the entry point actually launches. This catches the
+    # common case where a stale shim sits on PATH but the package itself
+    # failed to import (e.g. missing optional dependency).
+    try:
+        help_res = subprocess.run(
+            [found_cmd, "--help"],
+            capture_output=True,
+            text=True,
+            timeout=_VERIFY_TIMEOUT,
+            check=False,
         )
-        if result.returncode == 0:
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        log.exception("Could not invoke %s --help", found_cmd)
+        _warn(f"'{found_cmd} --help' failed to launch: {exc}")
+        return
+
+    if help_res.returncode != 0:
+        _warn(f"'{found_cmd} --help' exited with code {help_res.returncode}")
+        if help_res.stderr.strip():
+            _info(help_res.stderr.strip().splitlines()[-1])
+        return
+    _ok(f"'{found_cmd} --help' launches cleanly")
+
+    # Rung 3 — only the `research` entry point exposes `doctor` today.
+    if shutil.which("research"):
+        try:
+            doctor_res = subprocess.run(
+                ["research", "doctor"],
+                capture_output=True,
+                text=True,
+                timeout=_VERIFY_TIMEOUT,
+                check=False,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError) as exc:
+            log.exception("research doctor failed to launch")
+            _warn(f"Could not run research doctor: {exc}")
+            return
+        if doctor_res.returncode == 0:
             _ok("Health check passed")
         else:
             _warn("Health check reported issues — see output with: research doctor")
@@ -543,13 +683,16 @@ _MIN_COLS = 64      # minimum terminal width to enable game
 def _win_enable_ansi() -> bool:
     try:
         import ctypes
-        k32 = ctypes.windll.kernel32
+        k32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
         h   = k32.GetStdHandle(-11)
         m   = ctypes.c_ulong()
         k32.GetConsoleMode(h, ctypes.byref(m))
         k32.SetConsoleMode(h, m.value | 0x0004)  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
         return True
-    except Exception:
+    except (OSError, AttributeError):
+        # AttributeError: ctypes.windll not available (non-Windows). OSError:
+        # console handle missing (e.g. running headless under a service).
+        log.debug("Win32 ANSI enable failed", exc_info=True)
         return False
 
 
@@ -567,7 +710,13 @@ def _game_capable() -> bool:
 # ── Non-blocking input ────────────────────────────────────────────────────────
 
 def _read_key() -> str | None:
-    """Return key name or None without blocking."""
+    """Return key name or None without blocking.
+
+    On POSIX we put the terminal into raw mode briefly to read a single byte.
+    The outer try/finally guarantees the original termios state is restored
+    even if select/os.read raise, so a crash in the game can never leave
+    the user with a borked terminal.
+    """
     if sys.platform == "win32":
         import msvcrt
         if not msvcrt.kbhit():
@@ -583,9 +732,23 @@ def _read_key() -> str | None:
         s = ch.decode("ascii", errors="ignore").upper()
         return s if s else None
     # ── Unix ──────────────────────────────────────────────────────────────
-    import select, tty, termios
-    fd = sys.stdin.fileno()
-    saved = termios.tcgetattr(fd)
+    import select
+    import termios
+    import tty
+    try:
+        fd = sys.stdin.fileno()
+    except (AttributeError, OSError):
+        # stdin not a real file descriptor (e.g. captured by an IDE) — no
+        # keys to read.
+        return None
+
+    try:
+        saved = termios.tcgetattr(fd)
+    except termios.error:
+        # Not a TTY (e.g. running inside CI). Caller already gated on
+        # isatty() but stay safe.
+        return None
+
     try:
         tty.setraw(fd)
         rr, _, _ = select.select([fd], [], [], 0)
@@ -604,8 +767,16 @@ def _read_key() -> str | None:
         if ch in (b"\r", b"\n"): return "ENTER"
         s = ch.decode("ascii", errors="ignore").upper()
         return s if s else None
+    except (OSError, select.error) as exc:
+        log.debug("Non-blocking key read failed: %s", exc)
+        return None
     finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+        # CRITICAL: restore terminal state even if the read raised, or the
+        # user is left with a half-raw terminal after the installer exits.
+        try:
+            termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+        except termios.error:
+            log.exception("Failed to restore terminal mode after key read")
 
 
 # ── Game data ─────────────────────────────────────────────────────────────────
@@ -940,7 +1111,8 @@ def run_game_overlay(cmd: list[str]) -> int:
 
             try:
                 key = _read_key()
-            except Exception:
+            except (OSError, ValueError):
+                log.debug("Key read failed mid-frame", exc_info=True)
                 key = None
 
             if key == "CTRL_C":
@@ -1021,8 +1193,8 @@ def run_game_overlay(cmd: list[str]) -> int:
 
                 try:
                     _draw(gs, info, notify_msg, TOP_ROW)
-                except Exception:
-                    pass   # game crash must never abort the install
+                except Exception:  # noqa: BLE001 - intentional: a draw bug must never abort the install
+                    log.debug("Game frame draw raised; suppressing", exc_info=True)
 
             # ── frame rate cap ─────────────────────────────────────────────
             elapsed = time.perf_counter() - t0

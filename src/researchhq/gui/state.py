@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+import logging
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from researchhq.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -33,7 +36,8 @@ def list_reports() -> list[ReportSummary]:
     for p in sorted(folder.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True):
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            logger.debug("Skipping unreadable report %s: %s", p, exc)
             continue
         verifier = data.get("verifier") or {}
         out.append(
@@ -78,5 +82,5 @@ def parse_iso(ts: str) -> datetime | None:
         return None
     try:
         return datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    except Exception:  # noqa: BLE001
+    except (TypeError, ValueError):
         return None

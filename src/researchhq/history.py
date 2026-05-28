@@ -90,14 +90,15 @@ def ensure_db() -> None:
         with closing(_connect()) as conn:
             conn.executescript(_SCHEMA)
             conn.commit()
-    except sqlite3.DatabaseError as e:
+    except sqlite3.DatabaseError:
+        logger.exception("History DB schema setup hit a sqlite error; rebuilding.")
         # Corrupted DB: rename and recreate so the app keeps working.
         broken = db_path().with_suffix(".db.broken")
         try:
             db_path().rename(broken)
             logger.warning("History DB was corrupt; moved to %s", broken)
-        except Exception:  # noqa: BLE001
-            pass
+        except OSError:
+            logger.exception("Could not move corrupt history DB out of the way")
         with closing(_connect()) as conn:
             conn.executescript(_SCHEMA)
             conn.commit()
@@ -257,15 +258,18 @@ def reindex_from_folder(folder: str | Path | None = None, workspace: str = "defa
     for p in folder.glob("*.json"):
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            logger.debug("Skipping non-report JSON %s: %s", p, exc)
             continue
-        if "mode" not in data or "query" not in data:
+        if not isinstance(data, dict) or "mode" not in data or "query" not in data:
             continue  # not one of ours
         try:
             index_report_dict(p, data, workspace=workspace)
             n += 1
-        except Exception:  # noqa: BLE001
-            logger.exception("reindex failed for %s", p)
+        except sqlite3.Error:
+            logger.exception("reindex DB write failed for %s", p)
+        except (TypeError, ValueError):
+            logger.exception("reindex payload invalid for %s", p)
     return n
 
 

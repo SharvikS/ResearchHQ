@@ -8,6 +8,7 @@ and effort selectors live in a small toolbar at the top of the view.
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Optional
 
 from rich.markdown import Markdown
@@ -16,6 +17,8 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.message import Message
 from textual.widgets import RichLog, Select, Static
+
+logger = logging.getLogger(__name__)
 
 from researchhq.config import settings
 from researchhq.effort import DEFAULT_EFFORT
@@ -172,17 +175,19 @@ class ResearchView(Container):
         except asyncio.CancelledError:
             self.post_message(RunCompleted(ok=False, message="run cancelled"))
             return
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001 - top-level boundary: surface and log
+            logger.exception("TUI pipeline run failed for query %r", query)
             self.post_message(RunCompleted(ok=False, message=f"run failed: {e}"))
             return
         try:
             self.query_one(_ReportPane).render_sections(report.sections, header_query=query)
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001 - widget may have been swapped out mid-run
+            logger.debug("Report pane render skipped (widget gone)", exc_info=True)
         try:
             path = save_report(report, fmt=settings.default_format)
             msg = f"saved to {path}"
-        except Exception as e:  # noqa: BLE001
+        except (OSError, ValueError, TypeError) as e:
+            logger.exception("Saving report after TUI run failed")
             msg = f"saved failed: {e}"
         self.post_message(RunCompleted(ok=True, message=msg))
 

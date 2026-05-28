@@ -260,4 +260,56 @@ QToolTip {{
     padding: 10px 14px;
     font-weight: 600;
 }}
+
+/* ---------- Page-level helpers (moved out of inline setStyleSheet calls) ---------- */
+QLabel#PageTitle {{
+    font-size: 20px;
+    font-weight: 700;
+    color: {text};
+    background-color: transparent;
+}}
+QLabel#Muted {{
+    color: {text_muted};
+    background-color: transparent;
+}}
+QLabel#MutedItalic {{
+    color: {text_muted};
+    background-color: transparent;
+    font-style: italic;
+}}
+QLabel#ProviderName {{
+    color: {text};
+    background-color: transparent;
+}}
+QLabel#StatusOk {{
+    color: {ok};
+    background-color: transparent;
+}}
+QLabel#StatusOff {{
+    color: {text_muted};
+    background-color: transparent;
+}}
+QLabel#StatValueInline {{
+    color: {text};
+    font-size: 16px;
+    background-color: transparent;
+}}
+QLabel#KeyStatus {{
+    background-color: transparent;
+}}
+QLineEdit#QueryInput {{
+    font-size: 14px;
+    padding: 12px;
+}}
+
+/* Indeterminate progress bar used as a "busy" indicator next to page titles. */
+QProgressBar#BusyBar {{
+    background-color: {panel_2};
+    border: none;
+    border-radius: 3px;
+}}
+QProgressBar#BusyBar::chunk {{
+    background-color: {accent};
+    border-radius: 3px;
+}}
 """.format(**PALETTE)

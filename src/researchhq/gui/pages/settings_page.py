@@ -7,16 +7,15 @@ configured/missing status.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QSettings, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFileDialog,
-    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -26,10 +25,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import QUrl
 
 from researchhq.config import settings
 from researchhq.gui.widgets.card import Card
+
+logger = logging.getLogger(__name__)
 
 PROVIDERS = ["groq", "gemini", "ollama", "openai", "anthropic"]
 SEARCH_ENGINES = ["duckduckgo"]
@@ -45,7 +45,7 @@ class SettingsPage(QWidget):
         outer.setSpacing(12)
 
         title = QLabel("Settings")
-        title.setStyleSheet("font-size: 20px; font-weight: 700; background: transparent;")
+        title.setObjectName("PageTitle")
         outer.addWidget(title)
 
         # --- LLM provider card ---
@@ -68,7 +68,7 @@ class SettingsPage(QWidget):
         # API key status (read-only). Never shows the actual key.
         grid.addWidget(QLabel("API key status"), 2, 0)
         self._key_status = QLabel(self._key_status_text())
-        self._key_status.setStyleSheet("background: transparent;")
+        self._key_status.setObjectName("KeyStatus")
         grid.addWidget(self._key_status, 2, 1)
 
         prov.add_layout(grid)
@@ -135,7 +135,7 @@ class SettingsPage(QWidget):
         self._theme.setEnabled(False)
         theme_row.addWidget(self._theme)
         coming = QLabel("Light theme & accent picker coming soon")
-        coming.setStyleSheet("color: #8a96a8; background: transparent; font-style: italic;")
+        coming.setObjectName("MutedItalic")
         theme_row.addWidget(coming); theme_row.addStretch(1)
         theme_w = QWidget(); theme_w.setLayout(theme_row)
         grid3.addWidget(theme_w, 2, 1)
@@ -157,14 +157,24 @@ class SettingsPage(QWidget):
     # ---- helpers ----
 
     def _key_status_text(self) -> str:
+        # Colours come from the theme tokens at render time. We embed CSS
+        # variables here only because QLabel doesn't expose a stylesheet
+        # for inline-formatted rich text; the colour values match the QSS
+        # palette so the result is theme-consistent.
+        from researchhq.gui.theme import PALETTE
         rows = [
             ("Groq",      bool(settings.groq_api_key)),
             ("Gemini",    bool(settings.gemini_api_key)),
             ("OpenAI",    bool(settings.openai_api_key)),
             ("Anthropic", bool(settings.anthropic_api_key)),
         ]
-        bits = [f"<span style='color:{'#3ecf8e' if ok else '#8a96a8'};'>{name}: {'set' if ok else 'not set'}</span>"
-                for name, ok in rows]
+        ok_colour = PALETTE["ok"]
+        muted_colour = PALETTE["text_muted"]
+        bits = [
+            f"<span style='color:{ok_colour if ok else muted_colour};'>"
+            f"{name}: {'set' if ok else 'not set'}</span>"
+            for name, ok in rows
+        ]
         return "  ·  ".join(bits) + "  ·  Ollama: local"
 
     def _on_browse_folder(self) -> None:
@@ -177,7 +187,8 @@ class SettingsPage(QWidget):
         if not p.exists():
             try:
                 p.mkdir(parents=True, exist_ok=True)
-            except Exception:  # noqa: BLE001
+            except OSError:
+                logger.exception("Could not create output folder %s", p)
                 return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(p.resolve())))
 

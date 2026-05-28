@@ -12,6 +12,7 @@ Signals emitted to the GUI thread (all payloads are plain Python types):
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 import traceback
 
@@ -21,6 +22,8 @@ from researchhq.events import PipelineEvent
 from researchhq.pipeline import run as pipeline_run
 from researchhq.reports.exporter import save
 from researchhq.reports.schema import ResearchReport
+
+logger = logging.getLogger(__name__)
 
 
 class ResearchWorker(QThread):
@@ -81,18 +84,24 @@ class ResearchWorker(QThread):
 
             try:
                 path = save(report, fmt=self._fmt, workspace=self._workspace)
-            except Exception as e:  # noqa: BLE001
-                self.failed.emit(f"Failed to save report: {e}", traceback.format_exc())
+            except (OSError, ValueError, TypeError) as exc:
+                logger.exception("Failed to save report after pipeline run")
+                self.failed.emit(f"Failed to save report: {exc}", traceback.format_exc())
                 return
 
             self.finished_ok.emit(report, str(path))
-        except Exception as e:  # noqa: BLE001
-            self.failed.emit(str(e) or type(e).__name__, traceback.format_exc())
+        except asyncio.CancelledError:
+            self.canceled.emit()
+        except Exception as exc:  # noqa: BLE001 - top-level worker boundary
+            # Top of the worker: anything else is unexpected and needs to be
+            # surfaced to the user instead of crashing the QThread silently.
+            logger.exception("ResearchWorker terminated with an unhandled exception")
+            self.failed.emit(str(exc) or type(exc).__name__, traceback.format_exc())
         finally:
             try:
                 loop.close()
-            except Exception:  # noqa: BLE001
-                pass
+            except RuntimeError:
+                logger.exception("Closing the asyncio loop raised")
 
     async def _run_pipeline(self) -> ResearchReport:
         def _on_event(ev: PipelineEvent) -> None:
