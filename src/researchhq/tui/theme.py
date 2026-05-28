@@ -43,19 +43,20 @@ class Palette:
 
 _DEEP_SPACE = Palette(
     name="deep_space",
-    description="Matte black · electric purple · glass panels",
-    bg="#07080f",
-    bg_alt="#0d0f1a",
-    panel="#111320",
-    border="#1c2035",
-    text="#dde4f0",
-    text_dim="#8896aa",
-    text_mute="#414d62",
-    accent="#7c5cff",    # electric violet — the ResearchHQ signature color
-    accent_2="#4a9eff",  # electric blue — secondary pop
-    success="#3dd68c",
-    warning="#f59e0b",
-    error="#f06882",
+    description="Deep navy · electric cyan · magenta pop · the ResearchHQ identity",
+    # Aligned with the desktop GUI so both interfaces share one palette.
+    bg="#0c1322",
+    bg_alt="#131c30",
+    panel="#131c30",
+    border="#1f2d44",
+    text="#dde7f4",
+    text_dim="#7689a4",
+    text_mute="#4a5b78",
+    accent="#00d4ff",    # electric cyan — primary brand accent
+    accent_2="#ff5cd0",  # magenta — secondary typographic pop
+    success="#00e57a",
+    warning="#ffaa00",
+    error="#ff4d63",
 )
 
 _ARCTIC = Palette(

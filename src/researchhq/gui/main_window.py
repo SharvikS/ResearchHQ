@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Signal
+from PySide6.QtCore import QSettings, Qt, Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -23,11 +23,13 @@ from pydantic import ValidationError
 
 from researchhq.config import settings
 from researchhq.gui import state as gstate
+from researchhq.gui.motion import cross_fade, fade_in
 from researchhq.gui.pages.compare_page import ComparePage
 from researchhq.gui.pages.dashboard import DashboardPage
 from researchhq.gui.pages.history_page import HistoryPage
 from researchhq.gui.pages.research_page import ResearchPage
 from researchhq.gui.pages.settings_page import SettingsPage
+from researchhq.gui.widgets.divider import WorkspaceDivider
 from researchhq.gui.widgets.sidebar import Sidebar
 from researchhq.gui.workers.log_handler import QtLogBridge
 from researchhq.reports.exporter import to_markdown
@@ -67,6 +69,10 @@ class MainWindow(QMainWindow):
         self._sidebar = Sidebar()
         layout.addWidget(self._sidebar)
 
+        # Theme-aware gradient hairline between sidebar + content.
+        self._divider = WorkspaceDivider()
+        layout.addWidget(self._divider)
+
         self._stack = QStackedWidget()
         layout.addWidget(self._stack, 1)
 
@@ -104,7 +110,8 @@ class MainWindow(QMainWindow):
     # ---------- nav ----------
     def _on_nav(self, key: str) -> None:
         idx = _PAGE_INDEX.get(key, 0)
-        self._stack.setCurrentIndex(idx)
+        # Animated cross-fade between pages instead of an instant swap.
+        cross_fade(self._stack, idx)
         # Refresh the page being shown so it reflects latest state. Page
         # refreshes dispatch their own background work — they never block.
         page = self._stack.currentWidget()
@@ -114,6 +121,13 @@ class MainWindow(QMainWindow):
                 refresh()
             except (RuntimeError, OSError):
                 logger.exception("Page refresh on nav('%s') raised", key)
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt method
+        super().showEvent(event)
+        # Reveal the window with a subtle opacity fade on first paint.
+        if not getattr(self, "_did_intro_fade", False):
+            self._did_intro_fade = True
+            fade_in(self)
 
     # ---------- open report ----------
     def _open_report_from_path(self, path_str: str) -> None:
