@@ -338,9 +338,34 @@ class SplashScreen(QWidget):
         self._reveal.start()
 
     def set_progress(self, percent: int, status: str | None = None) -> None:
-        self._bar.setValue(max(0, min(100, int(percent))))
+        prev = self._bar.value()
+        new = max(0, min(100, int(percent)))
+        self._bar.setValue(new)
         if status is not None:
             self._status.setText(status)
+        # Fire a celebratory particle burst on the transition into the
+        # final "ready" state — happens exactly once even if callers
+        # set 100 repeatedly.
+        if new >= 100 and prev < 100 and not getattr(self, "_burst_fired", False):
+            self._burst_fired = True
+            self._fire_ready_burst()
+
+    def _fire_ready_burst(self) -> None:
+        """Spawn a particle burst centred on the logo."""
+        try:
+            from PySide6.QtCore import QPointF
+            from researchhq.gui.widgets.particle_burst import ParticleBurst
+            # Compute the logo centre in _root-local coordinates.
+            logo_geo = self._logo.geometry()
+            origin = QPointF(
+                logo_geo.x() + logo_geo.width() / 2,
+                logo_geo.y() + logo_geo.height() / 2,
+            )
+            ParticleBurst.fire_at(self._root, origin)
+        except (ImportError, RuntimeError):
+            # Burst is pure spectacle — never let a paint failure
+            # interfere with the boot handoff.
+            pass
 
     def finish(self) -> None:
         """Fade the splash out, then close + emit ``finished``."""

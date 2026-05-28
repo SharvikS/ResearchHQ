@@ -20,12 +20,14 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
-    QProgressBar,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
 )
+
+from researchhq.gui.widgets.animated_list import AnimatedListWidget
+from researchhq.gui.widgets.shimmer_button import ShimmerButton
 
 from researchhq.config import settings
 from researchhq.gui import state as gstate
@@ -122,7 +124,10 @@ class DashboardPage(QWidget):
         header.addWidget(self._busy)
 
         header.addStretch(1)
-        self._new_btn = QPushButton("+ New Research")
+        # ShimmerButton paints a moving accent2 highlight + nudges its
+        # rendered content toward the cursor on hover. Picks up the
+        # #Primary QSS rules through objectName.
+        self._new_btn = ShimmerButton("+ New Research")
         self._new_btn.setObjectName("Primary")
         self._new_btn.clicked.connect(self.open_research.emit)
         header.addWidget(self._new_btn)
@@ -151,7 +156,9 @@ class DashboardPage(QWidget):
         cols.addWidget(providers_card, 1)
 
         recent_card = Card("Recent reports", "Double-click to open")
-        self._recent_list = QListWidget()
+        # AnimatedListWidget paints a sliding accent bar on the
+        # hovered row — no QSS work needed at the call site.
+        self._recent_list = AnimatedListWidget()
         self._recent_list.itemActivated.connect(self._on_open_recent)
         recent_card.add(self._recent_list)
         cols.addWidget(recent_card, 1)
@@ -160,7 +167,7 @@ class DashboardPage(QWidget):
 
         # Saved exports
         exports_card = Card("Saved exports", "Files in your reports folder")
-        self._exports_list = QListWidget()
+        self._exports_list = AnimatedListWidget()
         self._exports_list.itemActivated.connect(self._on_open_export)
         exports_card.add(self._exports_list)
         layout.addWidget(exports_card)

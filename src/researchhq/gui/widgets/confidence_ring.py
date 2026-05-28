@@ -110,14 +110,32 @@ class ConfidenceRing(QWidget):
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.drawArc(rect, 0, 360 * 16)
 
-        # ── value arc ────────────────────────────────────────────────
+        # ── trailing tail ────────────────────────────────────────────
+        # A short, soft secondary arc that *leads* the main sweep — gives
+        # the ring a sense of momentum while it's still animating in.
+        # The tail only appears while the sweep is in flight (sweep is
+        # under the target value or briefly after).
+        sweep_deg = -int(self._sweep * 360)
+        tail_len = max(8, int(36 * min(1.0, self._sweep + 0.05)))
+        if self._sweep > 0.01:
+            tail_color = QColor(self._arc_color())
+            tail_color.setAlpha(110)
+            tail_pen = QPen(tail_color)
+            tail_pen.setWidthF(stroke)
+            tail_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            p.setPen(tail_pen)
+            # Tail extends slightly past the current leading edge in
+            # the sweep direction. Qt arc angles use 1/16 deg; CCW.
+            tail_start = 90 + sweep_deg          # leading edge of the main sweep
+            p.drawArc(rect, int(tail_start * 16), int(-tail_len * 16))
+
+        # ── value arc (main) ─────────────────────────────────────────
         # Qt arc angles use sixteenths of a degree; CCW from 3 o'clock.
         # We want CW from 12 o'clock, so start at 90° and sweep negative.
         arc_pen = QPen(self._arc_color())
         arc_pen.setWidthF(stroke)
         arc_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         p.setPen(arc_pen)
-        sweep_deg = -int(self._sweep * 360)
         p.drawArc(rect, int(90 * 16), sweep_deg * 16)
 
         # ── centre label ─────────────────────────────────────────────

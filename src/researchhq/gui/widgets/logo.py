@@ -74,11 +74,16 @@ class LogoMark(QWidget):
         self._filaments_progress = 1.0 if mode != "assemble" else 0.0
         self._core_scale = 1.0 if mode != "assemble" else 0.0
         self._core_pulse = 0.6  # idle alpha modulation for the centre dot
+        # Extra rotation applied to all outer agent nodes — used by the
+        # hover-trail animation. Defaults to 0; nudges to +60° (one
+        # full hex step) on enterEvent and eases back on leaveEvent.
+        self._rotation_offset = 0.0
 
         # Idle pulse — runs forever in "idle" + after assembly in "assemble"
         # mode. Cheap (alpha-only on one element).
         self._pulse_anim: QPropertyAnimation | None = None
         self._assemble_group: QSequentialAnimationGroup | None = None
+        self._rotation_anim: QPropertyAnimation | None = None
 
         ThemeManager.instance().theme_changed.connect(self._on_theme)
 
@@ -114,6 +119,32 @@ class LogoMark(QWidget):
     def _set_core_pulse(self, v: float) -> None:
         self._core_pulse = float(v); self.update()
     corePulse = Property(float, _get_core_pulse, _set_core_pulse)
+
+    def _get_rotation_offset(self) -> float: return self._rotation_offset
+    def _set_rotation_offset(self, v: float) -> None:
+        self._rotation_offset = float(v); self.update()
+    rotationOffset = Property(float, _get_rotation_offset, _set_rotation_offset)
+
+    # ── hover trail (outer nodes rotate one hex step on hover) ─────────────
+
+    def enterEvent(self, event) -> None:  # noqa: N802 - Qt method
+        super().enterEvent(event)
+        self._start_rotation(target_degrees=60.0, duration_ms=320)
+
+    def leaveEvent(self, event) -> None:  # noqa: N802 - Qt method
+        super().leaveEvent(event)
+        self._start_rotation(target_degrees=0.0, duration_ms=380)
+
+    def _start_rotation(self, *, target_degrees: float, duration_ms: int) -> None:
+        if self._rotation_anim is not None:
+            self._rotation_anim.stop()
+        anim = QPropertyAnimation(self, b"rotationOffset", self)
+        anim.setStartValue(self._rotation_offset)
+        anim.setEndValue(target_degrees)
+        anim.setDuration(scaled(duration_ms))
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        anim.start()
+        self._rotation_anim = anim
 
     # ── assembly animation ────────────────────────────────────────────────
 
@@ -230,8 +261,11 @@ class LogoMark(QWidget):
         # gives the *last* node a brief visible flourish before phase 1
         # completes (it never reaches 100% mid-phase).
         n = _AGENT_COUNT
+        # Hover-trail rotation offset is in degrees — convert to radians
+        # and add to every node's angle so the whole ring drifts.
+        rot_rad = math.radians(self._rotation_offset)
         for i in range(n):
-            angle = -math.pi / 2 + (2 * math.pi * i / n)  # start at top, CW
+            angle = -math.pi / 2 + (2 * math.pi * i / n) + rot_rad  # start at top, CW
             nx = cx + outer_r * math.cos(angle)
             ny = cy + outer_r * math.sin(angle)
 

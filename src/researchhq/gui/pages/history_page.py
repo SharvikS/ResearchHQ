@@ -28,6 +28,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from researchhq.gui.widgets.animated_list import AnimatedTableWidget
+
 from researchhq.gui.state import delete_report
 from researchhq.gui.workers.db_worker import DbCallable
 
@@ -142,7 +144,9 @@ class HistoryPage(QWidget):
 
         outer.addLayout(controls)
 
-        self._table = QTableWidget(0, 7)
+        # AnimatedTableWidget paints a sliding accent bar on the
+        # hovered row, matching the dashboard's recent-reports list.
+        self._table = AnimatedTableWidget(0, 7)
         self._table.setHorizontalHeaderLabels(
             ["Mode", "Query", "Provider", "Confidence", "Sources", "Cost (eq)", "Generated"]
         )

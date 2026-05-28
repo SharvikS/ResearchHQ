@@ -619,22 +619,55 @@ QTabBar::tab:selected {{
 }}
 QTabBar::tab:hover:!selected {{ color: {text}; }}
 
-/* ─── Scrollbars ───────────────────────────────────────────────────── */
-QScrollBar:vertical {{ background: transparent; width: 10px; margin: 0; }}
+/* ─── Scrollbars ───────────────────────────────────────────────────────
+   Thumb carries a subtle vertical/horizontal gradient so it reads as a
+   polished glass slab. Hover state lifts the thumb into the accent
+   palette + brightens it; pressed state dims it slightly. */
+QScrollBar:vertical {{ background: transparent; width: 12px; margin: 0; }}
 QScrollBar::handle:vertical {{
-    background: {border_lt};
-    border-radius: 5px;
+    background: qlineargradient(
+        x1:0, y1:0, x2:1, y2:0,
+        stop:0 {border}, stop:1 {border_lt}
+    );
+    border: 1px solid {border_lt};
+    border-radius: 6px;
     min-height: 24px;
+    margin: 2px;
 }}
-QScrollBar::handle:vertical:hover {{ background: {accent_dim}; }}
+QScrollBar::handle:vertical:hover {{
+    background: qlineargradient(
+        x1:0, y1:0, x2:1, y2:0,
+        stop:0 {accent_dim}, stop:1 {accent}
+    );
+    border-color: {accent};
+}}
+QScrollBar::handle:vertical:pressed {{
+    background: {accent};
+    border-color: {accent2};
+}}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
-QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 0; }}
+QScrollBar:horizontal {{ background: transparent; height: 12px; margin: 0; }}
 QScrollBar::handle:horizontal {{
-    background: {border_lt};
-    border-radius: 5px;
+    background: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 {border}, stop:1 {border_lt}
+    );
+    border: 1px solid {border_lt};
+    border-radius: 6px;
     min-width: 24px;
+    margin: 2px;
 }}
-QScrollBar::handle:horizontal:hover {{ background: {accent_dim}; }}
+QScrollBar::handle:horizontal:hover {{
+    background: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 {accent_dim}, stop:1 {accent}
+    );
+    border-color: {accent};
+}}
+QScrollBar::handle:horizontal:pressed {{
+    background: {accent};
+    border-color: {accent2};
+}}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0; }}
 
 /* ─── Tooltips ─────────────────────────────────────────────────────── */

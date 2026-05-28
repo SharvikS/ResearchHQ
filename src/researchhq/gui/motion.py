@@ -403,21 +403,28 @@ def cross_fade(stack: QStackedWidget, new_index: int,
     """Animated swap from the current page to *new_index*.
 
     Pages in this app contain instrumented buttons / inputs that already
-    wear their own ``QGraphicsEffect`` (drop-shadow glow). Stacking a
+    wear their own ``QGraphicsEffect``. Stacking a
     ``QGraphicsOpacityEffect`` on the parent page makes Qt re-enter
-    painting on descendants — that crashes the splash. So we keep the
-    swap snappy and lean on a brief "pixmap shroud" overlay to soften
-    the cut: paint a snapshot of the old page over the new one, then
-    fade the snapshot out at the WM-level via an animated label
-    opacity. The snapshot has no children, no effects, so it never
-    nests.
+    painting on descendants — that crashes the splash. So we use a
+    "pixmap shroud" overlay: render the old page to a snapshot label,
+    swap the stack instantly, then animate the snapshot out.
+
+    The shroud also slides horizontally a small distance in the
+    direction implied by the index delta (forward = right→left, back =
+    left→right). The new page's "entrance slide" rides through the
+    same translation in the opposite direction so the navigation feels
+    spatial without becoming a hard cut.
     """
     if new_index == stack.currentIndex():
         return
 
+    direction = 1 if new_index > stack.currentIndex() else -1
+    slide_px = 14
     old = stack.currentWidget()
     snapshot = None
+
     if old is not None and old.size().width() > 0 and old.size().height() > 0:
+        from PySide6.QtCore import QPoint
         from PySide6.QtGui import QPixmap
         from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel
 
@@ -432,20 +439,47 @@ def cross_fade(stack: QStackedWidget, new_index: int,
         snapshot.raise_()
         snapshot.show()
 
+        # Fade out the snapshot.
         eff = QGraphicsOpacityEffect(snapshot)
         eff.setOpacity(1.0)
         snapshot.setGraphicsEffect(eff)
+        fade = QPropertyAnimation(eff, b"opacity", snapshot)
+        fade.setDuration(scaled(duration))
+        fade.setStartValue(1.0)
+        fade.setEndValue(0.0)
+        fade.setEasingCurve(MOTION.EASE_PAGE)
+        fade.finished.connect(snapshot.deleteLater)
+        fade.start()
 
-        anim = QPropertyAnimation(eff, b"opacity", snapshot)
-        anim.setDuration(duration)
-        anim.setStartValue(1.0)
-        anim.setEndValue(0.0)
-        anim.setEasingCurve(MOTION.EASE_PAGE)
-        anim.finished.connect(snapshot.deleteLater)
-        anim.start()
-        snapshot._rhq_fade = anim  # type: ignore[attr-defined]
+        # Slide the snapshot away in the navigation direction.
+        slide = QPropertyAnimation(snapshot, b"pos", snapshot)
+        slide.setDuration(scaled(duration))
+        slide.setStartValue(snapshot.pos())
+        slide.setEndValue(QPoint(snapshot.pos().x() - direction * slide_px,
+                                 snapshot.pos().y()))
+        slide.setEasingCurve(MOTION.EASE_PAGE)
+        slide.start()
 
+        snapshot._rhq_anims = (fade, slide)  # type: ignore[attr-defined]
+
+    # Swap to the new page + give it the opposite-direction entrance slide.
     stack.setCurrentIndex(new_index)
+    new = stack.currentWidget()
+    if new is not None and not is_reduced():
+        from PySide6.QtCore import QPoint
+        # Cache the final position once we know the layout has placed
+        # the page; then offset by +/- slide_px in the page's local
+        # coords. The container is a QStackedWidget so each child
+        # widget's pos is (0, 0) — we shift it temporarily and animate
+        # back to (0, 0).
+        new_anim = QPropertyAnimation(new, b"pos", new)
+        new_anim.setStartValue(QPoint(direction * slide_px, 0))
+        new_anim.setEndValue(QPoint(0, 0))
+        new_anim.setDuration(scaled(duration))
+        new_anim.setEasingCurve(MOTION.EASE_PAGE)
+        new.move(direction * slide_px, 0)
+        new_anim.start()
+        new._rhq_entrance_slide = new_anim  # type: ignore[attr-defined]
 
 
 def fade_in(widget: QWidget, duration: int = MOTION.INTRO) -> None:

@@ -3,6 +3,10 @@
 Cards auto-instrument with a hover-lift drop-shadow (see
 ``motion.attach_card_hover``) so they feel tactile across the app
 without each call site needing to wire it up.
+
+The card title is rendered through ``SectionTitle`` so each card has a
+slow accent gradient sweep painted under its heading — a quiet
+ambient touch that ties the cards into the rest of the animated UI.
 """
 
 from __future__ import annotations
@@ -28,7 +32,11 @@ class Card(QFrame):
         self._outer.setSpacing(8)
 
         if title:
-            t = QLabel(title)
+            # SectionTitle is a QLabel subclass that paints a slow
+            # accent gradient underline. Same QSS hooks (objectName)
+            # as before so existing theme rules still apply.
+            from researchhq.gui.widgets.section_title import SectionTitle
+            t = SectionTitle(title)
             t.setObjectName("CardTitle")
             self._outer.addWidget(t)
         if subtitle:
