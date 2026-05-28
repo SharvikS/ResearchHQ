@@ -1,11 +1,21 @@
-import { AppSettings } from '../types';
+import { AppSettings, ReadyResponse } from '../types';
 
 const DEFAULT_BASE = 'http://localhost:8000';
 
+/**
+ * Read the user's persisted settings out of the Zustand `rhq_store`
+ * key. Zustand persist wraps state under a `state` field, so a naive
+ * `JSON.parse` returns the wrapper — we have to drill in.
+ *
+ * The store name + nesting come from `store/index.ts`; if you rename
+ * the persist key, update both places together.
+ */
 function getSettings(): Partial<AppSettings> {
   try {
-    const raw = localStorage.getItem('rhq_settings');
-    return raw ? JSON.parse(raw) : {};
+    const raw = localStorage.getItem('rhq_store');
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as { state?: { settings?: Partial<AppSettings> } };
+    return parsed.state?.settings ?? {};
   } catch {
     return {};
   }
@@ -38,7 +48,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   health: () => request<{ status: string; version: string; providers_available: string[] }>('/health'),
-  ready:  () => request<{ status: string; version: string; providers_available: string[]; circuit_breakers_open: string[] }>('/ready'),
+  ready:  () => request<ReadyResponse>('/ready'),
 
   submitQuery: (body: {
     query: string;
