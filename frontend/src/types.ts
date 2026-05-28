@@ -65,6 +65,8 @@ export interface FinalResponse {
   key_findings: string[];
   conflicting_viewpoints: string[];
   limitations: string[];
+  /** Follow-up questions the backend suggests; rendered as clickable chips. */
+  next_questions?: string[];
   confidence: ConfidenceResult;
   sources: Source[];
   execution_metadata: ExecutionMetadata;

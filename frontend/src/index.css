@@ -1,3 +1,18 @@
+/*
+ * ResearchHQ Studio — global stylesheet.
+ *
+ * Layered Tailwind setup with three concerns:
+ *   1. Base — body / font / scrollbar styling, dark colour scheme,
+ *      CSS variables that are mutated live by the Settings page
+ *      (accent colour, font size, density).
+ *   2. Utilities — animation aliases (so JSX classes pick up keyframes
+ *      declared below), three glass surface tiers, prose styling for
+ *      ReactMarkdown report bodies.
+ *   3. Keyframes — duplicated at the file root so non-tailwind CSS
+ *      (inline animation properties on custom widgets) can reference
+ *      them.
+ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,58 +20,87 @@
 @layer base {
   :root {
     color-scheme: dark;
+    /* Settings page mutates these vars at runtime so palette + density
+       changes apply without a reload. */
+    --color-brand: #6366f1;
+    --font-size-base: 14px;
+    --density-gap: 1rem;
   }
 
   html {
+    font-size: var(--font-size-base);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
 
   body {
     @apply bg-surface-950 text-slate-200 font-sans;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    /* Inter contextual ligatures + stylistic set 1. */
+    font-feature-settings: 'rlig' 1, 'calt' 1, 'ss01' 1;
+    background-color: #070711;
   }
 
-  * {
-    @apply border-white/[0.08];
-  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-white/20; }
+  ::-webkit-scrollbar-corner { background: transparent; }
 
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    @apply bg-white/10 rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-white/20;
-  }
+  ::selection { background: rgba(99, 102, 241, 0.35); color: #e0e7ff; }
 }
 
 @layer utilities {
-  .animate-fade-in {
-    animation: fadeIn 0.2s ease-out both;
+  /* JSX-friendly animation aliases. */
+  .animate-fade-in    { animation: fadeIn 0.2s ease-out both; }
+  .animate-fade-in-up { animation: fadeInUp 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-slide-up   { animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-scale-in   { animation: scaleIn 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+
+  /* Glass surface tiers — for layering cards-in-cards without colour clash. */
+  .glass        { @apply bg-white/[0.04] backdrop-blur-xl   border border-white/[0.07]; }
+  .glass-md     { @apply bg-white/[0.06] backdrop-blur-xl   border border-white/[0.10]; }
+  .glass-strong { @apply bg-white/[0.08] backdrop-blur-2xl  border border-white/[0.12]; }
+
+  .text-balance { text-wrap: balance; }
+  .text-gradient {
+    background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
-  .animate-slide-up {
-    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Prose styling for ReactMarkdown report bodies — dark theme overrides
+     for @tailwindcss/typography's prose-invert. */
+  .prose-rhq {
+    @apply prose prose-sm prose-invert max-w-none;
+    --tw-prose-body:     theme('colors.slate.300');
+    --tw-prose-headings: theme('colors.slate.100');
+    --tw-prose-bold:     theme('colors.slate.200');
+    --tw-prose-code:     theme('colors.violet.300');
+    --tw-prose-links:    theme('colors.indigo.400');
+    --tw-prose-bullets:  theme('colors.slate.500');
+    --tw-prose-pre-bg:   rgba(0,0,0,0.4);
   }
-
-  .animate-glow {
-    animation: glow 4s ease-in-out infinite;
+  .prose-rhq code:not(pre code) {
+    @apply bg-white/[0.08] text-violet-300 px-1.5 py-0.5 rounded text-[0.8em] font-normal;
   }
-
-  .glass {
-    @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.07];
-  }
-
-  .text-balance {
-    text-wrap: balance;
-  }
+  .prose-rhq pre { @apply border border-white/[0.08] rounded-xl; }
+  .prose-rhq a   { @apply no-underline hover:text-indigo-300 transition-colors; }
+  .prose-rhq th  { @apply border-b border-white/[0.12] text-slate-300 font-semibold; }
+  .prose-rhq td  { @apply border-b border-white/[0.06] text-slate-400; }
 }
+
+@keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp  { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp   { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn   { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes scaleIn   { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: scale(1); } }
+@keyframes glow      { from { box-shadow: 0 0 20px rgba(99,102,241,0.3); } to { box-shadow: 0 0 50px rgba(99,102,241,0.65); } }
+@keyframes shimmer   { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+@keyframes bounceDots {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40%           { transform: scale(1);   opacity: 1;   }
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes spin  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
