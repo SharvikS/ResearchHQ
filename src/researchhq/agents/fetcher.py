@@ -43,26 +43,44 @@ class FetchedPage:
     truncated: bool
 
 
+_SKIP_TAGS = frozenset({"script", "style", "noscript", "svg", "template", "head"})
+_BLOCK_TAGS = frozenset({"p", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "div"})
+
+
 class _TextOnly(HTMLParser):
-    """Lightweight HTML-to-text. Drops <script>/<style>; collapses whitespace."""
+    """Lightweight HTML-to-text. Drops <script>/<style>; collapses whitespace.
+
+    Uses a tag stack rather than a depth counter so that self-closing skip tags
+    (``<svg/>``) and unbalanced/malformed markup can't permanently wedge the
+    parser into "skip everything" mode and silently drop all page text.
+    """
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self._buf: list[str] = []
-        self._skip_depth = 0
+        self._skip_stack: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in ("script", "style", "noscript", "svg"):
-            self._skip_depth += 1
+        if tag in _SKIP_TAGS:
+            self._skip_stack.append(tag)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        # Self-closing (<svg/>) has no content, so never enter skip mode for it.
+        if tag in _BLOCK_TAGS and not self._skip_stack:
+            self._buf.append("\n")
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in ("script", "style", "noscript", "svg") and self._skip_depth > 0:
-            self._skip_depth -= 1
-        if tag in ("p", "br", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "div"):
+        if tag in _SKIP_TAGS and self._skip_stack:
+            # Pop the most recent matching open skip tag; tolerate mismatches.
+            for i in range(len(self._skip_stack) - 1, -1, -1):
+                if self._skip_stack[i] == tag:
+                    del self._skip_stack[i]
+                    break
+        if tag in _BLOCK_TAGS and not self._skip_stack:
             self._buf.append("\n")
 
     def handle_data(self, data: str) -> None:
-        if self._skip_depth == 0:
+        if not self._skip_stack:
             self._buf.append(data)
 
     def text(self) -> str:

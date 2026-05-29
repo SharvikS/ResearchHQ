@@ -1,5 +1,5 @@
-from competiq.llm.cost_tracker import CostTracker
-from competiq.llm.providers.base import LLMResponse
+from researchhq.llm.cost_tracker import CostTracker
+from researchhq.llm.providers.base import LLMResponse
 
 
 def test_records_aggregate_per_provider():

@@ -5,23 +5,13 @@ description = "ResearchHQ — premium multi-agent research workstation for the t
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    # LLM providers
+    # LLM providers (default free-tier chain)
     "groq>=0.13.0",
     "google-genai>=0.3.0",
     "ollama>=0.4.0",
     # Web tools
     "ddgs>=6.0.0",
     "httpx>=0.27.0",
-    # Agent orchestration (legacy competiq pipeline)
-    "langgraph>=0.2.50",
-    "langchain-core>=0.3.0",
-    # Memory
-    "psycopg[binary]>=3.2.0",
-    "pgvector>=0.3.0",
-    "redis>=5.2.0",
-    "sentence-transformers>=3.3.0",
-    # Observability
-    "langfuse>=2.50.0",
     # CLI + UX
     "typer>=0.15.0",
     "rich>=13.9.0",
@@ -29,10 +19,6 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
-    # Server
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.34.0",
-    "sse-starlette>=2.1.0",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +32,12 @@ openai = ["openai>=1.30.0"]
 anthropic = ["anthropic>=0.40.0"]
 gui = ["PySide6>=6.7.0"]
 tui = ["textual>=0.86.0"]
+# HTTP API backend for the React frontend (not yet implemented — see frontend/).
+server = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "sse-starlette>=2.1.0",
+]
 
 [project.scripts]
 # Premium CLI (interactive + all subcommands):
@@ -58,8 +50,6 @@ research = "researchhq.cli:app"
 researchhq-cli = "researchhq.cli:app"
 # Desktop GUI (requires the [gui] extra: pip install -e ".[gui]")
 researchhq-gui = "researchhq.gui.app:main"
-# Legacy CLI preserved for backward compatibility:
-competiq = "competiq.cli:app"
 
 [tool.ruff]
 line-length = 100
@@ -78,4 +68,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/researchhq", "src/competiq"]
+packages = ["src/researchhq"]

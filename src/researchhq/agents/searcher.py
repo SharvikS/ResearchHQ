@@ -12,24 +12,29 @@ from researchhq.search.web_search import SearchResult, web_search_async
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_CONCURRENCY = 4
+
 
 async def search_all(
     queries: list[str],
     *,
     results_per_query: int | None = None,
+    concurrency: int = DEFAULT_CONCURRENCY,
 ) -> list[SearchResult]:
     n_per = results_per_query if results_per_query is not None else settings.max_results_per_query
+    sem = asyncio.Semaphore(max(1, concurrency))
 
     async def _run(q: str) -> list[SearchResult]:
-        try:
-            return await web_search_async(
-                q,
-                n_per,
-                settings.search_engines,
-            )
-        except Exception as e:  # noqa: BLE001 — partial failure tolerated
-            logger.warning("Searcher: query '%s' failed: %s", q, e)
-            return []
+        async with sem:
+            try:
+                return await web_search_async(
+                    q,
+                    n_per,
+                    settings.search_engines,
+                )
+            except Exception as e:  # noqa: BLE001 — partial failure tolerated
+                logger.warning("Searcher: query '%s' failed: %s", q, e)
+                return []
 
     batches = await asyncio.gather(*[_run(q) for q in queries], return_exceptions=False)
     seen: set[str] = set()

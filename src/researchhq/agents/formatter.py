@@ -5,13 +5,12 @@ The actual rendering to markdown / json / html lives in researchhq.reports.expor
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 
 from researchhq.llm.router import router
 from researchhq.modes.base import ResearchMode
 from researchhq.reports.schema import Section
+from researchhq.utils.json_extract import extract_json_object
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +27,6 @@ Rules:
 - Output JSON only — no prose."""
 
 
-def _extract_json(text: str) -> dict:
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if not match:
-        raise ValueError("no JSON object")
-    return json.loads(match.group())
-
-
 async def next_questions(
     mode: ResearchMode,
     query: str,
@@ -47,9 +39,9 @@ async def next_questions(
     prompt = f"Mode: {mode.name}\nUser query: {query}\n\nReport so far:\n{body}"
     try:
         response = await router.complete(prompt=prompt, system=_system(min_q, max_q), max_tokens=400, stage="formatter")
-        data = _extract_json(response.text)
-        qs = [q for q in data.get("questions", []) if isinstance(q, str)]
-        return qs[: max(max_q + 2, 8)] if qs else _fallback_questions(mode, query)
+        data = extract_json_object(response.text)
+        qs = [q.strip() for q in data.get("questions", []) if isinstance(q, str) and q.strip()]
+        return qs[:max_q] if qs else _fallback_questions(mode, query)
     except Exception as e:
         logger.warning("Formatter LLM failed (%s); using fallback questions.", e)
         return _fallback_questions(mode, query)

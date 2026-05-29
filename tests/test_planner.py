@@ -8,20 +8,28 @@ import asyncio
 import pytest
 
 from researchhq.agents import planner
-from researchhq.agents.planner import _extract_json, _fallback
+from researchhq.agents.planner import _fallback
 from researchhq.modes import get_mode
 from researchhq.reports.schema import ResearchPlan
+from researchhq.utils.json_extract import extract_json_object
 
 
 def test_extract_json_finds_object_in_noisy_output():
     text = "junk text\n```json\n{\"queries\": [\"a\", \"b\"], \"rationale\": \"x\"}\n```"
-    data = _extract_json(text)
+    data = extract_json_object(text)
     assert data["queries"] == ["a", "b"]
 
 
 def test_extract_json_raises_when_absent():
     with pytest.raises(ValueError):
-        _extract_json("no json here")
+        extract_json_object("no json here")
+
+
+def test_extract_json_ignores_trailing_object():
+    # Greedy first-to-last-brace parsing used to fail here; raw_decode takes the first.
+    text = '{"queries": ["a"], "rationale": "x"} and then {"junk": 1}'
+    data = extract_json_object(text)
+    assert data["queries"] == ["a"]
 
 
 def test_template_fallback_returns_seed_queries():

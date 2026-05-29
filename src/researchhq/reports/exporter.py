@@ -17,6 +17,13 @@ def _slug(s: str) -> str:
     return cleaned or "report"
 
 
+def _assert_within(path: Path, parent: Path) -> None:
+    """Guard against path traversal: ``path`` must resolve inside ``parent``."""
+    resolved_parent = parent.resolve()
+    if resolved_parent not in path.resolve().parents and path.resolve() != resolved_parent:
+        raise ValueError(f"Refusing to write outside output folder: {path}")
+
+
 def _confidence_label(value: float) -> str:
     if value >= 0.75:
         return "High"
@@ -164,13 +171,16 @@ def save(
     fn, ext = _FORMATS[fmt]
     out_dir = Path(folder or settings.output_folder)
     out_dir.mkdir(parents=True, exist_ok=True)
-    name = f"{report.mode}__{_slug(report.query)}{ext}"
-    path = out_dir / name
+    # Slugify BOTH mode and query: report.mode is an unvalidated string and must
+    # never escape out_dir (e.g. mode="../../etc/x").
+    stem = f"{_slug(report.mode)}__{_slug(report.query)}"
+    path = out_dir / f"{stem}{ext}"
+    _assert_within(path, out_dir)
     path.write_text(fn(report), encoding="utf-8")
 
     # Always also write the JSON form (small) so the history index has a stable
     # JSON to reference. It's fine for fmt==json (no-op overwrite).
-    json_path = out_dir / f"{report.mode}__{_slug(report.query)}.json"
+    json_path = out_dir / f"{stem}.json"
     if fmt != "json":
         json_path.write_text(to_json(report), encoding="utf-8")
 

@@ -1100,14 +1100,17 @@ def export(
         if not src.exists():
             continue
         try:
-            import json as _json
-            data = _json.loads(src.read_text(encoding="utf-8"))
             dest = out_dir / src.name
             if fmt == "markdown":
-                dest = dest.with_suffix(".md")
+                import json as _json
+
                 from researchhq.reports.exporter import to_markdown
-                # Build a minimal report object or just copy the JSON
-                dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+                from researchhq.reports.schema import ResearchReport
+
+                data = _json.loads(src.read_text(encoding="utf-8"))
+                report = ResearchReport.model_validate(data)
+                dest = dest.with_suffix(".md")
+                dest.write_text(to_markdown(report), encoding="utf-8")
             else:
                 dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
             imported += 1

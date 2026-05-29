@@ -5,13 +5,12 @@ or returns malformed JSON."""
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 
 from researchhq.llm.router import router
 from researchhq.modes.base import ResearchMode
 from researchhq.reports.schema import ResearchPlan
+from researchhq.utils.json_extract import extract_json_object
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +31,6 @@ Rules:
 - Mix breadth and depth — at least two queries should target official/authoritative sources.
 - For modes 'news' and 'academic', bias toward dated and venue-anchored queries respectively.
 - Output JSON only, no prose, no fences."""
-
-
-def _extract_json(text: str) -> dict:
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if not match:
-        raise ValueError("no JSON object in planner output")
-    return json.loads(match.group())
 
 
 def _fallback(mode: ResearchMode, query: str) -> ResearchPlan:
@@ -71,12 +63,18 @@ async def plan(
             max_tokens=max_tokens,
             stage="planner",
         )
-        data = _extract_json(response.text)
+        data = extract_json_object(response.text)
         queries = [q for q in data.get("queries", []) if isinstance(q, str) and q.strip()]
         if not queries:
             raise ValueError("empty queries list")
-        cap = max(max_queries + 2, 10)
-        return ResearchPlan(queries=queries[:cap], rationale=str(data.get("rationale", "")))
+        # Top up from seeds if the model under-delivered, then cap.
+        if len(queries) < min_queries:
+            for seed in mode.seed_queries(query):
+                if seed not in queries:
+                    queries.append(seed)
+                if len(queries) >= min_queries:
+                    break
+        return ResearchPlan(queries=queries[:max_queries], rationale=str(data.get("rationale", "")))
     except Exception as e:
         logger.warning("Planner LLM failed (%s); using template seeds.", e)
         return _fallback(mode, query)

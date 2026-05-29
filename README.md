@@ -9,7 +9,7 @@ side-by-side compare, multi-format export including PDF.
 
 Built on free-tier providers (Groq, Gemini, local Ollama). Operational cost: **$0**.
 
-> **Heritage**: this project began as `competiq`, a competitor-only intelligence tool. The legacy `competiq` CLI is preserved for backward compatibility (see [Backward compatibility](#backward-compatibility)).
+> **Heritage**: this project began as `competiq`, a competitor-only intelligence tool, and has since been fully reimplemented as `researchhq` (see [Heritage](#heritage)).
 
 <br>
 <p align="center">
@@ -258,17 +258,12 @@ research modes      # list available research modes
 research status     # show provider configuration
 ```
 
-## Backward compatibility
+## Heritage
 
-The original CLI is preserved unchanged:
-
-```powershell
-competiq research "Linear"     # original single-agent briefing
-competiq pipeline "Supabase"   # original LangGraph multi-agent flow
-competiq status                # original provider status
-```
-
-The `competiq` package remains installed alongside `researchhq`; the new CLI does not depend on it.
+This project began as `competiq`, a competitor-only intelligence tool built on
+LangGraph. That legacy package has been removed — `researchhq` is a full
+reimplementation and does not depend on it. If you need the old LangGraph flow,
+check it out from git history prior to the 0.3.x cleanup.
 
 ## Project structure
 
@@ -312,7 +307,6 @@ multi_agent/
 |   |   +-- utils/
 |   |       +-- logging.py
 |   |       +-- rich_ui.py
-|   +-- competiq/                  # legacy package (preserved)
 +-- tests/
 ```
 
@@ -322,7 +316,7 @@ multi_agent/
 2. Wire it into `researchhq/pipeline.py` between two existing stages, emitting a `StageEvent` so the CLI can show progress.
 3. Add a unit test in `tests/test_<myagent>.py`.
 
-The pipeline is a flat sequence rather than a graph (intentionally — easier to extend than the LangGraph version in the legacy `competiq` package). If you need fan-out / fan-in, mirror the structure in `competiq/graph/workflow.py`.
+The pipeline is a flat sequence rather than a graph (intentionally — easier to extend than a LangGraph-style flow). If you need fan-out / fan-in, introduce an `asyncio.gather` fan-out stage between two existing stages.
 
 ## Adding a new research mode
 
