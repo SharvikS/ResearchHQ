@@ -9,6 +9,12 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
+# Node (frontend) — commit the lockfile, never the installed deps
+node_modules/
+
+# Claude Code scratch worktrees
+.claude/worktrees/
+
 # Env
 .env
 .env.local
