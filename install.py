@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 """ResearchHQ — one-command interactive installer.
 
-Run from anywhere:
+Recommended (auto-detects Python, most robust):
+  macOS / Linux   curl -fsSL https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.sh | sh
+  Windows         irm https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.ps1 | iex
+
+Run a local checkout directly:
   python install.py
 
-Or pipe from GitHub (Linux/Mac):
-  curl -sSL https://raw.githubusercontent.com/SharvikS/PROJECT_NAME/master/install.py | python3
+Pipe this script straight to Python (requires Python 3.11+ on PATH):
+  macOS / Linux   curl -fsSL https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.py | python3 -
+  Windows         irm https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.py | py -3 -
 
-Windows (PowerShell):
-  irm https://raw.githubusercontent.com/SharvikS/PROJECT_NAME/master/install.py | python
+When piped, stdin is the script itself (not your keyboard), so this file
+re-downloads itself to a temp path and re-execs with the real terminal
+attached — see _bootstrap_interactive() below.
 """
 
 from __future__ import annotations
 
+import contextlib
 import getpass
 import logging
 import os
@@ -51,7 +58,45 @@ _VERIFY_TIMEOUT = 30
 # with the real terminal as stdin.
 # ---------------------------------------------------------------------------
 
-_INSTALLER_URL = "https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.py"
+# Pinned to master by default. The .sh / .ps1 wrappers (and testers) can point
+# this at another ref via RESEARCHHQ_INSTALL_URL so an unmerged branch can be
+# exercised end-to-end before it lands.
+_DEFAULT_INSTALLER_URL = "https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.py"
+_INSTALLER_URL = os.environ.get("RESEARCHHQ_INSTALL_URL", _DEFAULT_INSTALLER_URL)
+
+_DOWNLOAD_TIMEOUT = 30
+_DOWNLOAD_RETRIES = 3
+
+
+def _download(url: str, dest: str) -> None:
+    """Download *url* to *dest* with a timeout, retries, and a status check.
+
+    urllib.request.urlretrieve has no timeout and silently writes whatever the
+    server returns (including a 404 HTML page), so we drive urlopen() directly:
+    a non-2xx status raises HTTPError, and each attempt is bounded so a captive
+    portal or stalled connection can't wedge the installer.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(1, _DOWNLOAD_RETRIES + 1):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "researchhq-installer"})
+            with urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT) as resp:  # noqa: S310 — fixed URL we own
+                status = getattr(resp, "status", 200) or 200
+                if status >= 400:
+                    raise urllib.error.HTTPError(url, status, "HTTP error", resp.headers, None)
+                data = resp.read()
+            head = data[:512].lstrip().lower()
+            if head.startswith((b"<!doctype", b"<html")) or b"ResearchHQ" not in data[:512]:
+                raise OSError("downloaded file does not look like the installer (got an error page?)")
+            with open(dest, "wb") as fh:
+                fh.write(data)
+            return
+        except (urllib.error.URLError, OSError) as exc:
+            last_exc = exc
+            log.warning("Download attempt %d/%d failed: %s", attempt, _DOWNLOAD_RETRIES, exc)
+            if attempt < _DOWNLOAD_RETRIES:
+                time.sleep(attempt)  # linear backoff: 1s, 2s
+    raise last_exc if last_exc else OSError("download failed")
 
 
 def _bootstrap_interactive() -> None:
@@ -67,15 +112,17 @@ def _bootstrap_interactive() -> None:
         delete=False,
     )
     tmp = fd.name
-    fd.close()  # We're going to write to it via urlretrieve; just need the path.
+    fd.close()  # We're going to write to it via _download; just need the path.
 
     con = None
     try:
         try:
-            urllib.request.urlretrieve(_INSTALLER_URL, tmp)  # noqa: S310 — fixed URL we own
+            _download(_INSTALLER_URL, tmp)
         except (urllib.error.URLError, OSError) as exc:
             log.exception("Download of installer failed")
             print(f"Download failed: {exc}")
+            print(f"  URL: {_INSTALLER_URL}")
+            print("  Check your internet connection and try again.")
             sys.exit(1)
 
         try:
@@ -156,6 +203,13 @@ def yellow(t: str) -> str:     return _c("33", t)
 def cyan(t: str) -> str:       return _c("36", t)
 def red(t: str) -> str:        return _c("31", t)
 def magenta(t: str) -> str:    return _c("35", t)
+# Warm Claude-style accent (256-colour 173 ≈ #d7875f). 256-colour rather than
+# truecolor for the widest terminal support.
+def accent(t: str) -> str:     return _c("38;5;173", t)
+
+
+# Brand mark used throughout the guided flow, à la Claude Code's ✻.
+SPARK = "✻"
 
 
 # ---------------------------------------------------------------------------
@@ -234,9 +288,254 @@ def _ask_yn(prompt: str, default: bool = True) -> bool:
     return raw.lower().startswith("y")
 
 
-def _section(title: str) -> None:
+# ---------------------------------------------------------------------------
+# Arrow-key menus (Claude Code style) with a numbered fallback
+# ---------------------------------------------------------------------------
+# These reuse the idea of raw-terminal input from the mini-game but NOT its
+# per-keystroke termios toggle: a menu sets cbreak mode *once*, blocks on
+# select(), and restores once on exit. (The game's _read_key, which toggles
+# every call, is left untouched — it redraws every cell each frame so the
+# transient cooked-mode windows never show.)
+
+def _can_raw_menu() -> bool:
+    """True only when interactive arrow-key menus are safe to use.
+
+    Gated so scripted/CI installs (which inject IO via set_io or set RHQ_NO_RAW)
+    and non-terminals fall back to the numbered prompt instead — that fallback
+    is the contract for non-interactive use, so it must stay fully functional."""
+    if os.environ.get("RHQ_NO_RAW"):
+        return False
+    if _input_fn is not input:            # IO was injected (tests / library)
+        return False
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        return False
+    if sys.platform == "win32":
+        return _win_enable_ansi()
+    return True
+
+
+# Single-byte keys → normalised names (shared by both platform readers).
+_SIMPLE_KEYS = {
+    b" ":    "SPACE",
+    b"\r":   "ENTER",
+    b"\n":   "ENTER",
+    b"\x1b": "ESC",
+    b"\x03": "CTRL_C",
+    b"\x08": "BACKSPACE",
+    b"\x7f": "BACKSPACE",
+}
+_CSI_ARROWS = {b"A": "UP", b"B": "DOWN", b"C": "RIGHT", b"D": "LEFT"}      # ESC [ <X>
+_WIN_ARROWS = {b"H": "UP", b"P": "DOWN", b"K": "LEFT", b"M": "RIGHT"}      # \xe0 <X>
+
+
+@contextlib.contextmanager
+def _key_reader():
+    """Yield a blocking getkey() that returns normalised key names.
+
+    POSIX: enter cbreak once (no echo, char-at-a-time, signals intact) and
+    restore on exit. Windows: msvcrt.getch is already non-echoing and blocking,
+    so no mode change is needed."""
+    if sys.platform == "win32":
+        import msvcrt
+
+        def getkey() -> str:
+            ch = msvcrt.getch()
+            if ch in (b"\xe0", b"\x00"):           # arrow / function key prefix
+                ext = msvcrt.getch()
+                return _WIN_ARROWS.get(ext, "")
+            if ch in _SIMPLE_KEYS:
+                return _SIMPLE_KEYS[ch]
+            try:
+                return ch.decode("ascii").upper()
+            except UnicodeDecodeError:
+                return ""
+
+        yield getkey
+        return
+
+    import select
+    import termios
+    import tty
+
+    fd = sys.stdin.fileno()
+    saved = termios.tcgetattr(fd)
+    # TCSANOW (not the default TCSAFLUSH) so any keys typed ahead — before
+    # cbreak engages — survive instead of being discarded, which would block
+    # the first read forever.
+    tty.setcbreak(fd, termios.TCSANOW)
+    try:
+        def getkey() -> str:
+            select.select([fd], [], [], None)     # block until a key is ready
+            ch = os.read(fd, 1)
+            if ch == b"\x1b":
+                # Distinguish a bare ESC from a CSI escape sequence (arrows).
+                rr, _, _ = select.select([fd], [], [], 0.02)
+                if rr:
+                    seq = os.read(fd, 2)
+                    for marker, name in _CSI_ARROWS.items():
+                        if seq.endswith(marker):
+                            return name
+                return "ESC"
+            if ch in _SIMPLE_KEYS:
+                return _SIMPLE_KEYS[ch]
+            try:
+                return ch.decode("ascii").upper()
+            except UnicodeDecodeError:
+                return ""
+
+        yield getkey
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, saved)
+
+
+def _fit(text: str, width: int) -> str:
+    """Truncate plain text to *width* columns (keeps menu redraw math honest)."""
+    if width <= 1 or len(text) <= width:
+        return text
+    return text[: width - 1] + "…"
+
+
+def _select(title: str, options: list[tuple[str, str]], default: int = 0) -> int:
+    """Single-choice menu. options = [(label, hint), …]. Returns chosen index.
+
+    Arrow keys ↑/↓ move, Enter selects, a digit jumps-and-confirms. Falls back
+    to a numbered prompt when raw input isn't available."""
+    n = len(options)
+    cols = shutil.get_terminal_size(fallback=(80, 24)).columns
+
+    if not _can_raw_menu():
+        print()
+        print(f"  {bold(title)}")
+        for i, (label, hint) in enumerate(options, 1):
+            tail = f"  {dim('— ' + hint)}" if hint else ""
+            print(f"  {dim(f'{i})')} {label}{tail}")
+        while True:
+            raw = _ask("Choice", str(default + 1))
+            if raw.isdigit() and 1 <= int(raw) <= n:
+                return int(raw) - 1
+            _warn("Enter a number from the list.")
+
+    idx = default
     print()
-    print(bold(cyan(f"  ── {title} ")))
+    print(f"  {bold(title)}")
+    print()
+
+    def render(first: bool = False) -> None:
+        if not first:
+            sys.stdout.write(f"\033[{n + 1}A")     # back up over options + hint
+        for i, (label, hint) in enumerate(options):
+            sel = i == idx
+            cursor = accent("❯") if sel else " "
+            shown = _fit(f"{label}{('  — ' + hint) if hint else ''}", cols - 6)
+            body = accent(shown) if sel else shown
+            sys.stdout.write(f"\r\033[2K  {cursor} {body}\n")
+        sys.stdout.write(f"\r\033[2K  {dim('↑/↓ move · 1-9 jump · enter select')}\n")
+        sys.stdout.flush()
+
+    render(first=True)
+    with _key_reader() as getkey:
+        while True:
+            try:
+                k = getkey()
+            except KeyboardInterrupt:
+                print()
+                sys.exit(0)
+            if k == "UP":
+                idx = (idx - 1) % n
+                render()
+            elif k == "DOWN":
+                idx = (idx + 1) % n
+                render()
+            elif k == "ENTER":
+                break
+            elif k in ("CTRL_C", "ESC"):
+                print()
+                sys.exit(0)
+            elif k.isdigit() and 1 <= int(k) <= n:
+                idx = int(k) - 1
+                render()
+                break
+    return idx
+
+
+def _multiselect(title: str, options: list[tuple[str, str]], preselected: set[int] | None = None) -> list[int]:
+    """Checklist menu. Space toggles, Enter confirms. Returns selected indices.
+
+    Falls back to one Y/N prompt per option when raw input isn't available."""
+    pre = preselected or set()
+    n = len(options)
+    cols = shutil.get_terminal_size(fallback=(80, 24)).columns
+
+    if not _can_raw_menu():
+        print()
+        print(f"  {bold(title)}")
+        chosen: list[int] = []
+        for i, (label, hint) in enumerate(options):
+            tail = f"  ({hint})" if hint else ""
+            if _ask_yn(f"{label}{tail}", default=i in pre):
+                chosen.append(i)
+        return chosen
+
+    sel = set(pre)
+    idx = 0
+    print()
+    print(f"  {bold(title)}")
+    print()
+
+    def render(first: bool = False) -> None:
+        if not first:
+            sys.stdout.write(f"\033[{n + 1}A")
+        for i, (label, hint) in enumerate(options):
+            on = i in sel
+            here = i == idx
+            cursor = accent("❯") if here else " "
+            box = accent("◉") if on else dim("○")
+            shown = _fit(f"{label}{('  — ' + hint) if hint else ''}", cols - 8)
+            body = (accent(shown) if here else shown)
+            sys.stdout.write(f"\r\033[2K  {cursor} {box} {body}\n")
+        sys.stdout.write(f"\r\033[2K  {dim('↑/↓ move · space toggle · enter confirm')}\n")
+        sys.stdout.flush()
+
+    render(first=True)
+    with _key_reader() as getkey:
+        while True:
+            try:
+                k = getkey()
+            except KeyboardInterrupt:
+                print()
+                sys.exit(0)
+            if k == "UP":
+                idx = (idx - 1) % n
+                render()
+            elif k == "DOWN":
+                idx = (idx + 1) % n
+                render()
+            elif k == "SPACE":
+                sel.symmetric_difference_update({idx})
+                render()
+            elif k == "ENTER":
+                break
+            elif k in ("CTRL_C", "ESC"):
+                print()
+                sys.exit(0)
+            elif k.isdigit() and 1 <= int(k) <= n:
+                sel.symmetric_difference_update({int(k) - 1})
+                render()
+    return sorted(sel)
+
+
+# Step counter for the guided flow. Each _section() call is one numbered step,
+# so the user always knows how far along they are and what is left.
+_STEP = 0
+_STEP_TOTAL = 8
+
+
+def _section(title: str) -> None:
+    global _STEP
+    _STEP += 1
+    print()
+    badge = dim(f"[{_STEP}/{_STEP_TOTAL}]")
+    print(f"  {accent(SPARK)}  {bold(title)}   {badge}")
 
 
 def _ok(msg: str) -> None:
@@ -270,8 +569,9 @@ BANNER = r"""
 
 
 def print_banner() -> None:
-    print(magenta(BANNER))
-    print(f"  {bold('Premium multi-agent research workstation')}")
+    print(accent(BANNER))
+    print(f"  {accent(SPARK)} {bold('Welcome to ResearchHQ')}")
+    print(f"  {dim('Premium multi-agent research workstation · setup takes about a minute')}")
     print(f"  {dim('github.com/SharvikS/ResearchHQ')}")
     print()
 
@@ -314,36 +614,92 @@ def detect_managers() -> dict[str, bool]:
 
 def choose_source() -> str:
     _section("Installation source")
-    print(f"  {dim('1)')} {bold('GitHub')}  — latest master from {GITHUB_REPO}")
-    print(f"  {dim('2)')} {bold('Local')}   — install from this cloned directory")
-    choice = _ask("Choice", "1")
-    if choice == "2":
+    choice = _select(
+        "Where should ResearchHQ be installed from?",
+        [
+            ("GitHub", "latest master — recommended"),
+            ("Local", "install from this cloned directory"),
+        ],
+        default=0,
+    )
+    if choice == 1:
         local = Path(__file__).parent.resolve()
         _info(f"Using local path: {local}")
         return str(local)
     return f"git+{GITHUB_REPO}.git"
 
 
+# Optional pip extras offered as a checklist. (tui is always installed.)
+_OPTIONAL_EXTRAS = [
+    ("gui",       "GUI desktop app", "PySide6, ~200 MB"),
+    ("anthropic", "Anthropic / Claude provider", "console.anthropic.com"),
+    ("openai",    "OpenAI / GPT provider", "platform.openai.com"),
+]
+
+
 def choose_extras() -> list[str]:
     _section("Optional features")
-    extras: list[str] = []
-
-    extras.append("tui")   # always include — needed for rhq / researchhq commands
     _ok("TUI  (terminal workstation — included by default)")
 
-    if _ask_yn("Install GUI desktop app?  (requires PySide6 ~200 MB)", default=False):
-        extras.append("gui")
-        _ok("GUI")
+    picks = _multiselect(
+        "Toggle any extras to install (TUI is already included):",
+        [(label, hint) for _key, label, hint in _OPTIONAL_EXTRAS],
+    )
 
-    if _ask_yn("Enable Anthropic / Claude provider?", default=False):
-        extras.append("anthropic")
-        _ok("Anthropic")
-
-    if _ask_yn("Enable OpenAI / GPT provider?", default=False):
-        extras.append("openai")
-        _ok("OpenAI")
-
+    extras = ["tui"]
+    for i in picks:
+        extras.append(_OPTIONAL_EXTRAS[i][0])
     return extras
+
+
+# ---------------------------------------------------------------------------
+# Recap — confirm the plan before doing anything irreversible
+# ---------------------------------------------------------------------------
+
+def _install_method(source: str, managers: dict[str, bool]) -> str:
+    """Human label for how the package will actually be installed."""
+    if not source.startswith("git+"):
+        return "pip (editable, from this checkout)"
+    if managers.get("pipx"):
+        return "pipx (isolated tool environment)"
+    if managers.get("uv"):
+        return "uv tool"
+    return "pip --user"
+
+
+def confirm_plan(source: str, extras: list[str], managers: dict[str, bool]) -> None:
+    """Show a recap box of every choice and get a final go/no-go.
+
+    The download/install is the first irreversible step, so this is the last
+    clean exit point. Defaults to yes so a quick Enter proceeds."""
+    print()
+    is_local = not source.startswith("git+")
+    src_label = "Local checkout" if is_local else "GitHub · master"
+
+    rows = [
+        ("Source", src_label),
+        ("Features", ", ".join(extras) if extras else "tui"),
+        ("Method", _install_method(source, managers)),
+        ("Config dir", str(INSTALL_DIR)),
+    ]
+    title = " Ready to install "
+    width = max(len(f"{k}  {v}") for k, v in rows) + 4
+    width = max(width, len(title) + 2, 34)
+
+    # Title sits in the top border, à la Claude Code's panels.
+    top_fill = width - len(title)
+    print(f"  {dim('╭')}{accent(title)}{dim('─' * top_fill + '╮')}")
+    for k, v in rows:
+        # Inner cell is `│ {k}{pad}{v} │`, so the gap = width − k − v − 2 to
+        # line the right border up with the top/bottom rule exactly.
+        pad = width - len(k) - len(v) - 2
+        print(f"  {dim('│')} {bold(k)}{' ' * pad}{dim(v)} {dim('│')}")
+    print(f"  {dim('╰' + '─' * width + '╯')}")
+    print()
+
+    if not _ask_yn("Proceed?", default=True):
+        _info("Cancelled — nothing was installed.")
+        sys.exit(0)
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +707,37 @@ def choose_extras() -> list[str]:
 # ---------------------------------------------------------------------------
 
 PACKAGE_NAME = "researchhq"
+
+
+def _pip_prefix() -> list[str]:
+    """Command prefix for installing with pip.
+
+    Target the interpreter that is *running this installer* via `python -m pip`.
+    The wrapper (install.sh / install.ps1) deliberately selected that
+    interpreter, and a bare `pip3` on PATH frequently points at a different,
+    externally-managed Python (e.g. Homebrew under PEP 668) that refuses
+    installs outright — so preferring it would install into the wrong env or
+    fail. `python -m pip` is pip's own recommended invocation for this reason.
+
+    Fall back to a PATH pip/pip3 only if the running interpreter has no usable
+    pip module (e.g. a stripped `curl … | python3 -` interpreter)."""
+    candidate = [sys.executable, "-m", "pip"]
+    try:
+        ok = subprocess.run(
+            [*candidate, "--version"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+            check=False,
+        ).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        ok = False
+    if ok:
+        return candidate
+    exe = shutil.which("pip3") or shutil.which("pip")
+    if exe:
+        return [exe]
+    return candidate
 
 
 def run_install(source: str, extras: list[str], managers: dict[str, bool]) -> None:
@@ -368,11 +755,9 @@ def run_install(source: str, extras: list[str], managers: dict[str, bool]) -> No
         pkg = f"{PACKAGE_NAME}[{extras_str}]" if extras_str else PACKAGE_NAME
         remote_spec = f"{pkg} @ {source}"
 
-    pip = shutil.which("pip3") or shutil.which("pip")
-
     if is_local:
         # Local installs: always use pip -e (works universally)
-        cmd = [pip, "install", "-e", local_spec]
+        cmd = _pip_prefix() + ["install", "-e", local_spec]
     elif managers["pipx"]:
         # pipx gives an isolated env + automatic PATH wiring — best for CLI tools
         cmd = ["pipx", "install", remote_spec, "--force"]
@@ -381,14 +766,25 @@ def run_install(source: str, extras: list[str], managers: dict[str, bool]) -> No
         cmd = ["uv", "tool", "install", remote_spec]
     else:
         # Plain pip --user as last resort
-        cmd = [pip, "install", "--user", remote_spec]
+        cmd = _pip_prefix() + ["install", "--user", remote_spec]
 
     _info(f"Running: {' '.join(cmd)}")
     print()
     if _game_capable():
         returncode = run_game_overlay(cmd)
     else:
-        result = _run(cmd)
+        # No timeout here: a real package install (esp. the PySide6 [gui]
+        # extra) can take many minutes on a cold cache, and _run's default
+        # 60s _NET_TIMEOUT — fine for quick network probes — would raise
+        # TimeoutExpired mid-install. The game path (Popen + wait) is already
+        # unbounded; match it so the non-game path (CI, TERM=dumb, narrow
+        # terminals, `… | python3 -`) is just as robust.
+        try:
+            result = _run(cmd, timeout=None)
+        except (subprocess.SubprocessError, OSError) as exc:
+            log.exception("Install subprocess failed to run")
+            _err(f"Could not run installer command: {exc}")
+            sys.exit(1)
         returncode = result.returncode
     print()
     if returncode != 0:
@@ -486,15 +882,16 @@ def configure_provider(keys: dict[str, str]) -> dict[str, str]:
     if not available:
         return {}
 
-    print(f"  Available: {', '.join(available)}")
-    default = available[0]
-    provider = _ask("Default provider", default)
-    if provider not in available:
-        _warn(f"'{provider}' not configured — using '{default}' instead")
-        provider = default
+    if len(available) == 1:
+        _ok(f"Default provider: {available[0]}")
+        return {"default_provider": available[0]}
 
-    cfg: dict[str, str] = {"default_provider": provider}
-    return cfg
+    choice = _select(
+        "Which provider should be the default?",
+        [(p, "configured") for p in available],
+        default=0,
+    )
+    return {"default_provider": available[choice]}
 
 
 # ---------------------------------------------------------------------------
@@ -641,24 +1038,29 @@ def verify_install() -> None:
 # ---------------------------------------------------------------------------
 
 def print_success() -> None:
+    w = 46
+    title = " ✓ Installed successfully "
     print()
-    print(bold(green("  ══════════════════════════════════════════")))
-    print(bold(green("    ResearchHQ installed successfully! 🎉   ")))
-    print(bold(green("  ══════════════════════════════════════════")))
+    print(f"  {accent('╭')}{green(title)}{accent('─' * (w - len(title)) + '╮')}")
+    print(f"  {accent('│')}{' ' * w}{accent('│')}")
+    msg = f"{SPARK} ResearchHQ is ready to research."
+    print(f"  {accent('│')}  {bold(msg)}{' ' * (w - len(msg) - 2)}{accent('│')}")
+    print(f"  {accent('│')}{' ' * w}{accent('│')}")
+    print(f"  {accent('╰' + '─' * w + '╯')}")
     print()
-    print(f"  {bold('Quick start:')}")
+    print(f"  {bold('Quick start')}")
     print()
     _topic = dim('"your topic"')
-    print(f"    {cyan('research')} {_topic}         # one-shot research report")
-    print(f"    {cyan('rhq')}                         # interactive TUI workstation")
-    print(f"    {cyan('research doctor')}              # check provider connectivity")
-    print(f"    {cyan('research --help')}              # full CLI reference")
+    print(f"    {accent('research')} {_topic}         {dim('# one-shot research report')}")
+    print(f"    {accent('rhq')}                         {dim('# interactive TUI workstation')}")
+    print(f"    {accent('research doctor')}              {dim('# check provider connectivity')}")
+    print(f"    {accent('research --help')}              {dim('# full CLI reference')}")
     print()
-    print(f"  {bold('Config:')}")
-    print(f"    {dim(str(INSTALL_DIR / '.env'))}          # API keys")
-    print(f"    {dim(str(INSTALL_DIR / 'config.yaml'))}   # provider & model settings")
+    print(f"  {bold('Config')}")
+    print(f"    {dim(str(INSTALL_DIR / '.env'))}          {dim('# API keys')}")
+    print(f"    {dim(str(INSTALL_DIR / 'config.yaml'))}   {dim('# provider & model settings')}")
     print()
-    print(f"  {bold('Docs:')}  {dim(GITHUB_REPO)}")
+    print(f"  {bold('Docs')}  {dim(GITHUB_REPO)}")
     print()
 
 
@@ -1232,6 +1634,7 @@ def main() -> None:
     source = choose_source()
     extras = choose_extras()
 
+    confirm_plan(source, extras, managers)
     run_install(source, extras, managers)
 
     keys = collect_api_keys()

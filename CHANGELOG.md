@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **Cross-platform one-command installer.** New `install.sh` (macOS/Linux) and
+  `install.ps1` (Windows) bootstrap wrappers locate a Python 3.11+ interpreter
+  (skipping the Windows Store stub), download `install.py` robustly (curl `-f` /
+  retries / timeouts / content sanity check), and hand off to the interactive
+  TUI with the real terminal attached. README now documents the
+  `curl … | sh` / `irm … | iex` quick-install.
+- **Hardened `install.py` bootstrap** — download now has a timeout, 3 retries,
+  HTTP-status and content checks (rejects HTML error pages), and honors
+  `RESEARCHHQ_INSTALL_URL` for testing an unmerged ref. Local installs now run
+  through `python -m pip` against the interpreter the wrapper selected (with a
+  PATH-pip fallback), instead of grabbing a stray `pip3` that may target a
+  different, externally-managed Python (PEP 668) and fail.
+- **Install step is no longer bounded by the 60s network timeout** — a real
+  `pip` install (especially the PySide6 `[gui]` extra) on a cold cache could
+  exceed it and crash the non-game install path with `TimeoutExpired`.
+- **Installer TUI, restyled in the Claude Code idiom** — warm accent colour,
+  a `✻` brand mark, rounded panels, a step counter (`[n/8]`) on every section,
+  and a recap/confirmation box before the first irreversible step.
+- **Arrow-key menus** for source / extras / default-provider selection
+  (`↑/↓` move, `space` toggles a checklist, digits jump-and-select, `Enter`
+  confirms). Uses a raw-key reader that enters cbreak mode once (not the
+  game's per-keystroke toggle) and restores it on exit. Falls back to numbered
+  / Y-N prompts whenever raw input isn't safe — non-TTYs, injected IO, or
+  `RHQ_NO_RAW=1` (which also keeps scripted/CI installs line-driven).
+
 ## v0.3 — Production-grade GUI upgrade (2026-05-06)
 
 ### Added

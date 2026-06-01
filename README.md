@@ -141,22 +141,47 @@ Sources are classified into tiers. Each tier has a default credibility score tha
 
 ## Installation
 
-```powershell
-cd "C:\Users\sharvik admin\Desktop\VsCode\multi_agent"
-uv sync
+### One command (recommended)
+
+The installer auto-detects Python, downloads the latest release, walks you
+through provider keys, and verifies the result — works on macOS, Linux, and
+Windows.
+
+**macOS / Linux**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.sh | sh
 ```
 
-Or with pip:
+**Windows (PowerShell)**
 
 ```powershell
-python -m pip install -e .
+irm https://raw.githubusercontent.com/SharvikS/ResearchHQ/master/install.ps1 | iex
 ```
 
-Optional providers:
+> Requires Python 3.11+. The `-f` flag on `curl` matters — it makes a failed
+> download error out instead of piping an HTML page into your shell. The
+> wrappers locate `python3` / the `py` launcher for you and skip the Windows
+> Store stub.
+>
+> Prefer to read before you run? The wrappers just fetch and run
+> [`install.py`](install.py). You can also pipe it straight to Python:
+> `curl -fsSL .../install.py | python3 -` (Windows: `irm .../install.py | py -3 -`).
 
-```powershell
+### From source
+
+```sh
+git clone https://github.com/SharvikS/ResearchHQ.git
+cd ResearchHQ
+uv sync                       # or:  python -m pip install -e .
+```
+
+Optional providers / surfaces (extras):
+
+```sh
 python -m pip install -e ".[openai]"
 python -m pip install -e ".[anthropic]"
+python -m pip install -e ".[gui]"      # PySide6 desktop app (~200 MB)
 ```
 
 ## Environment variables
