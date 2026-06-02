@@ -23,7 +23,10 @@ mutated in place and the header refreshes immediately.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from rich.table import Table
 from rich.text import Text
@@ -201,8 +204,8 @@ class SettingsView(Container):
         elif event.button.id == "set_cancel":
             try:
                 self.app.action_show_dashboard()  # type: ignore[attr-defined]
-            except Exception:
-                pass
+            except (LookupError, RuntimeError, AttributeError):
+                logger.debug("Settings cancel: could not navigate to dashboard", exc_info=True)
 
     # --------------------------------------------------------------- save flow
 
@@ -303,8 +306,8 @@ class SettingsView(Container):
             status.update(Text("✗  " + "\n   ".join(errs), style="bold #f87171"))
             try:
                 self.app.notify("Validation failed — see Settings panel", severity="error")
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Settings validation notification failed", exc_info=True)
             return
 
         # Capture pre-apply snapshot for rollback on live-apply failure.
@@ -332,8 +335,8 @@ class SettingsView(Container):
             status.update(Text(f"✗  could not write config: {e}", style="bold #f87171"))
             try:
                 self.app.notify(f"Save failed: {e}", severity="error")
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Settings save notification failed", exc_info=True)
             return
 
         # ---- live apply ----
@@ -363,8 +366,8 @@ class SettingsView(Container):
                     provider=prev_provider,
                     effort=prev_effort,
                 )
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Settings rollback apply_runtime_settings failed", exc_info=True)
             save_btn.disabled = False
             save_btn.label = "Save"
             status.update(Text(
@@ -373,8 +376,8 @@ class SettingsView(Container):
             ))
             try:
                 self.app.notify(f"Apply failed; rolled back: {e}", severity="error")
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Settings live-apply failure notification failed", exc_info=True)
             return
 
         # Success.
@@ -384,8 +387,8 @@ class SettingsView(Container):
         status.update(Text(f"✓  saved to {path}{suffix}", style="bold #4ade80"))
         try:
             self.app.notify("Settings updated", severity="information")
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Settings success notification failed", exc_info=True)
         self._snapshot = self._capture()
 
     def _reset(self) -> None:

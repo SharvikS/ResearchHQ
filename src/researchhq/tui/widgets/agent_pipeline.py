@@ -7,7 +7,10 @@ The synthesizer row expands into an "ensemble" variant with provider sub-rows.
 
 from __future__ import annotations
 
+import logging
 import time
+
+logger = logging.getLogger(__name__)
 from textual.app import ComposeResult
 from textual.widget import Widget
 from textual.widgets import Static
@@ -132,8 +135,8 @@ class AgentRow(Static):
         if self._tick_ref is not None:
             try:
                 self._tick_ref.stop()
-            except Exception:  # noqa: BLE001
-                pass
+            except (RuntimeError, AttributeError):  # noqa: BLE001
+                logger.debug("AgentRow timer stop failed (already stopped or detached)", exc_info=True)
             self._tick_ref = None
 
     def _tick(self) -> None:

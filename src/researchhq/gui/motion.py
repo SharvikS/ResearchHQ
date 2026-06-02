@@ -527,7 +527,7 @@ def fade_in(widget: QWidget, duration: int = MOTION.INTRO) -> None:
         try:
             widget.setGraphicsEffect(None)
         except RuntimeError:
-            pass
+            logger.debug("fade_in cleanup: widget already destroyed", exc_info=True)
 
     anim.finished.connect(_cleanup)
     anim.start()
@@ -548,7 +548,7 @@ def pulse_color(label, color: QColor, duration: int = 600) -> None:
                 "background: transparent;"
             )
         except RuntimeError:
-            pass
+            logger.debug("pulse_color: label destroyed mid-animation", exc_info=True)
 
     anim = QVariantAnimation(label)
     anim.setDuration(duration)
@@ -766,7 +766,7 @@ def count_up(label, end_value: int, *, duration: int = 700,
         try:
             label.setText(f"{prefix}{int(v)}{suffix}")
         except RuntimeError:
-            pass
+            logger.debug("count_up: label destroyed mid-animation", exc_info=True)
 
     anim.valueChanged.connect(_step)
     anim.start()
@@ -786,7 +786,7 @@ def count_up_float(label, end_value: float, *, duration: int = 700,
         try:
             label.setText(f"{prefix}{fmt.format(float(v))}")
         except RuntimeError:
-            pass
+            logger.debug("count_up_float: label destroyed mid-animation", exc_info=True)
 
     anim.valueChanged.connect(_step)
     anim.start()
@@ -850,7 +850,7 @@ def flash_value_change(label: QWidget, *, duration: int = 480) -> None:
                 f"color: rgb({r},{g},{b}); background-color: transparent;"
             )
         except RuntimeError:
-            pass
+            logger.debug("flash_value_change: label destroyed mid-animation", exc_info=True)
 
     anim.valueChanged.connect(_step)
     anim.finished.connect(lambda: label.setStyleSheet(""))
@@ -890,7 +890,7 @@ class _PolishFilter(QObject):
             if event.type() == QEvent.Type.Polish and isinstance(obj, QWidget):
                 _maybe_attach(obj)
         except RuntimeError:
-            pass
+            logger.debug("PolishFilter: widget destroyed during polish", exc_info=True)
         return False
 
 

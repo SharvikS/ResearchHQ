@@ -130,8 +130,8 @@ class ResearchView(Container):
         self._log(f"[dim]effort → [bold]{self._effort}[/][/]")
         try:
             self.app.query_one("#header_bar").effort = self._effort  # type: ignore[attr-defined]
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Could not update header effort", exc_info=True)
 
     # --- run lifecycle -------------------------------------------------------
 
@@ -159,8 +159,8 @@ class ResearchView(Container):
             header.tokens_in = 0
             header.tokens_out = 0
             header.cost_usd = 0.0
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Could not update header at run start", exc_info=True)
 
         self._worker_task = asyncio.create_task(self._run_pipeline(self._mode, query, self._effort))
 
@@ -196,28 +196,28 @@ class ResearchView(Container):
             header = self.app.query_one("#header_bar")  # type: ignore[assignment]
             header.stop_run()
             header.active_agent = "idle"
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Could not update header at run complete", exc_info=True)
         if message.ok:
             self._log(f"[#4ade80]✓  done[/]  ·  {message.message}")
             try:
                 self.app.notify(f"Research completed — {message.message}", severity="information")
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Could not show completion notification", exc_info=True)
         else:
             self._log(f"[#f87171]✗  {message.message}[/]")
             try:
                 self.app.notify(message.message, severity="error")
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Could not show error notification", exc_info=True)
 
     def _on_event(self, ev: PipelineEvent) -> None:
         try:
             self.query_one(AgentPipeline).on_pipeline_event(
                 type_=ev.type, stage=ev.stage, detail=ev.detail, data=ev.data
             )
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Pipeline event routing to AgentPipeline failed", exc_info=True)
         try:
             header = self.app.query_one("#header_bar")  # type: ignore[assignment]
             if ev.type == "agent_started":
@@ -226,8 +226,8 @@ class ResearchView(Container):
                 header.tokens_in += int(ev.data.get("input_tokens", 0))
                 header.tokens_out += int(ev.data.get("output_tokens", 0))
                 header.cost_usd += float(ev.data.get("equivalent_cost_usd", 0))
-        except Exception:
-            pass
+        except (LookupError, RuntimeError, KeyError):
+            logger.debug("Header stat update from event failed", exc_info=True)
 
         if ev.type == "run_started":
             self._log("[dim]· planning…[/]")
@@ -315,5 +315,5 @@ class ResearchView(Container):
         try:
             log = self.query_one("#log_console", RichLog)
             log.write(Text.from_markup(message))
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Could not write to TUI log console", exc_info=True)

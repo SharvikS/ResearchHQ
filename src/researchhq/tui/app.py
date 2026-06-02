@@ -20,7 +20,10 @@ auto-pops to reveal the shell beneath.
 
 from __future__ import annotations
 
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -98,8 +101,8 @@ class ResearchHQApp(App):
             header.model = settings.models.get(header.provider, "—")
             header.workspace = self._workspace
             header.effort = DEFAULT_EFFORT
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Header widget not ready during mount", exc_info=True)
 
         # Seed the activity feed with boot events.
         self.log_activity("ResearchHQ started")
@@ -127,7 +130,7 @@ class ResearchHQApp(App):
             async with httpx.AsyncClient(timeout=2.0) as client:
                 resp = await client.get(url)
                 ok = resp.status_code < 500
-        except Exception:
+        except (OSError, Exception):
             ok = False
         if ok:
             self.log_activity(f"Ollama reachable at {host}")
@@ -145,8 +148,8 @@ class ResearchHQApp(App):
                         severity="warning",
                         timeout=8.0,
                     )
-                except Exception:
-                    pass
+                except (LookupError, RuntimeError):
+                    logger.debug("Could not show Ollama warning notification", exc_info=True)
 
         if self._initial_query:
             q = self._initial_query
@@ -163,8 +166,8 @@ class ResearchHQApp(App):
     def action_focus_query(self) -> None:
         try:
             self.query_one("#global_query", Input).focus()
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Could not focus global query input", exc_info=True)
 
     def on_nav_request(self, message: NavRequest) -> None:
         self._show(message.target)
@@ -177,8 +180,8 @@ class ResearchHQApp(App):
             cs = self.query_one("#content_switcher", ContentSwitcher)
             cs.current = f"view_{target}"
             self.query_one("#sidebar", Sidebar).set_active(target)
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Navigation _show failed for target %s", target, exc_info=True)
 
     # --- global query input ---------------------------------------------------
 
@@ -208,16 +211,16 @@ class ResearchHQApp(App):
             # Empty + Esc → unfocus so global Esc bindings can fire.
             try:
                 self.set_focus(None)
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Could not unfocus global query input", exc_info=True)
 
     def _dispatch_query(self, q: str) -> None:
         self._show("research")
         try:
             view = self.query_one("#view_research", ResearchView)
             view.run_query(q)
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Could not dispatch query to research view", exc_info=True)
 
     # --- live settings application -------------------------------------------
 
@@ -255,8 +258,8 @@ class ResearchHQApp(App):
             self._theme_name = previous
             try:
                 self.notify(f"Theme apply failed; kept {previous}", severity="error")
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Theme apply notification failed", exc_info=True)
             return False
 
         # Re-theme widgets that hold their own palette reference.
@@ -270,26 +273,26 @@ class ResearchHQApp(App):
                 for wm in self.query(wm_cls):
                     if hasattr(wm, "set_theme"):
                         wm.set_theme(theme_name)
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Theme re-apply to wordmark widgets failed", exc_info=True)
 
         try:
             header = self.query_one("#header_bar", StatusHeader)
             header._theme_name = theme_name
             header._refresh()
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Theme re-apply to header failed", exc_info=True)
 
         if focused is not None:
             try:
                 self.set_focus(focused)
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("Could not refocus widget after theme switch", exc_info=True)
 
         try:
             self.notify(f"Theme → {theme_name}", severity="information")
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("Theme notification failed", exc_info=True)
         return True
 
     def apply_runtime_settings(
@@ -311,16 +314,16 @@ class ResearchHQApp(App):
             if workspace:
                 header.workspace = workspace
                 self._workspace = workspace
-        except Exception:
-            pass
+        except (LookupError, RuntimeError):
+            logger.debug("apply_runtime_settings: header update failed", exc_info=True)
 
         if effort:
             try:
                 from researchhq.tui.widgets.effort_selector import EffortSelector
                 for sel in self.query(EffortSelector):
                     sel.set_value(effort)
-            except Exception:
-                pass
+            except (LookupError, RuntimeError):
+                logger.debug("apply_runtime_settings: effort selector update failed", exc_info=True)
 
         if provider:
             # Rebuild the router so the next run picks up the new provider order.
@@ -328,5 +331,5 @@ class ResearchHQApp(App):
             try:
                 from researchhq.llm import router as _r
                 _r.router = _r.LLMRouter()
-            except Exception:
-                pass
+            except (ImportError, RuntimeError, ValueError):
+                logger.debug("apply_runtime_settings: LLM router rebuild failed", exc_info=True)

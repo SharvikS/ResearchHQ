@@ -14,8 +14,11 @@ done the caller invokes ``finish()`` to fade the window out and emit
 
 from __future__ import annotations
 
+import logging
 import math
 import random
+
+logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import (
     QEasingCurve, QPoint, QPointF, QPropertyAnimation, QRect, QTimer, Qt, Signal,
@@ -365,7 +368,7 @@ class SplashScreen(QWidget):
         except (ImportError, RuntimeError):
             # Burst is pure spectacle — never let a paint failure
             # interfere with the boot handoff.
-            pass
+            logger.debug("Particle burst skipped during splash ready", exc_info=True)
 
     def finish(self) -> None:
         """Fade the splash out, then close + emit ``finished``."""
@@ -375,11 +378,11 @@ class SplashScreen(QWidget):
         try:
             self._logo.stop()
         except (AttributeError, RuntimeError):
-            pass
+            logger.debug("Logo stop during splash finish raised", exc_info=True)
         try:
             self._stars.stop()
         except (AttributeError, RuntimeError):
-            pass
+            logger.debug("Starfield stop during splash finish raised", exc_info=True)
         self._fade_out.start()
 
     # ─── internals ──────────────────────────────────────────────────────────

@@ -11,6 +11,10 @@ Repaints on theme change. Reduce-motion pauses the timer.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QColor, QLinearGradient, QPainter
 from PySide6.QtWidgets import QSizePolicy, QWidget
@@ -54,7 +58,7 @@ class WorkspaceDivider(QWidget):
             self._color = QColor(theme().accent)
             self.update()
         except RuntimeError:
-            pass
+            logger.debug("Divider theme change on dying widget", exc_info=True)
 
     def _on_reduce_motion(self, reduced: bool) -> None:
         if reduced:

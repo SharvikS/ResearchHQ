@@ -1,8 +1,7 @@
 """Research page: query input, mode selector, run/cancel, live pipeline + stats + report.
 
 PDF export runs on a worker thread (QTextDocument render → QPrinter) so the
-window stays responsive on large reports. Pause/Resume is hidden until the
-pipeline supports mid-stage checkpointing — see `_PAUSE_AVAILABLE`.
+window stays responsive on large reports.
 """
 
 from __future__ import annotations
@@ -39,11 +38,6 @@ from researchhq.reports.exporter import to_html, to_json, to_markdown
 from researchhq.reports.schema import ResearchReport
 
 logger = logging.getLogger(__name__)
-
-# Pause/Resume needs mid-stage checkpointing in async LLM calls. Until the
-# pipeline supports it, the button is hidden entirely instead of dangling
-# disabled in the toolbar.
-_PAUSE_AVAILABLE = False
 
 MODES = [
     ("topic",      "General topic"),
@@ -163,13 +157,7 @@ class ResearchPage(QWidget):
         self._run_btn.clicked.connect(self._on_run)
         params.addWidget(self._run_btn)
 
-        # Pause is gated behind a feature flag — the pipeline needs mid-stage
-        # checkpointing in async LLM calls before this is meaningful. We keep
-        # a reference so it can be toggled live once the backend lands.
-        self._pause_btn = QPushButton("Pause")
-        self._pause_btn.setVisible(_PAUSE_AVAILABLE)
-        if _PAUSE_AVAILABLE:
-            params.addWidget(self._pause_btn)
+
 
         self._cancel_btn = QPushButton("Cancel")
         self._cancel_btn.setObjectName("Danger")

@@ -25,7 +25,10 @@ Usage::
 
 from __future__ import annotations
 
+import logging
 import math
+
+logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import (
     QEasingCurve, QEvent, QPoint, QPointF, QPropertyAnimation,
@@ -142,7 +145,7 @@ class ShimmerButton(QPushButton):
         try:
             self._alpha_anim.finished.disconnect()
         except RuntimeError:
-            pass
+            logger.debug("Shimmer alpha anim disconnect raised (no prior connection)")
         self._alpha_anim.finished.connect(self._on_alpha_zero)
         self._alpha_anim.start()
 

@@ -78,6 +78,12 @@ export const api = {
     );
   },
 
+  patchSettings: (updates: { debug_mode?: boolean; verbosity_default?: string; default_provider?: string; max_cost_per_query?: number }) =>
+    request<{ status: string; applied: string[] }>(
+      '/api/v1/settings',
+      { method: 'PATCH', body: JSON.stringify(updates) },
+    ),
+
   createWebSocket: (queryId: string): WebSocket => {
     const base = getBaseUrl().replace(/^http/, 'ws');
     const key = getApiKey();

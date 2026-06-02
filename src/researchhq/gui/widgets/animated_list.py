@@ -15,6 +15,10 @@ are thin conveniences that auto-attach the indicator on construction.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from PySide6.QtCore import (
     QEasingCurve, QEvent, QObject, QPoint, QPropertyAnimation, QRect, Qt,
     Property,
@@ -156,7 +160,7 @@ class _RowHoverFilter(QObject):
                 vp = self._view.viewport()
                 self._indicator.setGeometry(0, 0, vp.width(), vp.height())
         except RuntimeError:
-            pass
+            logger.debug("Row hover filter event on dying widget", exc_info=True)
         return False
 
     def _update_hover(self, event) -> None:

@@ -14,6 +14,10 @@ ambient touch that ties the cards into the rest of the animated UI.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
@@ -63,7 +67,7 @@ class Card(QFrame):
             attach_card_hover(self)
         except ImportError:
             # Motion module not available — card still renders, just no glow.
-            pass
+            logger.debug("Motion module unavailable; card hover glow skipped")
 
     def add(self, w: QWidget) -> None:
         self._body.addWidget(w)
@@ -83,7 +87,7 @@ class Card(QFrame):
                 pt = event.pos()
             Ripple.spawn(self, pt)
         except (ImportError, RuntimeError):
-            pass
+            logger.debug("Ripple spawn on card press failed", exc_info=True)
         super().mousePressEvent(event)
 
 
@@ -122,7 +126,7 @@ class StatCard(QFrame):
             from researchhq.gui.motion import attach_card_hover
             attach_card_hover(self)
         except ImportError:
-            pass
+            logger.debug("Motion module unavailable; StatCard hover glow skipped")
 
     @property
     def value_label(self) -> QLabel:
@@ -142,4 +146,4 @@ class StatCard(QFrame):
                 from researchhq.gui.motion import flash_value_change
                 flash_value_change(self._value)
             except ImportError:
-                pass
+                logger.debug("flash_value_change unavailable; skipping stat flash")

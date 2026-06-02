@@ -230,7 +230,7 @@ class DashboardPage(QWidget):
                     try:
                         stop()
                     except RuntimeError:
-                        pass
+                        logger.debug("PulseDot stop raised during provider grid clear", exc_info=True)
                 w.deleteLater()
 
         from researchhq.gui.widgets.pulse_dot import PulseDot

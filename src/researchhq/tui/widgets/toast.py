@@ -6,6 +6,10 @@ custom CSS palette so they're consistent with the rest of the UI.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from textual.containers import Container
 from textual.widgets import Static
 
@@ -27,5 +31,5 @@ class Toast(Container):
     def _dismiss(self) -> None:
         try:
             self.remove()
-        except Exception:
-            pass
+        except (RuntimeError, LookupError):
+            logger.debug("Toast dismiss failed (widget already removed)", exc_info=True)

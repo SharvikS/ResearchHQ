@@ -22,6 +22,10 @@ its stock ``setToolTip`` so they don't double-trigger.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from typing import Optional
 
 from PySide6.QtCore import (
@@ -104,7 +108,7 @@ class _TooltipBubble(QWidget):
         try:
             self._fade.finished.disconnect()
         except RuntimeError:
-            pass
+            logger.debug("Tooltip fade-in disconnect raised (no prior connection)")
         self._fade.start()
 
     def fade_out(self) -> None:
@@ -115,7 +119,7 @@ class _TooltipBubble(QWidget):
         try:
             self._fade.finished.disconnect()
         except RuntimeError:
-            pass
+            logger.debug("Tooltip fade-out disconnect raised (no prior connection)")
         self._fade.finished.connect(self.hide)
         self._fade.start()
 
