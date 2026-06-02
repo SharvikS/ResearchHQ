@@ -50,6 +50,8 @@ research = "researchhq.cli:app"
 researchhq-cli = "researchhq.cli:app"
 # Desktop GUI (requires the [gui] extra: pip install -e ".[gui]")
 researchhq-gui = "researchhq.gui.app:main"
+# HTTP API for the React frontend (requires the [server] extra)
+researchhq-api = "researchhq.server.__main__:main"
 
 [tool.ruff]
 line-length = 100
