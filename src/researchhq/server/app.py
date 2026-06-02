@@ -545,7 +545,8 @@ def _provider_chain() -> list[str]:
 def _available_providers() -> list[str]:
     try:
         return [p.name for p in LLMRouter().providers]
-    except Exception:
+    except Exception as exc:
+        logger.error("Failed to load providers: %s", exc, exc_info=True)
         return []
 
 

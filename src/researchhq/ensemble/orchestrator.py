@@ -171,8 +171,8 @@ async def run_parallel(
         if on_provider_event:
             try:
                 on_provider_event(result)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:
+                logger.debug("Ensemble event callback failed", exc_info=True)
         return result
 
     t0 = time.monotonic()

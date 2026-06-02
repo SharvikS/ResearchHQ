@@ -5,6 +5,8 @@ Returns a list of CheckResult with .ok and a short message.
 """
 
 from __future__ import annotations
+import logging
+logger = logging.getLogger(__name__)
 
 import importlib
 import os
@@ -59,7 +61,8 @@ def _check_required_deps() -> list[CheckResult]:
         try:
             importlib.import_module(mod)
             out.append(CheckResult(f"dep:{mod}", True, INFO, why))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
+            logger.debug("Failed", exc_info=True)
             out.append(CheckResult(f"dep:{mod}", False, CRITICAL,
                                    f"missing ({type(e).__name__}); {why}"))
     return out
@@ -71,7 +74,8 @@ def _check_optional_deps() -> list[CheckResult]:
         try:
             importlib.import_module(mod)
             out.append(CheckResult(f"opt:{mod}", True, INFO, why))
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
+            logger.debug("Failed", exc_info=True)
             out.append(CheckResult(f"opt:{mod}", False, WARN,
                                    f"not installed; {why} unavailable"))
     return out
@@ -106,7 +110,8 @@ def _check_output_folder() -> CheckResult:
         with tempfile.NamedTemporaryFile(dir=folder, delete=True):
             pass
         return CheckResult("Output folder writable", True, INFO, str(folder.resolve()))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
+        logger.debug("Failed", exc_info=True)
         return CheckResult("Output folder writable", False, CRITICAL,
                            f"cannot write to {folder}: {e}")
 
@@ -116,7 +121,8 @@ def _check_history_db() -> CheckResult:
         from researchhq.history import db_path, ensure_db
         ensure_db()
         return CheckResult("History DB", True, INFO, str(db_path()))
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
+        logger.debug("Failed", exc_info=True)
         return CheckResult("History DB", False, WARN,
                            f"cannot initialize: {e}")
 
@@ -126,7 +132,8 @@ def _check_gui_import() -> CheckResult:
         importlib.import_module("PySide6.QtWidgets")
         return CheckResult("GUI importable", True, INFO,
                            "PySide6 present; `python -m researchhq.gui` should launch")
-    except Exception:  # noqa: BLE001
+    except Exception as exc:
+        logger.debug("Failed", exc_info=True)
         return CheckResult("GUI importable", False, WARN,
                            "PySide6 not installed (CLI works; install with `pip install -e \".[gui]\"`)")
 
@@ -142,7 +149,8 @@ def _check_router_loadable() -> CheckResult:
                                "no providers initialized; check API keys / Ollama host")
         return CheckResult("Router providers", True, INFO,
                            f"chain: {' -> '.join(names)}")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
+        logger.debug("Failed", exc_info=True)
         return CheckResult("Router providers", False, CRITICAL, f"router init failed: {e}")
 
 

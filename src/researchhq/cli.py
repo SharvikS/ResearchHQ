@@ -20,6 +20,8 @@ Entry points
 """
 
 from __future__ import annotations
+import logging
+logger = logging.getLogger(__name__)
 
 import asyncio
 import json
@@ -141,7 +143,8 @@ def _time_ago(iso: str) -> str:
         if secs < 3600:  return f"{secs // 60}m ago"
         if secs < 86400: return f"{secs // 3600}h ago"
         return f"{secs // 86400}d ago"
-    except Exception:  # noqa: BLE001
+    except Exception as exc:
+        logger.debug("Failed", exc_info=True)
         return iso[:10] if len(iso) >= 10 else iso
 
 
@@ -314,7 +317,8 @@ def _run_query(
     try:
         from researchhq.utils.logging import configure as _configure_logging
         _configure_logging(_resolve_verbosity(quiet, verbose, debug))
-    except Exception:  # noqa: BLE001
+    except Exception as exc:
+        logger.debug("Failed", exc_info=True)
         pass
 
     if ensemble is not None:
@@ -444,7 +448,8 @@ def _interactive_mode() -> None:
         from researchhq.llm.router import LLMRouter
         providers = [p.name for p in LLMRouter().providers]
         status_line = "[green]●[/green] " + "  ".join(f"[dim]{p}[/dim]" for p in providers)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:
+        logger.debug("Failed", exc_info=True)
         status_line = "[red]●[/red] [dim]No providers found — run [bold]research-hq doctor[/bold][/dim]"
     console.print(f"  Providers  {status_line}")
     console.print()
@@ -527,7 +532,8 @@ def _interactive_mode() -> None:
             )
         except KeyboardInterrupt:
             console.print("\n[dim]  Interrupted.[/dim]")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            logger.exception("Fatal error")
             console.print(f"\n[red]  Error:[/red] {exc}")
 
         console.print()
@@ -656,7 +662,8 @@ def agents() -> None:
         from researchhq.llm.router import LLMRouter
         router = LLMRouter()
         providers = router.providers
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
+        logger.exception("Fatal error")
         console.print(f"[red]Failed to load router:[/red] {exc}")
         raise typer.Exit(1)
 
@@ -972,7 +979,8 @@ def test_models(
     try:
         from researchhq.llm.router import LLMRouter
         all_providers = LLMRouter().providers
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
+        logger.exception("Fatal error")
         console.print(f"[red]Router failed to load:[/red] {exc}")
         raise typer.Exit(1)
 
@@ -1008,7 +1016,8 @@ def test_models(
                     f"{latency:.2f}s",
                     resp_text,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
+                logger.exception("Fatal error")
                 latency = time.monotonic() - t0
                 tbl.add_row(
                     p.name, model,
@@ -1114,7 +1123,8 @@ def export(
             else:
                 dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
             imported += 1
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
+            logger.exception("Fatal error")
             console.print(f"[dim]  Skipped {src.name}: {exc}[/dim]")
 
     console.print(f"[green]✓[/green] Exported [bold]{imported}[/bold] reports to [dim]{out_dir.resolve()}[/dim]")
@@ -1199,7 +1209,8 @@ def modes() -> None:
         try:
             cfg = cls().config
             desc = getattr(cfg, "description", "")
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
+            logger.debug("Failed", exc_info=True)
             desc = ""
         tbl.add_row(name, desc)
 

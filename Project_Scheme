@@ -1,0 +1,20 @@
+
+├── frontend/             → The React + Vite web application.
+│   ├── src/api/          → API client (fetches data from the FastAPI backend).
+│   ├── src/components/   → Reusable React UI components.
+│   ├── src/pages/        → High-level page views (Dashboard, Research, Settings).
+│   └── src/store/        → Zustand state management.
+├── src/researchhq/       → The core Python backend and pipeline.
+│   ├── cli.py            → Command-line interface entry points.
+│   ├── config.py         → Environment and yaml configuration loading.
+│   ├── db/               → SQLite database interactions (history storage).
+│   ├── gui/              → The PySide6 Desktop application code.
+│   ├── tui/              → The Textual terminal application code.
+│   ├── server/           → The FastAPI application (serves the React frontend).
+│   ├── llm/              → Code to interact with LLMs (Groq, OpenAI, Ollama).
+│   ├── pipeline.py       → Orchestrator that strings agents together.
+│   ├── agents/           → Individual agent logic (planner, searcher, synthesizer, etc).
+│   └── reports/          → Markdown/HTML/JSON report generation and export.
+├── install.py / .sh      → Installation scripts for users.
+├── pyproject.toml        → Python dependencies and build configuration.
+└── config.yaml           → Default configuration template.

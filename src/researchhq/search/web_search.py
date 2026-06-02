@@ -15,7 +15,7 @@ from researchhq.utils.retry import with_retry
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT_S = 12.0
-DEFAULT_ATTEMPTS = 2
+DEFAULT_ATTEMPTS = 4
 
 
 @dataclass
