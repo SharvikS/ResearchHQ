@@ -12,7 +12,6 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ _URL_RE = re.compile(r"https?://[^\s\)\]]+")
 class Claim:
     text: str
     provider: str
-    claim_type: str = "fact"   # fact|statistic|date|entity|recommendation|conclusion
+    claim_type: str = "fact"  # fact|statistic|date|entity|recommendation|conclusion
     confidence: float = 0.5
     source_mentions: list[str] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)
@@ -39,6 +38,7 @@ class Claim:
 
 
 # ── Heuristic helpers ──────────────────────────────────────────────────────────
+
 
 def _detect_type(text: str) -> str:
     tl = text.lower()
@@ -79,15 +79,17 @@ def extract_claims_heuristic(text: str, provider: str) -> list[Claim]:
             conf += 0.08
         if urls:
             conf += 0.07
-        claims.append(Claim(
-            text=sentence,
-            provider=provider,
-            claim_type=ctype,
-            confidence=min(conf, 0.85),
-            source_mentions=urls,
-            has_number=has_num,
-            has_date=has_date,
-        ))
+        claims.append(
+            Claim(
+                text=sentence,
+                provider=provider,
+                claim_type=ctype,
+                confidence=min(conf, 0.85),
+                source_mentions=urls,
+                has_number=has_num,
+                has_date=has_date,
+            )
+        )
     return claims
 
 
@@ -96,7 +98,7 @@ def extract_claims_heuristic(text: str, provider: str) -> list[Claim]:
 _EXTRACT_SYSTEM = (
     "You are a precise claim extractor. Extract every factual claim, statistic, date, "
     "recommendation, and conclusion from the given research text.\n\n"
-    'Output a JSON array. Each element must have:\n'
+    "Output a JSON array. Each element must have:\n"
     '  "claim"      : self-contained claim text (1-2 sentences max)\n'
     '  "type"       : one of fact, statistic, date, entity, recommendation, conclusion\n'
     '  "confidence" : float 0.0-1.0 (your estimate of accuracy)\n'
@@ -131,15 +133,17 @@ async def extract_claims_llm(
         for item in parsed:
             if not isinstance(item, dict) or not item.get("claim"):
                 continue
-            claims.append(Claim(
-                text=str(item["claim"]),
-                provider=provider,
-                claim_type=str(item.get("type", "fact")),
-                confidence=float(item.get("confidence", 0.5)),
-                topics=list(item.get("topics", [])),
-                has_number=bool(item.get("has_number", False)),
-                has_date=bool(item.get("has_date", False)),
-            ))
+            claims.append(
+                Claim(
+                    text=str(item["claim"]),
+                    provider=provider,
+                    claim_type=str(item.get("type", "fact")),
+                    confidence=float(item.get("confidence", 0.5)),
+                    topics=list(item.get("topics", [])),
+                    has_number=bool(item.get("has_number", False)),
+                    has_date=bool(item.get("has_date", False)),
+                )
+            )
         return claims
     except Exception as e:  # noqa: BLE001
         logger.debug("LLM claim extraction failed for %s: %s — using heuristic", provider, e)
@@ -148,6 +152,7 @@ async def extract_claims_llm(
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
+
 def extract_claims(text: str, provider: str) -> list[Claim]:
     """Synchronous heuristic extraction. Use for cheap/balanced modes."""
     return extract_claims_heuristic(text, provider)
@@ -155,7 +160,7 @@ def extract_claims(text: str, provider: str) -> list[Claim]:
 
 async def extract_all_claims(
     results: list,  # list[ProviderResult]
-    router: Optional[object] = None,
+    router: object | None = None,
     *,
     use_llm: bool = False,
     max_tokens: int = 1200,
@@ -165,7 +170,9 @@ async def extract_all_claims(
 
     async def _one(result) -> tuple[str, list[Claim]]:  # type: ignore[type-arg]
         if use_llm and router is not None:
-            claims = await extract_claims_llm(result.text, result.provider, router, max_tokens=max_tokens)
+            claims = await extract_claims_llm(
+                result.text, result.provider, router, max_tokens=max_tokens
+            )
         else:
             claims = extract_claims_heuristic(result.text, result.provider)
         return result.provider, claims

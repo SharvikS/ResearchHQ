@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Iterator
 
 from researchhq.config import settings
 from researchhq.llm.cost_tracker import tracker
@@ -66,18 +66,23 @@ def _build_provider(name: str) -> LLMProvider | None:
     try:
         if name == "groq" and settings.groq_api_key:
             from researchhq.llm.providers.groq_provider import GroqProvider
+
             return GroqProvider(settings.groq_api_key, model)
         if name == "gemini" and settings.gemini_api_key:
             from researchhq.llm.providers.gemini_provider import GeminiProvider
+
             return GeminiProvider(settings.gemini_api_key, model)
         if name == "openai" and settings.openai_api_key:
             from researchhq.llm.providers.openai_provider import OpenAIProvider
+
             return OpenAIProvider(settings.openai_api_key, model)
         if name == "anthropic" and settings.anthropic_api_key:
             from researchhq.llm.providers.anthropic_provider import AnthropicProvider
+
             return AnthropicProvider(settings.anthropic_api_key, model)
         if name == "ollama":
             from researchhq.llm.providers.ollama_provider import OllamaProvider
+
             return OllamaProvider(settings.ollama_host, model)
     except Exception as e:
         logger.debug("Provider %s unavailable: %s", name, e)
@@ -111,11 +116,14 @@ class LLMRouter:
         until = self._cooldown_until.get(provider_name.lower(), 0.0)
         return max(0.0, until - time.monotonic())
 
-    def mark_rate_limited(self, provider_name: str, *, seconds: float = RATE_LIMIT_COOLDOWN_S) -> None:
+    def mark_rate_limited(
+        self, provider_name: str, *, seconds: float = RATE_LIMIT_COOLDOWN_S
+    ) -> None:
         self._cooldown_until[provider_name.lower()] = time.monotonic() + seconds
         logger.warning(
             "Provider %s rate-limited; cooling down for %.0fs (next call skips this provider).",
-            provider_name, seconds,
+            provider_name,
+            seconds,
         )
 
     def clear_cooldowns(self) -> None:
@@ -162,8 +170,10 @@ class LLMRouter:
                 tracker.record(response, stage=effective_stage)
                 logger.info(
                     "LLM ok via %s @ %s (%d in, %d out)",
-                    provider.name, effective_stage,
-                    response.input_tokens, response.output_tokens,
+                    provider.name,
+                    effective_stage,
+                    response.input_tokens,
+                    response.output_tokens,
                 )
                 return response
             except Exception as e:  # noqa: BLE001
@@ -174,7 +184,8 @@ class LLMRouter:
 
         skip_note = (
             f" (skipped on cooldown: {', '.join(skipped_for_cooldown)})"
-            if skipped_for_cooldown else ""
+            if skipped_for_cooldown
+            else ""
         )
         raise RuntimeError(f"All providers failed. Last error: {last_error}{skip_note}")
 

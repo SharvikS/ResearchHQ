@@ -28,8 +28,7 @@ DEFAULT_PER_PAGE_CHARS = 4000
 DEFAULT_CONCURRENCY = 5
 
 USER_AGENT = (
-    "Mozilla/5.0 (compatible; researchhq/0.2; +https://github.com/researchhq) "
-    "research-agent"
+    "Mozilla/5.0 (compatible; researchhq/0.2; +https://github.com/researchhq) research-agent"
 )
 
 
@@ -114,12 +113,18 @@ async def _fetch_one(
         resp = await with_retry(_do, attempts=2, timeout=DEFAULT_TIMEOUT_S, label=label)
     except Exception as e:  # noqa: BLE001
         logger.info("%s: failed (%s)", label, type(e).__name__)
-        return FetchedPage(url=src.url, title=src.title, text="", status=0, bytes_in=0, truncated=False)
+        return FetchedPage(
+            url=src.url, title=src.title, text="", status=0, bytes_in=0, truncated=False
+        )
 
     if resp.status_code >= 400:
         return FetchedPage(
-            url=src.url, title=src.title, text="", status=resp.status_code,
-            bytes_in=len(resp.content), truncated=False,
+            url=src.url,
+            title=src.title,
+            text="",
+            status=resp.status_code,
+            bytes_in=len(resp.content),
+            truncated=False,
         )
 
     ctype = resp.headers.get("content-type", "")
@@ -129,8 +134,12 @@ async def _fetch_one(
     if truncated:
         text = text[:per_page_chars] + " [...truncated]"
     return FetchedPage(
-        url=src.url, title=src.title, text=text, status=resp.status_code,
-        bytes_in=len(resp.content), truncated=truncated,
+        url=src.url,
+        title=src.title,
+        text=text,
+        status=resp.status_code,
+        bytes_in=len(resp.content),
+        truncated=truncated,
     )
 
 

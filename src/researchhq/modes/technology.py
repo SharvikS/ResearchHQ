@@ -17,8 +17,11 @@ class TechnologyMode(ResearchMode):
             "{q} tutorial getting started",
         ],
         preferred_tiers=[
-            SourceTier.OFFICIAL, SourceTier.DOCS, SourceTier.GITHUB,
-            SourceTier.ACADEMIC, SourceTier.NEWS,
+            SourceTier.OFFICIAL,
+            SourceTier.DOCS,
+            SourceTier.GITHUB,
+            SourceTier.ACADEMIC,
+            SourceTier.NEWS,
         ],
         drop_tiers={SourceTier.SEARCH_ENGINE, SourceTier.LOW_QUALITY},
         tier_weights={SourceTier.DOCS: 10, SourceTier.GITHUB: 9, SourceTier.OFFICIAL: 11},

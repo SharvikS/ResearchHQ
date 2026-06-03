@@ -18,9 +18,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget,
+    QFrame,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
 )
 
 
@@ -44,6 +47,7 @@ class Card(QFrame):
             # accent gradient underline. Same QSS hooks (objectName)
             # as before so existing theme rules still apply.
             from researchhq.gui.widgets.section_title import SectionTitle
+
             t = SectionTitle(title)
             t.setObjectName("CardTitle")
             self._outer.addWidget(t)
@@ -64,6 +68,7 @@ class Card(QFrame):
     def _attach_hover(self) -> None:
         try:
             from researchhq.gui.motion import attach_card_hover
+
             attach_card_hover(self)
         except ImportError:
             # Motion module not available — card still renders, just no glow.
@@ -81,6 +86,7 @@ class Card(QFrame):
         # click handlers still see it.
         try:
             from researchhq.gui.motion import Ripple
+
             try:
                 pt = event.position().toPoint()
             except (AttributeError, TypeError):
@@ -124,6 +130,7 @@ class StatCard(QFrame):
         # Hover-lift parity with Card.
         try:
             from researchhq.gui.motion import attach_card_hover
+
             attach_card_hover(self)
         except ImportError:
             logger.debug("Motion module unavailable; StatCard hover glow skipped")
@@ -144,6 +151,7 @@ class StatCard(QFrame):
         if previous and previous != value:
             try:
                 from researchhq.gui.motion import flash_value_change
+
                 flash_value_change(self._value)
             except ImportError:
                 logger.debug("flash_value_change unavailable; skipping stat flash")

@@ -12,10 +12,11 @@ ourselves sits in the same drop-down area.
 
 from __future__ import annotations
 
-import math
-
 from PySide6.QtCore import (
-    QEasingCurve, QPointF, QPropertyAnimation, Qt, Property,
+    Property,
+    QEasingCurve,
+    QPropertyAnimation,
+    Qt,
 )
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QComboBox
@@ -36,15 +37,19 @@ class AnimatedComboBox(QComboBox):
         # Suppress Qt's stock arrow by hiding the drop-down image —
         # the theme QSS template includes a rule for this object name.
         self.setObjectName("AnimatedComboBox")
-        self._chevron_angle = 0.0    # 0 = down, 180 = up
+        self._chevron_angle = 0.0  # 0 = down, 180 = up
         self._anim = QPropertyAnimation(self, b"chevronAngle", self)
         self._anim.setEasingCurve(QEasingCurve.Type.OutCubic)
         ThemeManager.instance().theme_changed.connect(self.update)
 
     # ── Qt property for the animation ──────────────────────────────────────
-    def _get_angle(self) -> float: return self._chevron_angle
+    def _get_angle(self) -> float:
+        return self._chevron_angle
+
     def _set_angle(self, v: float) -> None:
-        self._chevron_angle = float(v); self.update()
+        self._chevron_angle = float(v)
+        self.update()
+
     chevronAngle = Property(float, _get_angle, _set_angle)
 
     # ── popup lifecycle ────────────────────────────────────────────────────
@@ -94,6 +99,7 @@ class AnimatedComboBox(QComboBox):
         p.rotate(self._chevron_angle)
         # Two short lines forming a "v".
         from PySide6.QtCore import QLineF
+
         p.drawLine(QLineF(-arm, -arm * 0.35, 0.0, arm * 0.35))
         p.drawLine(QLineF(0.0, arm * 0.35, arm, -arm * 0.35))
         p.restore()

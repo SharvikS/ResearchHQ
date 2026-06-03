@@ -20,19 +20,18 @@ from __future__ import annotations
 import math
 import random
 
-from PySide6.QtCore import QPointF, QTimer, Qt
+from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QRadialGradient
 from PySide6.QtWidgets import QWidget
 
 from researchhq.gui.reduce_motion import ReduceMotion, is_reduced
 from researchhq.gui.theme import ThemeManager, theme
 
-
 # Period (seconds) for each halo's slow orbit. Big numbers — this is
 # ambient drift, not motion the user actively perceives.
-_PRIMARY_PERIOD_S   = 90.0
+_PRIMARY_PERIOD_S = 90.0
 _SECONDARY_PERIOD_S = 120.0
-_TICK_INTERVAL_MS   = 50    # 20 fps is plenty for ambient drift
+_TICK_INTERVAL_MS = 50  # 20 fps is plenty for ambient drift
 
 # Count of drifting dust motes painted on top of the radial halos.
 # Kept low so the workspace reads quiet — these are barely visible.
@@ -58,15 +57,17 @@ class BackgroundWidget(QWidget):
         rng = random.Random(0xDADA)
         self._motes: list[dict] = []
         for _ in range(_DUST_COUNT):
-            self._motes.append({
-                "x_ratio": rng.random(),
-                "y_ratio": rng.random(),
-                "vx": rng.uniform(-0.04, 0.04),  # ratio per second
-                "vy": rng.uniform(-0.03, 0.03),
-                "radius": rng.uniform(0.8, 1.8),
-                "phase": rng.uniform(0.0, math.tau),
-                "freq":  rng.uniform(0.7, 1.4),
-            })
+            self._motes.append(
+                {
+                    "x_ratio": rng.random(),
+                    "y_ratio": rng.random(),
+                    "vx": rng.uniform(-0.04, 0.04),  # ratio per second
+                    "vy": rng.uniform(-0.03, 0.03),
+                    "radius": rng.uniform(0.8, 1.8),
+                    "phase": rng.uniform(0.0, math.tau),
+                    "freq": rng.uniform(0.7, 1.4),
+                }
+            )
         self._mote_clock = 0.0
 
         self._timer = QTimer(self)
@@ -89,8 +90,12 @@ class BackgroundWidget(QWidget):
     def _tick(self) -> None:
         # Advance phases by (2pi / period) * tick_seconds — a tiny
         # nudge per frame, totalling one full revolution every period.
-        self._phase_primary   = (self._phase_primary   + (2 * math.pi / _PRIMARY_PERIOD_S)   * self._tick_seconds) % (2 * math.pi)
-        self._phase_secondary = (self._phase_secondary + (2 * math.pi / _SECONDARY_PERIOD_S) * self._tick_seconds) % (2 * math.pi)
+        self._phase_primary = (
+            self._phase_primary + (2 * math.pi / _PRIMARY_PERIOD_S) * self._tick_seconds
+        ) % (2 * math.pi)
+        self._phase_secondary = (
+            self._phase_secondary + (2 * math.pi / _SECONDARY_PERIOD_S) * self._tick_seconds
+        ) % (2 * math.pi)
 
         # Drift the dust motes. Velocities are ratios per second — at
         # 20 fps, displacement per tick = vx * 0.05. Wrap around screen
@@ -146,8 +151,10 @@ class BackgroundWidget(QWidget):
 
         # Top-edge highlight — almost invisible but adds dimensionality.
         edge = QLinearGradient(0, 0, 0, 2)
-        edge_top = QColor(t.text); edge_top.setAlpha(16)
-        edge_clear = QColor(t.text); edge_clear.setAlpha(0)
+        edge_top = QColor(t.text)
+        edge_top.setAlpha(16)
+        edge_clear = QColor(t.text)
+        edge_clear.setAlpha(0)
         edge.setColorAt(0.0, edge_top)
         edge.setColorAt(1.0, edge_clear)
         p.fillRect(0, 0, w, 2, edge)

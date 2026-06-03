@@ -18,18 +18,29 @@ Visual
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
 
 from PySide6.QtCore import (
-    QEasingCurve, QEvent, QPropertyAnimation, QSize, Qt, Signal,
+    QEasingCurve,
+    QEvent,
+    QPropertyAnimation,
+    Qt,
+    Signal,
 )
 from PySide6.QtGui import (
-    QColor, QKeyEvent, QPainter, QPainterPath,
+    QColor,
+    QKeyEvent,
+    QPainter,
 )
 from PySide6.QtWidgets import (
-    QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-    QListWidgetItem, QVBoxLayout, QWidget,
+    QGraphicsDropShadowEffect,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 from researchhq.gui.reduce_motion import scaled
@@ -140,9 +151,7 @@ class CommandPalette(QWidget):
         card_layout.addWidget(self._list, 1)
 
         # Footer hint pill.
-        footer = QLabel(
-            "↑↓  navigate    ↵  run    ⎋  dismiss"
-        )
+        footer = QLabel("↑↓  navigate    ↵  run    ⎋  dismiss")
         footer.setObjectName("PaletteFooter")
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(footer)
@@ -156,6 +165,7 @@ class CommandPalette(QWidget):
         # use a QGraphicsOpacityEffect on the *card* only — the
         # backdrop has no other effects so it's safe.
         from PySide6.QtWidgets import QGraphicsOpacityEffect
+
         self._fade_effect = QGraphicsOpacityEffect(self)
         self._fade_effect.setOpacity(0.0)
         self.setGraphicsEffect(self._fade_effect)
@@ -211,7 +221,8 @@ class CommandPalette(QWidget):
             self._filtered = list(self._commands)
         else:
             self._filtered = [
-                c for c in self._commands
+                c
+                for c in self._commands
                 if needle in c.title.lower()
                 or needle in c.section.lower()
                 or any(needle in k.lower() for k in c.keywords)
@@ -232,10 +243,7 @@ class CommandPalette(QWidget):
             section_item.setForeground(QColor(theme().text_dim))
             self._list.addItem(section_item)
             for c in sorted(by_section[section], key=lambda c: c.title):
-                row = QListWidgetItem(
-                    f"{c.title}"
-                    + (f"   {c.shortcut}" if c.shortcut else "")
-                )
+                row = QListWidgetItem(f"{c.title}" + (f"   {c.shortcut}" if c.shortcut else ""))
                 row.setData(Qt.ItemDataRole.UserRole, c)
                 self._list.addItem(row)
 
@@ -261,15 +269,18 @@ class CommandPalette(QWidget):
             cmd.action()
         except Exception:  # noqa: BLE001 - command callbacks shouldn't crash the palette
             import logging
-            logging.getLogger(__name__).exception(
-                "Command '%s' raised", cmd.title
-            )
+
+            logging.getLogger(__name__).exception("Command '%s' raised", cmd.title)
         self.executed.emit(cmd.title)
 
     # ── keyboard ───────────────────────────────────────────────────────────
 
     def eventFilter(self, obj, event) -> bool:  # noqa: N802 - Qt method
-        if obj is self._search and isinstance(event, QKeyEvent) and event.type() == QEvent.Type.KeyPress:
+        if (
+            obj is self._search
+            and isinstance(event, QKeyEvent)
+            and event.type() == QEvent.Type.KeyPress
+        ):
             key = event.key()
             if key == Qt.Key.Key_Escape:
                 self.dismiss()

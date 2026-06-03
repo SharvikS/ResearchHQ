@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from researchhq.doctor import (
-    CheckResult,
     CRITICAL,
+    CheckResult,
     has_critical_failure,
     run_checks,
 )

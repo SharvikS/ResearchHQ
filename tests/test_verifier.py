@@ -6,7 +6,12 @@ from researchhq.search.source_quality import RankedSource, SourceTier
 
 def _src(url: str, tier: SourceTier, score: int = 8, domain: str | None = None) -> RankedSource:
     return RankedSource(
-        url=url, title="t", snippet="s", tier=tier, score=score, domain=domain or url.split("//")[-1].split("/")[0]
+        url=url,
+        title="t",
+        snippet="s",
+        tier=tier,
+        score=score,
+        domain=domain or url.split("//")[-1].split("/")[0],
     )
 
 

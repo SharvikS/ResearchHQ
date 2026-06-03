@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -70,11 +70,12 @@ class EnsembleProviderSummary(BaseModel):
     elapsed: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class EnsembleReportSection(BaseModel):
     """Serialisable summary of the ensemble run, attached to ResearchReport."""
+
     enabled: bool = True
     ensemble_mode: str = "balanced"
     providers_attempted: list[str] = Field(default_factory=list)
@@ -109,7 +110,7 @@ class ResearchReport(BaseModel):
     mode: str
     query: str
     effort: str = "medium"
-    generated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    generated_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     plan: ResearchPlan
     sources: list[RankedSource] = Field(default_factory=list)
@@ -121,4 +122,4 @@ class ResearchReport(BaseModel):
     stage_costs: list[StageCost] = Field(default_factory=list)
 
     provider_used: str = ""
-    ensemble: Optional[EnsembleReportSection] = None
+    ensemble: EnsembleReportSection | None = None

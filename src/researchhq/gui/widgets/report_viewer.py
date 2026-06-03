@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHeaderView,
     QPlainTextEdit,
-    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QTextBrowser,
     QVBoxLayout,
     QWidget,
@@ -38,7 +37,9 @@ class ReportViewer(QWidget):
         self._tabs.addTab(self._sources, "Sources")
 
         self._evidence = QTableWidget(0, 4)
-        self._evidence.setHorizontalHeaderLabels(["Rule / Violation", "Severity", "Status", "Detail"])
+        self._evidence.setHorizontalHeaderLabels(
+            ["Rule / Violation", "Severity", "Status", "Detail"]
+        )
         self._evidence.setAlternatingRowColors(True)
         self._evidence.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._evidence.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -69,10 +70,13 @@ class ReportViewer(QWidget):
         self._json.setPlainText("")
         self._logs_tab.setPlainText("")
 
-    def show_report(self, report_dict: dict, full_markdown: str, logs_text: str | None = None) -> None:
+    def show_report(
+        self, report_dict: dict, full_markdown: str, logs_text: str | None = None
+    ) -> None:
         sections = report_dict.get("sections", [])
         exec_section = next(
-            (s for s in sections if s.get("heading", "").lower().startswith("executive")), None,
+            (s for s in sections if s.get("heading", "").lower().startswith("executive")),
+            None,
         )
         if exec_section:
             self._summary.setMarkdown(

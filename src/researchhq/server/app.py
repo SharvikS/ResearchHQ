@@ -9,17 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-import logging
-
 from pydantic import BaseModel, Field
-
-logger = logging.getLogger(__name__)
 
 from researchhq import __version__
 from researchhq.config import settings
@@ -28,6 +25,8 @@ from researchhq.llm.router import LLMRouter
 from researchhq.pipeline import run as pipeline_run
 from researchhq.reports.exporter import save
 from researchhq.reports.schema import ResearchReport, Section
+
+logger = logging.getLogger(__name__)
 
 try:  # Optional dependency: installed with `researchhq[server]`.
     from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -206,12 +205,20 @@ def create_app() -> FastAPI:
             "pipeline_modes": {
                 "fast": ["fast_scan", "web_synthesis", "deep_reasoning"],
                 "balanced": ["fast_scan", "web_synthesis", "technical", "deep_reasoning"],
-                "deep": ["fast_scan", "web_synthesis", "technical", "deep_reasoning", "extended_think"],
+                "deep": [
+                    "fast_scan",
+                    "web_synthesis",
+                    "technical",
+                    "deep_reasoning",
+                    "extended_think",
+                ],
             },
         }
 
     @app.get("/api/v1/logs/{query_id}")
-    async def logs(query_id: str, level: str | None = None, stage: str | None = None, limit: int = 100) -> dict[str, Any]:
+    async def logs(
+        query_id: str, level: str | None = None, stage: str | None = None, limit: int = 100
+    ) -> dict[str, Any]:
         run = _get_run(query_id)
         rows = run.events
         if stage:
@@ -222,6 +229,7 @@ def create_app() -> FastAPI:
 
     class SettingsPatch(BaseModel):
         """Subset of runtime settings the frontend may push."""
+
         debug_mode: bool | None = None
         verbosity_default: str | None = None
         default_provider: str | None = None
@@ -245,7 +253,6 @@ def create_app() -> FastAPI:
             applied.append(f"max_cost_per_query={body.max_cost_per_query}")
         logger.info("Settings patched: %s", ", ".join(applied) or "(no changes)")
         return {"status": "ok", "applied": applied}
-
 
     @app.websocket("/ws/{query_id}")
     async def ws(query_id: str, websocket: WebSocket) -> None:
@@ -283,7 +290,12 @@ async def _execute(run: RunState, options: dict[str, Any]) -> None:
         previous_ensemble_mode = settings.ensemble_mode
         try:
             if "ensemble_mode" in options:
-                settings.ensemble_enabled = options.get("ensemble_mode") not in ("", "off", "disabled", None)
+                settings.ensemble_enabled = options.get("ensemble_mode") not in (
+                    "",
+                    "off",
+                    "disabled",
+                    None,
+                )
                 settings.ensemble_mode = str(options.get("ensemble_mode") or "balanced")
 
             report = await pipeline_run(
@@ -363,7 +375,9 @@ def _handle_pipeline_event(run: RunState, ev: PipelineEvent) -> None:
     else:
         completed = sum(1 for s in run.stages.values() if s.get("status") == "complete")
         running = sum(1 for s in run.stages.values() if s.get("status") == "running")
-        run.progress_pct = min(99, int(((completed + (0.35 if running else 0)) / len(STAGE_ORDER)) * 100))
+        run.progress_pct = min(
+            99, int(((completed + (0.35 if running else 0)) / len(STAGE_ORDER)) * 100)
+        )
 
     run.touch()
     _broadcast(run, event)
@@ -415,10 +429,14 @@ def _stage_payload(run: RunState, name: str) -> dict[str, Any]:
 def _final_response(run: RunState) -> dict[str, Any]:
     assert run.report is not None
     report = run.report
-    summary = _section_body(report.sections, "executive") or (report.sections[0].body if report.sections else "")
+    summary = _section_body(report.sections, "executive") or (
+        report.sections[0].body if report.sections else ""
+    )
     detailed = "\n\n".join(f"## {s.heading}\n{s.body}" for s in report.sections)
-    confidence = report.ensemble.adjusted_confidence if report.ensemble else (
-        report.verifier.overall_confidence if report.verifier else 0.0
+    confidence = (
+        report.ensemble.adjusted_confidence
+        if report.ensemble
+        else (report.verifier.overall_confidence if report.verifier else 0.0)
     )
     stage_costs = report.stage_costs
     total_in = sum(c.input_tokens for c in stage_costs)

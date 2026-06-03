@@ -29,7 +29,7 @@ def main() -> int:
     except ImportError:
         sys.stderr.write(
             "PySide6 is not installed. Install the GUI extras with:\n"
-            "    pip install -e \".[gui]\"\n"
+            '    pip install -e ".[gui]"\n'
             "or:\n"
             "    pip install PySide6\n"
         )
@@ -43,23 +43,28 @@ def main() -> int:
     # dir so the QSS family stack can resolve "Geist" / "Inter" /
     # "JetBrains Mono" before falling back to system fonts.
     from researchhq.gui.fonts import load_bundled_fonts
+
     load_bundled_fonts()
 
     # 1. Theme — render fresh QSS for the active palette and apply.
     from researchhq.gui.theme import render_qss
+
     app.setStyleSheet(render_qss())
 
     # Window / dock icon — rasterised from the brand mark so the splash,
     # main window and macOS dock all show the same identity.
     from researchhq.gui.widgets.logo import logo_icon
+
     app.setWindowIcon(logo_icon(size=128))
 
     # 2. Global motion — instruments existing + future buttons/inputs.
     from researchhq.gui.motion import install_global_motion
+
     install_global_motion(app)
 
     # 3. Splash — frameless, animated, on top.
     from researchhq.gui.widgets.splash import SplashScreen
+
     splash = SplashScreen()
     splash.show_animated()
     splash.set_progress(8, "loading theme")
@@ -73,6 +78,7 @@ def main() -> int:
     app.processEvents()
 
     from researchhq.gui.main_window import MainWindow
+
     splash.set_progress(48, "wiring agents")
     app.processEvents()
 

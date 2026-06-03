@@ -6,7 +6,7 @@ import pytest
 
 from researchhq.ensemble.claim_extractor import Claim
 from researchhq.ensemble.confidence import ConfidenceReport, score_confidence
-from researchhq.ensemble.consensus import ConsensusResult, ClaimGroup, analyze_consensus
+from researchhq.ensemble.consensus import ClaimGroup, ConsensusResult
 from researchhq.ensemble.orchestrator import EnsembleRun, ProviderResult
 
 
@@ -15,16 +15,27 @@ def _make_run(
     failures: list[str] = None,
 ) -> EnsembleRun:
     results: list[ProviderResult] = []
-    for p in (successes or []):
-        results.append(ProviderResult(
-            provider=p, model="m", text="some text output",
-            status="success", input_tokens=100, output_tokens=200,
-        ))
-    for p in (failures or []):
-        results.append(ProviderResult(
-            provider=p, model="", text="",
-            status="error", error="api error",
-        ))
+    for p in successes or []:
+        results.append(
+            ProviderResult(
+                provider=p,
+                model="m",
+                text="some text output",
+                status="success",
+                input_tokens=100,
+                output_tokens=200,
+            )
+        )
+    for p in failures or []:
+        results.append(
+            ProviderResult(
+                provider=p,
+                model="",
+                text="",
+                status="error",
+                error="api error",
+            )
+        )
     return EnsembleRun(query="test", results=results)
 
 
@@ -38,12 +49,14 @@ def _make_consensus(
         groups = []
         for i in range(n):
             c = Claim(text=f"{prefix} claim {i}", provider="groq")
-            groups.append(ClaimGroup(
-                representative=f"{prefix} claim {i}",
-                claims=[c],
-                providers_supporting=["groq"],
-                agreement_score=0.7,
-            ))
+            groups.append(
+                ClaimGroup(
+                    representative=f"{prefix} claim {i}",
+                    claims=[c],
+                    providers_supporting=["groq"],
+                    agreement_score=0.7,
+                )
+            )
         return groups
 
     return ConsensusResult(
@@ -62,10 +75,12 @@ class _MockSource:
         class _Tier:
             def __init__(self, v):
                 self.value = v
+
         self.tier = _Tier(tier_value)
 
 
 # ── Basic output shape ─────────────────────────────────────────────────────────
+
 
 def test_returns_confidence_report():
     run = _make_run(successes=["groq", "gemini"])
@@ -99,6 +114,7 @@ def test_confidence_label_low_all_fail():
 
 
 # ── Component scores ──────────────────────────────────────────────────────────
+
 
 def test_source_quality_score_with_high_tier():
     run = _make_run(successes=["groq"])
@@ -153,6 +169,7 @@ def test_provider_agreement_score_all_fail():
 
 # ── Breakdown ─────────────────────────────────────────────────────────────────
 
+
 def test_breakdown_sums_to_overall():
     run = _make_run(successes=["groq", "gemini"])
     consensus = _make_consensus()
@@ -163,6 +180,7 @@ def test_breakdown_sums_to_overall():
 
 
 # ── Uncertainty notes ─────────────────────────────────────────────────────────
+
 
 def test_uncertainty_note_for_failed_providers():
     run = _make_run(successes=["groq"], failures=["gemini"])

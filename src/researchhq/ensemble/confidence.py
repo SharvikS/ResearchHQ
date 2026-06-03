@@ -21,38 +21,38 @@ from researchhq.ensemble.orchestrator import EnsembleRun
 logger = logging.getLogger(__name__)
 
 _WEIGHTS = {
-    "provider_agreement":   0.40,
-    "source_quality":       0.25,
-    "factual_consistency":  0.20,
+    "provider_agreement": 0.40,
+    "source_quality": 0.25,
+    "factual_consistency": 0.20,
     "hallucination_safety": 0.15,
 }
 
 # Source tier → normalized quality 0.0–1.0
 _TIER_QUALITY: dict[str, float] = {
-    "official":      1.00,
-    "academic":      1.00,
-    "government":    0.95,
-    "news":          0.80,
-    "docs":          0.75,
-    "github":        0.70,
-    "comparison":    0.60,
-    "wiki":          0.55,
-    "community":     0.50,
-    "social":        0.30,
-    "blog":          0.35,
-    "low_quality":   0.10,
+    "official": 1.00,
+    "academic": 1.00,
+    "government": 0.95,
+    "news": 0.80,
+    "docs": 0.75,
+    "github": 0.70,
+    "comparison": 0.60,
+    "wiki": 0.55,
+    "community": 0.50,
+    "social": 0.30,
+    "blog": 0.35,
+    "low_quality": 0.10,
     "search_engine": 0.20,
-    "other":         0.30,
+    "other": 0.30,
 }
 
 
 @dataclass
 class ConfidenceReport:
-    overall_score: float                    # 0.0–1.0, final weighted score
+    overall_score: float  # 0.0–1.0, final weighted score
     provider_agreement_score: float
     source_quality_score: float
     factual_consistency_score: float
-    hallucination_risk: float              # 0=low, 1=high
+    hallucination_risk: float  # 0=low, 1=high
     breakdown: dict[str, float] = field(default_factory=dict)
     high_confidence_areas: list[str] = field(default_factory=list)
     low_confidence_areas: list[str] = field(default_factory=list)
@@ -114,7 +114,8 @@ def score_confidence(
 
         source_urls: set[str] = {getattr(s, "url", "") for s in sources}
         unsupported_numeric = sum(
-            1 for g in consensus.unique_groups
+            1
+            for g in consensus.unique_groups
             for c in g.claims
             if c.has_number and not any(u in source_urls for u in c.source_mentions)
         )
@@ -123,9 +124,9 @@ def score_confidence(
 
     # ── Overall ──────────────────────────────────────────────────────────────
     overall = (
-        _WEIGHTS["provider_agreement"]   * provider_agreement
-        + _WEIGHTS["source_quality"]       * source_quality
-        + _WEIGHTS["factual_consistency"]  * factual_consistency
+        _WEIGHTS["provider_agreement"] * provider_agreement
+        + _WEIGHTS["source_quality"] * source_quality
+        + _WEIGHTS["factual_consistency"] * factual_consistency
         + _WEIGHTS["hallucination_safety"] * (1.0 - hallucination_risk)
     )
     overall = round(max(0.0, min(1.0, overall)), 3)
@@ -167,10 +168,12 @@ def score_confidence(
         factual_consistency_score=round(factual_consistency, 3),
         hallucination_risk=round(hallucination_risk, 3),
         breakdown={
-            "provider_agreement":   round(provider_agreement   * _WEIGHTS["provider_agreement"],   3),
-            "source_quality":       round(source_quality       * _WEIGHTS["source_quality"],       3),
-            "factual_consistency":  round(factual_consistency  * _WEIGHTS["factual_consistency"],  3),
-            "hallucination_safety": round((1.0 - hallucination_risk) * _WEIGHTS["hallucination_safety"], 3),
+            "provider_agreement": round(provider_agreement * _WEIGHTS["provider_agreement"], 3),
+            "source_quality": round(source_quality * _WEIGHTS["source_quality"], 3),
+            "factual_consistency": round(factual_consistency * _WEIGHTS["factual_consistency"], 3),
+            "hallucination_safety": round(
+                (1.0 - hallucination_risk) * _WEIGHTS["hallucination_safety"], 3
+            ),
         },
         high_confidence_areas=high_areas,
         low_confidence_areas=low_areas,

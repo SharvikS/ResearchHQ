@@ -31,11 +31,23 @@ import math
 from typing import Literal
 
 from PySide6.QtCore import (
-    QEasingCurve, QPointF, QPropertyAnimation, QRectF, QSequentialAnimationGroup,
-    QTimer, Qt, Property,
+    Property,
+    QEasingCurve,
+    QPointF,
+    QPropertyAnimation,
+    QRectF,
+    QSequentialAnimationGroup,
+    Qt,
+    QTimer,
 )
 from PySide6.QtGui import (
-    QBrush, QColor, QIcon, QPainter, QPen, QPixmap, QRadialGradient,
+    QBrush,
+    QColor,
+    QIcon,
+    QPainter,
+    QPen,
+    QPixmap,
+    QRadialGradient,
 )
 from PySide6.QtWidgets import QWidget
 
@@ -49,7 +61,7 @@ _AGENT_COUNT = 6
 
 # Stroke widths scale with widget size; min/max keep the mark legible at
 # both favicon (16 px) and splash (128 px) resolutions.
-_RING_W_RATIO   = 0.022
+_RING_W_RATIO = 0.022
 _FILAMENT_RATIO = 0.030
 
 
@@ -100,29 +112,49 @@ class LogoMark(QWidget):
 
     # ── property accessors (Qt animations require Property + signal) ───────
 
-    def _get_nodes_progress(self) -> float: return self._nodes_progress
+    def _get_nodes_progress(self) -> float:
+        return self._nodes_progress
+
     def _set_nodes_progress(self, v: float) -> None:
-        self._nodes_progress = float(v); self.update()
+        self._nodes_progress = float(v)
+        self.update()
+
     nodesProgress = Property(float, _get_nodes_progress, _set_nodes_progress)
 
-    def _get_filaments_progress(self) -> float: return self._filaments_progress
+    def _get_filaments_progress(self) -> float:
+        return self._filaments_progress
+
     def _set_filaments_progress(self, v: float) -> None:
-        self._filaments_progress = float(v); self.update()
+        self._filaments_progress = float(v)
+        self.update()
+
     filamentsProgress = Property(float, _get_filaments_progress, _set_filaments_progress)
 
-    def _get_core_scale(self) -> float: return self._core_scale
+    def _get_core_scale(self) -> float:
+        return self._core_scale
+
     def _set_core_scale(self, v: float) -> None:
-        self._core_scale = float(v); self.update()
+        self._core_scale = float(v)
+        self.update()
+
     coreScale = Property(float, _get_core_scale, _set_core_scale)
 
-    def _get_core_pulse(self) -> float: return self._core_pulse
+    def _get_core_pulse(self) -> float:
+        return self._core_pulse
+
     def _set_core_pulse(self, v: float) -> None:
-        self._core_pulse = float(v); self.update()
+        self._core_pulse = float(v)
+        self.update()
+
     corePulse = Property(float, _get_core_pulse, _set_core_pulse)
 
-    def _get_rotation_offset(self) -> float: return self._rotation_offset
+    def _get_rotation_offset(self) -> float:
+        return self._rotation_offset
+
     def _set_rotation_offset(self, v: float) -> None:
-        self._rotation_offset = float(v); self.update()
+        self._rotation_offset = float(v)
+        self.update()
+
     rotationOffset = Property(float, _get_rotation_offset, _set_rotation_offset)
 
     # ── hover trail (outer nodes rotate one hex step on hover) ─────────────
@@ -193,7 +225,8 @@ class LogoMark(QWidget):
         # Manual loop — reverse on finish so the pulse breathes.
         def _reverse() -> None:
             s, e = anim.startValue(), anim.endValue()
-            anim.setStartValue(e); anim.setEndValue(s)
+            anim.setStartValue(e)
+            anim.setEndValue(s)
             if scaled(1) > 0:  # only loop when motion is enabled
                 anim.start()
 
@@ -228,21 +261,21 @@ class LogoMark(QWidget):
 
         s = float(self._size)
         cx, cy = s / 2, s / 2
-        outer_r = s * 0.42         # agent-node orbital radius
-        ring_r  = s * 0.48         # framing ring radius
-        node_r  = max(1.5, s * 0.05)
-        core_r  = max(2.5, s * 0.085)
+        outer_r = s * 0.42  # agent-node orbital radius
+        ring_r = s * 0.48  # framing ring radius
+        node_r = max(1.5, s * 0.05)
+        core_r = max(2.5, s * 0.085)
         # Where the filaments terminate — short of the core so the
         # negative-space aperture reads as deliberate.
         filament_inner = core_r + s * 0.04
         filament_outer = outer_r - node_r * 0.6
 
-        ring_w     = max(1.0, s * _RING_W_RATIO)
+        ring_w = max(1.0, s * _RING_W_RATIO)
         filament_w = max(1.0, s * _FILAMENT_RATIO * 0.55)
 
-        accent  = QColor(t.accent)
+        accent = QColor(t.accent)
         accent2 = QColor(t.accent2)
-        text_c  = QColor(t.text)
+        text_c = QColor(t.text)
 
         # ── outer framing ring (a thin 320° arc — leaves a small gap so
         # the form reads as an aperture, not a closed circle) ─────────────
@@ -271,9 +304,9 @@ class LogoMark(QWidget):
 
             # Per-node reveal threshold.
             threshold = i / (n + 1)
-            local_progress = max(0.0, min(1.0,
-                (self._nodes_progress - threshold) / max(0.001, 1.0 - threshold)
-            ))
+            local_progress = max(
+                0.0, min(1.0, (self._nodes_progress - threshold) / max(0.001, 1.0 - threshold))
+            )
             if local_progress <= 0.0:
                 continue
 
@@ -281,10 +314,13 @@ class LogoMark(QWidget):
             # with filamentsProgress; per-node start threshold staggers
             # the draw so they don't all reach the centre simultaneously.
             fil_threshold = i / (n + 1)
-            fil_local = max(0.0, min(1.0,
-                (self._filaments_progress - fil_threshold)
-                / max(0.001, 1.0 - fil_threshold)
-            ))
+            fil_local = max(
+                0.0,
+                min(
+                    1.0,
+                    (self._filaments_progress - fil_threshold) / max(0.001, 1.0 - fil_threshold),
+                ),
+            )
             if fil_local > 0.0:
                 # Endpoint along the same radial line.
                 start_x = cx + filament_outer * math.cos(angle)
@@ -309,8 +345,7 @@ class LogoMark(QWidget):
             node_color.setAlpha(alpha)
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QBrush(node_color))
-            p.drawEllipse(QPointF(nx, ny),
-                          node_r * scale, node_r * scale)
+            p.drawEllipse(QPointF(nx, ny), node_r * scale, node_r * scale)
 
         # ── core: bright central node with radial-gradient halo ───────────
         scale = max(0.0, min(1.2, self._core_scale))
@@ -335,8 +370,7 @@ class LogoMark(QWidget):
             core_grad.setColorAt(0.6, accent)
             core_grad.setColorAt(1.0, accent2)
             p.setBrush(QBrush(core_grad))
-            p.drawEllipse(QPointF(cx, cy),
-                          core_r * scale, core_r * scale)
+            p.drawEllipse(QPointF(cx, cy), core_r * scale, core_r * scale)
 
 
 def logo_icon(size: int = 128) -> QIcon:

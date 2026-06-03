@@ -17,8 +17,11 @@ class MarketMode(ResearchMode):
             "{q} acquisitions M&A 2026",
         ],
         preferred_tiers=[
-            SourceTier.NEWS, SourceTier.GOVERNMENT, SourceTier.COMPARISON,
-            SourceTier.OFFICIAL, SourceTier.ACADEMIC,
+            SourceTier.NEWS,
+            SourceTier.GOVERNMENT,
+            SourceTier.COMPARISON,
+            SourceTier.OFFICIAL,
+            SourceTier.ACADEMIC,
         ],
         drop_tiers={SourceTier.SEARCH_ENGINE, SourceTier.LOW_QUALITY, SourceTier.SOCIAL},
         tier_weights={SourceTier.NEWS: 10, SourceTier.GOVERNMENT: 11},

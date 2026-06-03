@@ -26,17 +26,17 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
-
 from rich.table import Table
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Container, Horizontal, Vertical, VerticalScroll
+from textual.containers import Container, Horizontal, VerticalScroll
 from textual.widgets import Button, Input, Label, RadioButton, RadioSet, Select, Static
 
 from researchhq.config import reload_settings, save_settings, settings
 from researchhq.effort import PROFILES
 from researchhq.tui.theme import PALETTES, THEME_CYCLE
+
+logger = logging.getLogger(__name__)
 
 
 PROVIDERS = ["groq", "gemini", "openai", "anthropic", "ollama"]
@@ -186,7 +186,9 @@ class SettingsView(Container):
             ("ollama",    True,                              True),
         ]
         t = Table.grid(padding=(0, 2))
-        t.add_column(); t.add_column(); t.add_column()
+        t.add_column()
+        t.add_column()
+        t.add_column()
         for name, ready, local in rows:
             mark = ("[#4ade80]●[/]" if ready else "[#5a6573]○[/]")
             status = ("local" if local else ("set" if ready else "missing"))
@@ -318,7 +320,7 @@ class SettingsView(Container):
         # Pop transient fields before persisting (theme/mode/effort aren't
         # in the YAML schema; theme is in-app, mode/effort are runtime defaults).
         theme  = updates.pop("__theme",  "default")
-        mode   = updates.pop("__mode",   "topic")
+        updates.pop("__mode", "topic")
         effort = updates.pop("__effort", "medium")
 
         # Disable Save while the apply happens so a double-click can't queue

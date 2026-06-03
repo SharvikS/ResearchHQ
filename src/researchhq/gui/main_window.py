@@ -10,16 +10,15 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import QSettings, Qt, Signal
+from pydantic import ValidationError
+from PySide6.QtCore import QSettings, Signal
 from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
     QMessageBox,
     QStackedWidget,
-    QWidget,
 )
-from pydantic import ValidationError
 
 from researchhq.config import settings
 from researchhq.gui import state as gstate
@@ -114,8 +113,10 @@ class MainWindow(QMainWindow):
         # registration phase has visibility of the fully constructed
         # window.
         from researchhq.gui.widgets.command_palette import (
-            Command, CommandPalette,
+            Command,
+            CommandPalette,
         )
+
         self._palette = CommandPalette(self)
         self._register_default_commands(Command)
 
@@ -135,26 +136,30 @@ class MainWindow(QMainWindow):
         # ── Navigation ─────────────────────────────────────────────────
         for key, label, glyph in [
             ("dashboard", "Open Dashboard", "◈"),
-            ("research",  "Open Research",  "⌖"),
-            ("history",   "Open History",   "⊞"),
-            ("compare",   "Open Compare",   "⇌"),
-            ("settings",  "Open Settings",  "◎"),
+            ("research", "Open Research", "⌖"),
+            ("history", "Open History", "⊞"),
+            ("compare", "Open Compare", "⇌"),
+            ("settings", "Open Settings", "◎"),
         ]:
-            self._palette.register(Command(
-                title=f"{glyph}  {label}",
-                section="Navigate",
-                action=lambda k=key: self._sidebar.select(k),
-                keywords=(key, label.lower()),
-            ))
+            self._palette.register(
+                Command(
+                    title=f"{glyph}  {label}",
+                    section="Navigate",
+                    action=lambda k=key: self._sidebar.select(k),
+                    keywords=(key, label.lower()),
+                )
+            )
 
         # ── Actions ────────────────────────────────────────────────────
-        self._palette.register(Command(
-            title="+  New Research",
-            section="Actions",
-            action=lambda: self._sidebar.select("research"),
-            keywords=("new", "create", "run", "ask"),
-            shortcut="⌘+R",
-        ))
+        self._palette.register(
+            Command(
+                title="+  New Research",
+                section="Actions",
+                action=lambda: self._sidebar.select("research"),
+                keywords=("new", "create", "run", "ask"),
+                shortcut="⌘+R",
+            )
+        )
 
         # ── Theme switches — one row per available theme.
         def _switch_theme(key: str) -> None:
@@ -164,19 +169,23 @@ class MainWindow(QMainWindow):
             # Re-apply the rendered QSS app-wide so every widget picks
             # up the new palette immediately.
             from PySide6.QtWidgets import QApplication
+
             from researchhq.gui.theme import render_qss
+
             app = QApplication.instance()
             if app is not None:
                 app.setStyleSheet(render_qss())
             Toast.show_message(self, f"Theme: {THEMES[key].name}", kind="info")
 
         for key, palette in THEMES.items():
-            self._palette.register(Command(
-                title=f"Theme · {palette.name}",
-                section="Appearance",
-                action=lambda k=key: _switch_theme(k),
-                keywords=("theme", "palette", "colors", key),
-            ))
+            self._palette.register(
+                Command(
+                    title=f"Theme · {palette.name}",
+                    section="Appearance",
+                    action=lambda k=key: _switch_theme(k),
+                    keywords=("theme", "palette", "colors", key),
+                )
+            )
 
         # ── Reduce motion toggle ───────────────────────────────────────
         def _toggle_reduce_motion() -> None:
@@ -187,12 +196,15 @@ class MainWindow(QMainWindow):
                 f"Reduce motion: {'on' if now else 'off'}",
                 kind="info",
             )
-        self._palette.register(Command(
-            title="Toggle reduce motion",
-            section="Accessibility",
-            action=_toggle_reduce_motion,
-            keywords=("accessibility", "a11y", "animations", "motion"),
-        ))
+
+        self._palette.register(
+            Command(
+                title="Toggle reduce motion",
+                section="Accessibility",
+                action=_toggle_reduce_motion,
+                keywords=("accessibility", "a11y", "animations", "motion"),
+            )
+        )
 
     # ---------- nav ----------
     def _on_nav(self, key: str) -> None:
@@ -237,7 +249,11 @@ class MainWindow(QMainWindow):
         except ValidationError:
             logger.info("Report at %s did not match schema; using sibling .md fallback", path)
             sibling = path.with_suffix(".md")
-            md = sibling.read_text(encoding="utf-8") if sibling.exists() else "_Report could not be parsed._"
+            md = (
+                sibling.read_text(encoding="utf-8")
+                if sibling.exists()
+                else "_Report could not be parsed._"
+            )
 
         self._sidebar.select("research")
         self._research.show_report_dict(data, md)
@@ -304,6 +320,7 @@ class MainWindow(QMainWindow):
         # if they navigate away from the Research page mid-run.
         try:
             from researchhq.gui.widgets.toast import Toast
+
             Toast.show_message(self, "Research complete — report saved", kind="ok")
         except RuntimeError:
             logger.exception("Could not show run-finished toast")

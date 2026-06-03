@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -10,13 +9,12 @@ import pytest
 
 from researchhq.ensemble.claim_extractor import (
     Claim,
+    extract_all_claims,
     extract_claims,
     extract_claims_heuristic,
-    extract_all_claims,
 )
 from researchhq.ensemble.orchestrator import ProviderResult
 from researchhq.llm.providers.base import LLMResponse
-
 
 SAMPLE_TEXT = """
 ## Quantum Computing Advances
@@ -31,6 +29,7 @@ In conclusion, quantum computing is poised for commercial applications by 2026.
 
 
 # ── Heuristic extraction ───────────────────────────────────────────────────────
+
 
 def test_extract_returns_list_of_claims():
     claims = extract_claims_heuristic(SAMPLE_TEXT, "test_provider")
@@ -63,9 +62,7 @@ def test_has_number_detected():
 
 
 def test_has_date_detected():
-    claims = extract_claims_heuristic(
-        "IBM announced its processor in November 2023.", "groq"
-    )
+    claims = extract_claims_heuristic("IBM announced its processor in November 2023.", "groq")
     date_claims = [c for c in claims if c.has_date]
     assert len(date_claims) >= 1
 
@@ -87,9 +84,7 @@ def test_claim_type_conclusion():
 
 
 def test_claim_type_statistic():
-    claims = extract_claims_heuristic(
-        "Revenue grew by 150 percent year over year.", "groq"
-    )
+    claims = extract_claims_heuristic("Revenue grew by 150 percent year over year.", "groq")
     stat_claims = [c for c in claims if c.claim_type == "statistic"]
     assert len(stat_claims) >= 1
 
@@ -117,6 +112,7 @@ def test_markdown_stripped():
 
 # ── Public extract_claims alias ────────────────────────────────────────────────
 
+
 def test_extract_claims_is_heuristic():
     claims1 = extract_claims(SAMPLE_TEXT, "groq")
     claims2 = extract_claims_heuristic(SAMPLE_TEXT, "groq")
@@ -124,6 +120,7 @@ def test_extract_claims_is_heuristic():
 
 
 # ── extract_all_claims ────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_extract_all_claims_groups_by_provider():
@@ -140,10 +137,15 @@ async def test_extract_all_claims_groups_by_provider():
 async def test_extract_all_claims_llm_fallback_on_bad_json():
     """If LLM returns bad JSON, should fall back to heuristic."""
     mock_router = MagicMock()
-    mock_router.complete = AsyncMock(return_value=LLMResponse(
-        text="not valid json at all !!!",
-        model="m", provider="groq", input_tokens=10, output_tokens=5,
-    ))
+    mock_router.complete = AsyncMock(
+        return_value=LLMResponse(
+            text="not valid json at all !!!",
+            model="m",
+            provider="groq",
+            input_tokens=10,
+            output_tokens=5,
+        )
+    )
 
     results = [
         ProviderResult(provider="groq", model="m", text=SAMPLE_TEXT, status="success"),
@@ -157,17 +159,36 @@ async def test_extract_all_claims_llm_fallback_on_bad_json():
 @pytest.mark.asyncio
 async def test_extract_all_claims_llm_success():
     """Valid JSON from LLM should produce structured claims."""
-    valid_response = json.dumps([
-        {"claim": "IBM has 1000 qubits", "type": "fact", "confidence": 0.9,
-         "has_number": True, "has_date": False, "topics": ["quantum"]},
-        {"claim": "Research advances rapidly", "type": "conclusion", "confidence": 0.7,
-         "has_number": False, "has_date": False, "topics": ["research"]},
-    ])
+    valid_response = json.dumps(
+        [
+            {
+                "claim": "IBM has 1000 qubits",
+                "type": "fact",
+                "confidence": 0.9,
+                "has_number": True,
+                "has_date": False,
+                "topics": ["quantum"],
+            },
+            {
+                "claim": "Research advances rapidly",
+                "type": "conclusion",
+                "confidence": 0.7,
+                "has_number": False,
+                "has_date": False,
+                "topics": ["research"],
+            },
+        ]
+    )
     mock_router = MagicMock()
-    mock_router.complete = AsyncMock(return_value=LLMResponse(
-        text=valid_response,
-        model="m", provider="groq", input_tokens=100, output_tokens=50,
-    ))
+    mock_router.complete = AsyncMock(
+        return_value=LLMResponse(
+            text=valid_response,
+            model="m",
+            provider="groq",
+            input_tokens=100,
+            output_tokens=50,
+        )
+    )
 
     results = [
         ProviderResult(provider="groq", model="m", text=SAMPLE_TEXT, status="success"),

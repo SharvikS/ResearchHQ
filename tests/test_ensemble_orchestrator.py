@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -35,7 +35,9 @@ def _mock_provider(name: str, response_text: str = "ok", delay: float = 0.0):
     return provider
 
 
-def _mock_failing_provider(name: str, exc: Exception = RuntimeError("api error")):
+def _mock_failing_provider(name: str, exc: Exception | None = None):
+    if exc is None:
+        exc = RuntimeError("api error")
     provider = MagicMock()
     provider.name = name
 
@@ -51,6 +53,7 @@ def _mock_timeout_provider(name: str, delay: float = 999.0):
 
 
 # ── run_parallel ──────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_run_parallel_all_succeed():
@@ -120,7 +123,10 @@ async def test_run_parallel_on_provider_event_called():
     events: list[ProviderResult] = []
     providers = [_mock_provider("groq", "text")]
     await run_parallel(
-        "p", "s", providers, query="q",
+        "p",
+        "s",
+        providers,
+        query="q",
         on_provider_event=lambda r: events.append(r),
     )
     assert len(events) == 1
@@ -152,6 +158,7 @@ async def test_ensemble_run_properties():
 
 # ── build_ensemble_providers ──────────────────────────────────────────────────
 
+
 def test_build_ensemble_providers_deduplicates(monkeypatch):
     """Duplicate names in the list should only produce one provider."""
     from researchhq.ensemble import orchestrator as orch
@@ -170,6 +177,7 @@ def test_build_ensemble_providers_deduplicates(monkeypatch):
 
 def test_build_ensemble_providers_respects_max(monkeypatch):
     from researchhq.ensemble import orchestrator as orch
+
     monkeypatch.setattr(orch, "build_provider", lambda name: MagicMock(name=name))
     providers = build_ensemble_providers(["a", "b", "c", "d", "e"], max_providers=2)
     assert len(providers) <= 2
@@ -177,6 +185,7 @@ def test_build_ensemble_providers_respects_max(monkeypatch):
 
 def test_build_ensemble_providers_skips_unavailable(monkeypatch):
     from researchhq.ensemble import orchestrator as orch
+
     monkeypatch.setattr(orch, "build_provider", lambda name: None)
     providers = build_ensemble_providers(["a", "b", "c"])
     assert providers == []

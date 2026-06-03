@@ -17,8 +17,11 @@ class CompetitorMode(ResearchMode):
             "{q} latest product launch competitors",
         ],
         preferred_tiers=[
-            SourceTier.COMPARISON, SourceTier.OFFICIAL, SourceTier.NEWS,
-            SourceTier.COMMUNITY, SourceTier.DOCS,
+            SourceTier.COMPARISON,
+            SourceTier.OFFICIAL,
+            SourceTier.NEWS,
+            SourceTier.COMMUNITY,
+            SourceTier.DOCS,
         ],
         drop_tiers={SourceTier.SEARCH_ENGINE, SourceTier.LOW_QUALITY},
         tier_weights={SourceTier.COMPARISON: 10, SourceTier.COMMUNITY: 7},

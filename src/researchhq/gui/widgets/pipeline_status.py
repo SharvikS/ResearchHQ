@@ -15,7 +15,11 @@ from __future__ import annotations
 import math
 
 from PySide6.QtCore import (
-    QEasingCurve, QPropertyAnimation, QRectF, Qt, Property,
+    Property,
+    QEasingCurve,
+    QPropertyAnimation,
+    QRectF,
+    Qt,
 )
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
@@ -24,14 +28,14 @@ from researchhq.gui.reduce_motion import is_reduced
 from researchhq.gui.theme import ThemeManager, theme
 
 STAGES = [
-    ("planner",       "Planner"),
-    ("searcher",      "Searcher"),
+    ("planner", "Planner"),
+    ("searcher", "Searcher"),
     ("source_ranker", "Ranker"),
-    ("fetcher",       "Fetcher"),
-    ("extractor",     "Extractor"),
-    ("synthesizer",   "Synthesizer"),
-    ("verifier",      "Verifier"),
-    ("formatter",     "Formatter"),
+    ("fetcher", "Fetcher"),
+    ("extractor", "Extractor"),
+    ("synthesizer", "Synthesizer"),
+    ("verifier", "Verifier"),
+    ("formatter", "Formatter"),
 ]
 
 
@@ -49,9 +53,13 @@ class StageChip(QLabel):
 
     # ── Qt property ────────────────────────────────────────────────────────
 
-    def _get_pulse(self) -> float: return self._pulse_phase
+    def _get_pulse(self) -> float:
+        return self._pulse_phase
+
     def _set_pulse(self, v: float) -> None:
-        self._pulse_phase = float(v); self.update()
+        self._pulse_phase = float(v)
+        self.update()
+
     pulsePhase = Property(float, _get_pulse, _set_pulse)
 
     # ── state ──────────────────────────────────────────────────────────────
@@ -78,7 +86,8 @@ class StageChip(QLabel):
         # Manual ping-pong loop so the halo breathes.
         def _reverse() -> None:
             s, e = anim.startValue(), anim.endValue()
-            anim.setStartValue(e); anim.setEndValue(s)
+            anim.setStartValue(e)
+            anim.setEndValue(s)
             anim.start()
 
         anim.finished.connect(_reverse)
@@ -105,7 +114,8 @@ class StageChip(QLabel):
         w, h = self.width(), self.height()
         # Pulse from 60→200 alpha and back.
         alpha = int(60 + 140 * (math.sin(self._pulse_phase * math.pi) * 0.5 + 0.5))
-        glow = QColor(t.accent); glow.setAlpha(alpha)
+        glow = QColor(t.accent)
+        glow.setAlpha(alpha)
         pen = QPen(glow)
         pen.setWidthF(1.5)
         p.setPen(pen)

@@ -10,10 +10,10 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from collections.abc import Iterable
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from researchhq.config import settings
 
@@ -170,16 +170,20 @@ def list_runs(
     where: list[str] = []
     args: list[object] = []
     if workspace and workspace != "all":
-        where.append("workspace = ?"); args.append(workspace)
+        where.append("workspace = ?")
+        args.append(workspace)
     if mode:
-        where.append("mode = ?"); args.append(mode)
+        where.append("mode = ?")
+        args.append(mode)
     if text:
         where.append("(query LIKE ? OR mode LIKE ? OR provider LIKE ?)")
-        like = f"%{text}%"; args.extend([like, like, like])
+        like = f"%{text}%"
+        args.extend([like, like, like])
     sql = "SELECT * FROM runs"
     if where:
         sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY generated_at DESC LIMIT ?"; args.append(limit)
+    sql += " ORDER BY generated_at DESC LIMIT ?"
+    args.append(limit)
     with closing(_connect()) as conn:
         rows = conn.execute(sql, args).fetchall()
     return [_to_run_row(r) for r in rows]
@@ -204,9 +208,7 @@ def delete_run(json_path: str | Path) -> None:
 def list_workspaces() -> list[str]:
     ensure_db()
     with closing(_connect()) as conn:
-        rows = conn.execute(
-            "SELECT DISTINCT workspace FROM runs ORDER BY workspace ASC"
-        ).fetchall()
+        rows = conn.execute("SELECT DISTINCT workspace FROM runs ORDER BY workspace ASC").fetchall()
     out = [r["workspace"] for r in rows]
     if "default" not in out:
         out.insert(0, "default")

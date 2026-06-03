@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
 
 from researchhq.config import settings
 from researchhq.llm.cost_tracker import tracker
@@ -23,8 +23,8 @@ PROVIDER_TIMEOUT_S = 60.0
 
 # Provider lists by cost/quality profile
 ENSEMBLE_PROFILES: dict[str, list[str]] = {
-    "cheap":          ["groq", "ollama"],
-    "balanced":       ["groq", "gemini", "openai"],
+    "cheap": ["groq", "ollama"],
+    "balanced": ["groq", "gemini", "openai"],
     "max_confidence": ["groq", "gemini", "openai", "anthropic", "ollama"],
 }
 
@@ -37,8 +37,8 @@ class ProviderResult:
     input_tokens: int = 0
     output_tokens: int = 0
     elapsed: float = 0.0
-    status: str = "success"    # success | timeout | error | empty
-    error: Optional[str] = None
+    status: str = "success"  # success | timeout | error | empty
+    error: str | None = None
 
 
 @dataclass
@@ -66,25 +66,30 @@ class EnsembleRun:
         return len(self.successful) / len(self.results)
 
 
-def build_provider(name: str) -> Optional[LLMProvider]:
+def build_provider(name: str) -> LLMProvider | None:
     """Build a provider instance by name; returns None if unavailable."""
     name = name.lower()
     model = settings.models.get(name, "")
     try:
         if name == "groq" and settings.groq_api_key:
             from researchhq.llm.providers.groq_provider import GroqProvider
+
             return GroqProvider(settings.groq_api_key, model)
         if name == "gemini" and settings.gemini_api_key:
             from researchhq.llm.providers.gemini_provider import GeminiProvider
+
             return GeminiProvider(settings.gemini_api_key, model)
         if name == "openai" and settings.openai_api_key:
             from researchhq.llm.providers.openai_provider import OpenAIProvider
+
             return OpenAIProvider(settings.openai_api_key, model)
         if name == "anthropic" and settings.anthropic_api_key:
             from researchhq.llm.providers.anthropic_provider import AnthropicProvider
+
             return AnthropicProvider(settings.anthropic_api_key, model)
         if name == "ollama":
             from researchhq.llm.providers.ollama_provider import OllamaProvider
+
             return OllamaProvider(settings.ollama_host, model or "llama3.2:3b")
     except Exception as e:
         logger.debug("Provider %s unavailable for ensemble: %s", name, e)
@@ -117,7 +122,7 @@ async def run_parallel(
     *,
     timeout: float = PROVIDER_TIMEOUT_S,
     max_tokens: int = 2048,
-    on_provider_event: Optional[Callable[[ProviderResult], None]] = None,
+    on_provider_event: Callable[[ProviderResult], None] | None = None,
 ) -> EnsembleRun:
     """Run all providers in parallel, collecting results independently.
 
@@ -149,22 +154,32 @@ async def run_parallel(
             tracker.record(response, stage="ensemble")
             logger.info(
                 "Ensemble %s: %s in %.1fs (%d+%d tokens)",
-                provider.name, status, elapsed,
-                response.input_tokens, response.output_tokens,
+                provider.name,
+                status,
+                elapsed,
+                response.input_tokens,
+                response.output_tokens,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             elapsed = time.monotonic() - t0
             result = ProviderResult(
-                provider=provider.name, model="", text="",
-                elapsed=elapsed, status="timeout",
+                provider=provider.name,
+                model="",
+                text="",
+                elapsed=elapsed,
+                status="timeout",
                 error=f"timed out after {elapsed:.1f}s",
             )
             logger.warning("Ensemble %s timed out after %.1fs", provider.name, elapsed)
         except Exception as e:  # noqa: BLE001
             elapsed = time.monotonic() - t0
             result = ProviderResult(
-                provider=provider.name, model="", text="",
-                elapsed=elapsed, status="error", error=str(e),
+                provider=provider.name,
+                model="",
+                text="",
+                elapsed=elapsed,
+                status="error",
+                error=str(e),
             )
             logger.warning("Ensemble %s failed: %s", provider.name, e)
 

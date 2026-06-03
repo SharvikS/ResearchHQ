@@ -15,7 +15,7 @@ from researchhq.utils.json_extract import extract_json_object
 
 
 def test_extract_json_finds_object_in_noisy_output():
-    text = "junk text\n```json\n{\"queries\": [\"a\", \"b\"], \"rationale\": \"x\"}\n```"
+    text = 'junk text\n```json\n{"queries": ["a", "b"], "rationale": "x"}\n```'
     data = extract_json_object(text)
     assert data["queries"] == ["a", "b"]
 
@@ -42,8 +42,10 @@ def test_template_fallback_returns_seed_queries():
 
 def test_planner_falls_back_when_llm_errors(monkeypatch):
     """If the LLM raises, planner.plan() must still return a valid ResearchPlan."""
+
     async def _boom(*args, **kwargs):
         raise RuntimeError("no providers")
+
     monkeypatch.setattr(planner.router, "complete", _boom)
 
     mode = get_mode("company")

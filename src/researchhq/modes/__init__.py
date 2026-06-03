@@ -1,5 +1,5 @@
-from researchhq.modes.base import ResearchMode
 from researchhq.modes.academic import AcademicMode
+from researchhq.modes.base import ResearchMode
 from researchhq.modes.company import CompanyMode
 from researchhq.modes.competitor import CompetitorMode
 from researchhq.modes.general import GeneralMode
@@ -24,9 +24,7 @@ MODES: dict[str, type[ResearchMode]] = {
 def get_mode(name: str) -> ResearchMode:
     key = name.strip().lower()
     if key not in MODES:
-        raise KeyError(
-            f"Unknown research mode '{name}'. Available: {sorted(set(MODES))}"
-        )
+        raise KeyError(f"Unknown research mode '{name}'. Available: {sorted(set(MODES))}")
     return MODES[key]()
 
 

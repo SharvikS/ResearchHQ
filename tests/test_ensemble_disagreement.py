@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 from researchhq.ensemble.claim_extractor import Claim
-from researchhq.ensemble.confidence import ConfidenceReport, score_confidence
+from researchhq.ensemble.confidence import ConfidenceReport
 from researchhq.ensemble.consensus import ClaimGroup, ConsensusResult
 from researchhq.ensemble.disagreement import (
-    Disagreement,
     DisagreementReport,
     analyze_disagreements,
 )
@@ -16,16 +13,18 @@ from researchhq.ensemble.orchestrator import EnsembleRun, ProviderResult
 from researchhq.ensemble.verifier import EnsembleVerifierNote, verify_synthesis
 from researchhq.reports.schema import Section
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _claim(text: str, provider: str) -> Claim:
     return Claim(text=text, provider=provider)
 
 
 def _contested_group(
-    claim_a: str, provider_a: str,
-    claim_b: str, provider_b: str,
+    claim_a: str,
+    provider_a: str,
+    claim_b: str,
+    provider_b: str,
     note: str = "numeric disagreement: 50 vs 200",
 ) -> ClaimGroup:
     return ClaimGroup(
@@ -52,6 +51,7 @@ def _consensus_with_contested(groups: list[ClaimGroup]) -> ConsensusResult:
 
 # ── analyze_disagreements ──────────────────────────────────────────────────────
 
+
 def test_no_disagreements_on_empty_consensus():
     report = analyze_disagreements(_empty_consensus())
     assert isinstance(report, DisagreementReport)
@@ -62,8 +62,10 @@ def test_no_disagreements_on_empty_consensus():
 
 def test_major_disagreement_detected():
     group = _contested_group(
-        "Market grew 50 percent", "groq",
-        "Market grew 200 percent", "gemini",
+        "Market grew 50 percent",
+        "groq",
+        "Market grew 200 percent",
+        "gemini",
         note="numeric disagreement: 50 vs 200",
     )
     consensus = _consensus_with_contested([group])
@@ -75,8 +77,10 @@ def test_major_disagreement_detected():
 
 def test_moderate_disagreement_detected():
     group = _contested_group(
-        "Technology is improving rapidly", "groq",
-        "Technology adoption is declining sharply", "gemini",
+        "Technology is improving rapidly",
+        "groq",
+        "Technology adoption is declining sharply",
+        "gemini",
         note="conflicting sentiment across providers",
     )
     consensus = _consensus_with_contested([group])
@@ -86,8 +90,10 @@ def test_moderate_disagreement_detected():
 
 def test_minor_disagreement_detected():
     group = _contested_group(
-        "Researchers are making progress", "groq",
-        "Scientists are advancing the field", "gemini",
+        "Researchers are making progress",
+        "groq",
+        "Scientists are advancing the field",
+        "gemini",
         note=None,  # type: ignore[arg-type]
     )
     group.contradiction_note = None
@@ -98,8 +104,10 @@ def test_minor_disagreement_detected():
 
 def test_disagreement_has_resolution():
     group = _contested_group(
-        "Revenue is $10 billion", "groq",
-        "Revenue is $50 billion", "gemini",
+        "Revenue is $10 billion",
+        "groq",
+        "Revenue is $50 billion",
+        "gemini",
         note="numeric disagreement: 10 vs 50",
     )
     consensus = _consensus_with_contested([group])
@@ -146,28 +154,43 @@ def test_agreement_rate_decreases_with_contested():
 
 # ── verify_synthesis ──────────────────────────────────────────────────────────
 
+
 def _make_sections(with_valid_url: bool = True) -> list[Section]:
     url = "https://example.com/article" if with_valid_url else "https://unknown.example.com/page"
-    return [Section(heading="Findings", body=f"Research shows [evidence]({url}) that results are promising.")]
+    return [
+        Section(
+            heading="Findings", body=f"Research shows [evidence]({url}) that results are promising."
+        )
+    ]
 
 
 def _make_run(n_success: int = 2, n_fail: int = 0) -> EnsembleRun:
     results: list[ProviderResult] = []
     for i in range(n_success):
-        results.append(ProviderResult(
-            provider=f"p{i}", model="m", text="text", status="success",
-        ))
+        results.append(
+            ProviderResult(
+                provider=f"p{i}",
+                model="m",
+                text="text",
+                status="success",
+            )
+        )
     for i in range(n_fail):
-        results.append(ProviderResult(
-            provider=f"fail{i}", model="", text="", status="error",
-        ))
+        results.append(
+            ProviderResult(
+                provider=f"fail{i}",
+                model="",
+                text="",
+                status="error",
+            )
+        )
     return EnsembleRun(query="q", results=results)
 
 
 class _MockSource:
     url = "https://example.com/article"
 
-    class tier:
+    class Tier:
         value = "news"
 
 
@@ -216,10 +239,13 @@ def test_all_fail_penalises_confidence():
 
 def test_support_strength_strong_with_many_providers():
     sections = _make_sections()
-    run = EnsembleRun(query="q", results=[
-        ProviderResult(provider=f"p{i}", model="m", text="t", status="success")
-        for i in range(4)
-    ])
+    run = EnsembleRun(
+        query="q",
+        results=[
+            ProviderResult(provider=f"p{i}", model="m", text="t", status="success")
+            for i in range(4)
+        ],
+    )
     conf = ConfidenceReport(
         overall_score=0.80,
         provider_agreement_score=0.75,

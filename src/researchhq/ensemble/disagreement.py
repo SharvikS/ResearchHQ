@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
 from researchhq.ensemble.consensus import ClaimGroup, ConsensusResult
 
@@ -23,9 +22,9 @@ class Disagreement:
     provider_a: str
     claim_b: str
     provider_b: str
-    severity: str = "minor"          # minor | moderate | major
-    resolution: Optional[str] = None
-    contradiction_note: Optional[str] = None
+    severity: str = "minor"  # minor | moderate | major
+    resolution: str | None = None
+    contradiction_note: str | None = None
 
 
 @dataclass

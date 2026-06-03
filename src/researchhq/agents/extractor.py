@@ -102,7 +102,9 @@ async def extract(
 
     raw_items = data.get("facts", [])
     if not isinstance(raw_items, list):
-        logger.warning("Extractor: 'facts' was %s, not a list; returning empty.", type(raw_items).__name__)
+        logger.warning(
+            "Extractor: 'facts' was %s, not a list; returning empty.", type(raw_items).__name__
+        )
         return [], []
 
     raw_facts: list[Fact] = []

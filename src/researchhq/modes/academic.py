@@ -17,10 +17,18 @@ class AcademicMode(ResearchMode):
             "{q} citation",
         ],
         preferred_tiers=[
-            SourceTier.ACADEMIC, SourceTier.GOVERNMENT, SourceTier.DOCS,
-            SourceTier.OFFICIAL, SourceTier.GITHUB,
+            SourceTier.ACADEMIC,
+            SourceTier.GOVERNMENT,
+            SourceTier.DOCS,
+            SourceTier.OFFICIAL,
+            SourceTier.GITHUB,
         ],
-        drop_tiers={SourceTier.SEARCH_ENGINE, SourceTier.LOW_QUALITY, SourceTier.SOCIAL, SourceTier.BLOG},
+        drop_tiers={
+            SourceTier.SEARCH_ENGINE,
+            SourceTier.LOW_QUALITY,
+            SourceTier.SOCIAL,
+            SourceTier.BLOG,
+        },
         tier_weights={SourceTier.ACADEMIC: 12, SourceTier.GOVERNMENT: 10},
         report_sections=[
             ReportSection("Executive summary"),

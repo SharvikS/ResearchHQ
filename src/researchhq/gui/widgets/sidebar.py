@@ -19,25 +19,35 @@ Animations
 from __future__ import annotations
 
 from PySide6.QtCore import (
-    QEasingCurve, QPropertyAnimation, QRect, QSize, QTimer, Qt, Signal,
+    QPropertyAnimation,
+    QRect,
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
 )
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
 )
 
 from researchhq.gui.design_tokens import DURATION, EASING
 from researchhq.gui.reduce_motion import scaled
 from researchhq.gui.theme import ThemeManager, theme
 
-
 # Glyphs match the TUI sidebar 1:1.
 _NAV_ITEMS = [
     ("dashboard", "Dashboard", "◈"),
-    ("research",  "Research",  "⌖"),
-    ("history",   "History",   "⊞"),
-    ("compare",   "Compare",   "⇌"),
-    ("settings",  "Settings",  "◎"),
+    ("research", "Research", "⌖"),
+    ("history", "History", "⊞"),
+    ("compare", "Compare", "⇌"),
+    ("settings", "Settings", "◎"),
 ]
 
 
@@ -57,6 +67,7 @@ class _NavIndicator(QWidget):
 
     def paintEvent(self, _ev) -> None:  # noqa: N802 - Qt method
         from PySide6.QtGui import QLinearGradient
+
         t = theme()
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing, False)
@@ -64,10 +75,14 @@ class _NavIndicator(QWidget):
         if h <= 0:
             return
         grad = QLinearGradient(0, 0, 0, h)
-        c_dim   = QColor(t.accent); c_dim.setAlpha(0)
-        c_soft  = QColor(t.accent); c_soft.setAlpha(80)
-        c_peak  = QColor(t.accent); c_peak.setAlpha(255)
-        c_peak2 = QColor(t.accent2); c_peak2.setAlpha(200)
+        c_dim = QColor(t.accent)
+        c_dim.setAlpha(0)
+        c_soft = QColor(t.accent)
+        c_soft.setAlpha(80)
+        c_peak = QColor(t.accent)
+        c_peak.setAlpha(255)
+        c_peak2 = QColor(t.accent2)
+        c_peak2.setAlpha(200)
         grad.setColorAt(0.0, c_dim)
         grad.setColorAt(0.15, c_soft)
         grad.setColorAt(0.5, c_peak)
@@ -99,6 +114,7 @@ class Sidebar(QFrame):
 
         try:
             from researchhq.gui.widgets.logo import LogoMark
+
             # "idle" — outer nodes + filaments static, core pulses gently.
             self._logo = LogoMark(size=40, mode="idle")
         except ImportError:  # pragma: no cover
@@ -182,7 +198,8 @@ class Sidebar(QFrame):
         # the heavy lifting; the QSS rule now just recolours the text.
         for k, b in self._buttons.items():
             b.setProperty("active", "true" if k == key else "false")
-            b.style().unpolish(b); b.style().polish(b)
+            b.style().unpolish(b)
+            b.style().polish(b)
         self._move_indicator(animate=prev is not None)
         self.selected.emit(key)
 
@@ -208,8 +225,7 @@ class Sidebar(QFrame):
         # adjacent rows.
         x = 0
         y_inset = 6
-        target = QRect(x, btn.y() + y_inset,
-                       _NavIndicator.WIDTH, btn.height() - 2 * y_inset)
+        target = QRect(x, btn.y() + y_inset, _NavIndicator.WIDTH, btn.height() - 2 * y_inset)
 
         if not self._indicator.isVisible():
             self._indicator.setGeometry(target)

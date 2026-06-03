@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 
-from PySide6.QtCore import QThreadPool, Qt, Signal
+from PySide6.QtCore import Qt, QThreadPool, Signal
 from PySide6.QtGui import QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QComboBox,
@@ -40,13 +40,13 @@ from researchhq.reports.schema import ResearchReport
 logger = logging.getLogger(__name__)
 
 MODES = [
-    ("topic",      "General topic"),
-    ("company",    "Company"),
+    ("topic", "General topic"),
+    ("company", "Company"),
     ("competitor", "Competitor"),
     ("technology", "Technology"),
-    ("market",     "Market"),
-    ("news",       "News / Recent"),
-    ("academic",   "Academic"),
+    ("market", "Market"),
+    ("news", "News / Recent"),
+    ("academic", "Academic"),
 ]
 
 FORMATS = [("markdown", "Markdown"), ("json", "JSON"), ("html", "HTML"), ("pdf", "PDF")]
@@ -104,21 +104,27 @@ class ResearchPage(QWidget):
         self._mode = QComboBox()
         for key, label in MODES:
             self._mode.addItem(label, userData=key)
-        params.addWidget(QLabel("Mode")); params.addWidget(self._mode)
+        params.addWidget(QLabel("Mode"))
+        params.addWidget(self._mode)
 
         self._provider = QComboBox()
         for p in ["auto"] + ["groq", "gemini", "openai", "anthropic", "ollama"]:
             self._provider.addItem(p)
-        params.addWidget(QLabel("Provider")); params.addWidget(self._provider)
+        params.addWidget(QLabel("Provider"))
+        params.addWidget(self._provider)
 
-        self._max_sources = QSpinBox(); self._max_sources.setRange(3, 50)
+        self._max_sources = QSpinBox()
+        self._max_sources.setRange(3, 50)
         self._max_sources.setValue(settings.max_total_sources)
-        params.addWidget(QLabel("Max sources")); params.addWidget(self._max_sources)
+        params.addWidget(QLabel("Max sources"))
+        params.addWidget(self._max_sources)
 
-        self._depth = QSpinBox(); self._depth.setRange(1, 12)
+        self._depth = QSpinBox()
+        self._depth.setRange(1, 12)
         self._depth.setValue(settings.max_results_per_query)
         self._depth.setToolTip("Search depth: results per generated search query.")
-        params.addWidget(QLabel("Depth")); params.addWidget(self._depth)
+        params.addWidget(QLabel("Depth"))
+        params.addWidget(self._depth)
 
         self._effort = QComboBox()
         for level in PROFILES:
@@ -132,22 +138,32 @@ class ResearchPage(QWidget):
                 f"depth {p.synth_depth}",
                 Qt.ItemDataRole.ToolTipRole,
             )
-        ix = next((i for i in range(self._effort.count())
-                   if self._effort.itemData(i) == DEFAULT_EFFORT), 1)
+        ix = next(
+            (i for i in range(self._effort.count()) if self._effort.itemData(i) == DEFAULT_EFFORT),
+            1,
+        )
         self._effort.setCurrentIndex(ix)
         self._effort.setToolTip(
             "Effort dial — low (fast scan), medium (balanced default), "
             "high (deep dive; ~3× tokens)."
         )
-        params.addWidget(QLabel("Effort")); params.addWidget(self._effort)
+        params.addWidget(QLabel("Effort"))
+        params.addWidget(self._effort)
 
         self._format = QComboBox()
         for key, label in FORMATS:
             self._format.addItem(label, userData=key)
-        ix = next((i for i in range(self._format.count())
-                   if self._format.itemData(i) == settings.default_format), 0)
+        ix = next(
+            (
+                i
+                for i in range(self._format.count())
+                if self._format.itemData(i) == settings.default_format
+            ),
+            0,
+        )
         self._format.setCurrentIndex(ix)
-        params.addWidget(QLabel("Format")); params.addWidget(self._format)
+        params.addWidget(QLabel("Format"))
+        params.addWidget(self._format)
         params.addStretch(1)
 
         self._run_btn = QPushButton("Run Research")
@@ -156,8 +172,6 @@ class ResearchPage(QWidget):
         self._run_btn.setToolTip("Ctrl+Enter")
         self._run_btn.clicked.connect(self._on_run)
         params.addWidget(self._run_btn)
-
-
 
         self._cancel_btn = QPushButton("Cancel")
         self._cancel_btn.setObjectName("Danger")
@@ -172,17 +186,19 @@ class ResearchPage(QWidget):
 
         # ---- Live stats strip ----
         self._stats_card = Card("Live stats", "Updates as the pipeline runs.")
-        stats_row = QHBoxLayout(); stats_row.setSpacing(18)
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(18)
         self._stat_widgets: dict[str, QLabel] = {}
         for key, label in [
             ("elapsed", "Elapsed"),
-            ("agent",   "Current agent"),
+            ("agent", "Current agent"),
             ("sources", "Sources"),
             ("llm_calls", "LLM calls"),
-            ("tokens",  "Tokens"),
-            ("cost",    "Equiv $"),
+            ("tokens", "Tokens"),
+            ("cost", "Equiv $"),
         ]:
-            block = QVBoxLayout(); block.setSpacing(2)
+            block = QVBoxLayout()
+            block.setSpacing(2)
             label_widget = QLabel(label)
             label_widget.setObjectName("StatLabel")
             block.addWidget(label_widget)
@@ -209,7 +225,8 @@ class ResearchPage(QWidget):
         self._viewer = ReportViewer()
         report_card.add(self._viewer)
 
-        exports = QHBoxLayout(); exports.setSpacing(8)
+        exports = QHBoxLayout()
+        exports.setSpacing(8)
         self._btn_md = QPushButton("Export .md")
         self._btn_md.clicked.connect(lambda: self._export("markdown"))
         self._btn_json = QPushButton("Export .json")
@@ -222,8 +239,14 @@ class ResearchPage(QWidget):
         self._btn_copy_full.clicked.connect(self._copy_full)
         self._btn_copy_summary = QPushButton("Copy summary")
         self._btn_copy_summary.clicked.connect(self._copy_summary)
-        for b in (self._btn_md, self._btn_json, self._btn_html, self._btn_pdf,
-                  self._btn_copy_full, self._btn_copy_summary):
+        for b in (
+            self._btn_md,
+            self._btn_json,
+            self._btn_html,
+            self._btn_pdf,
+            self._btn_copy_full,
+            self._btn_copy_summary,
+        ):
             b.setEnabled(False)
             exports.addWidget(b)
         exports.addStretch(1)
@@ -246,10 +269,10 @@ class ResearchPage(QWidget):
 
         # Keyboard shortcuts (page-scoped)
         QShortcut(QKeySequence("Ctrl+Return"), self, activated=self._on_run)
-        QShortcut(QKeySequence("Ctrl+Enter"),  self, activated=self._on_run)
-        QShortcut(QKeySequence("Esc"),         self, activated=self._on_cancel)
-        QShortcut(QKeySequence("Ctrl+S"),      self, activated=self._on_save_default)
-        QShortcut(QKeySequence("Ctrl+K"),      self, activated=self._query.setFocus)
+        QShortcut(QKeySequence("Ctrl+Enter"), self, activated=self._on_run)
+        QShortcut(QKeySequence("Esc"), self, activated=self._on_cancel)
+        QShortcut(QKeySequence("Ctrl+S"), self, activated=self._on_save_default)
+        QShortcut(QKeySequence("Ctrl+K"), self, activated=self._query.setFocus)
 
     # --------------- shutdown ---------------
     def shutdown(self) -> None:
@@ -280,8 +303,7 @@ class ResearchPage(QWidget):
         if q:
             self._query.setText(q)
         if mode:
-            ix = next((i for i in range(self._mode.count())
-                       if self._mode.itemData(i) == mode), -1)
+            ix = next((i for i in range(self._mode.count()) if self._mode.itemData(i) == mode), -1)
             if ix >= 0:
                 self._mode.setCurrentIndex(ix)
         self._query.setFocus()
@@ -292,8 +314,7 @@ class ResearchPage(QWidget):
         if not p:
             return
         # Set mode to preset.mode
-        ix = next((i for i in range(self._mode.count())
-                   if self._mode.itemData(i) == p.mode), -1)
+        ix = next((i for i in range(self._mode.count()) if self._mode.itemData(i) == p.mode), -1)
         if ix >= 0:
             self._mode.setCurrentIndex(ix)
         self._max_sources.setValue(p.max_sources)
@@ -327,6 +348,7 @@ class ResearchPage(QWidget):
             # expects it to take effect on the next run.
             try:
                 from researchhq.llm import router as _r
+
                 _r.router = _r.LLMRouter()
             except (ImportError, RuntimeError, ValueError) as exc:
                 logger.exception("Failed to rebuild LLM router for provider %s", provider_choice)
@@ -339,7 +361,8 @@ class ResearchPage(QWidget):
 
         if not self._has_any_provider_config():
             QMessageBox.warning(
-                self, "No LLM provider configured",
+                self,
+                "No LLM provider configured",
                 "Add an API key (e.g. GROQ_API_KEY) to your .env file or run a local Ollama. "
                 "Open Settings to see provider status.",
             )
@@ -358,8 +381,12 @@ class ResearchPage(QWidget):
         export_fmt = fmt if fmt != "pdf" else "markdown"  # save as markdown; PDF is on-demand
 
         self._worker = ResearchWorker(
-            mode=mode, query=query, export_format=export_fmt,
-            workspace="default", effort=effort, parent=self,
+            mode=mode,
+            query=query,
+            export_format=export_fmt,
+            workspace="default",
+            effort=effort,
+            parent=self,
         )
         self._worker.stage.connect(self._pipeline.on_stage)
         self._worker.live_stats.connect(self._update_stats)
@@ -412,13 +439,27 @@ class ResearchPage(QWidget):
     def _set_running(self, running: bool) -> None:
         self._run_btn.setEnabled(not running)
         self._cancel_btn.setEnabled(running)
-        for w in (self._query, self._mode, self._provider, self._max_sources,
-                  self._depth, self._effort, self._format, self._preset_box):
+        for w in (
+            self._query,
+            self._mode,
+            self._provider,
+            self._max_sources,
+            self._depth,
+            self._effort,
+            self._format,
+            self._preset_box,
+        ):
             w.setEnabled(not running)
 
     def _enable_exports(self, on: bool) -> None:
-        for b in (self._btn_md, self._btn_json, self._btn_html, self._btn_pdf,
-                  self._btn_copy_full, self._btn_copy_summary):
+        for b in (
+            self._btn_md,
+            self._btn_json,
+            self._btn_html,
+            self._btn_pdf,
+            self._btn_copy_full,
+            self._btn_copy_summary,
+        ):
             b.setEnabled(on)
 
     def _has_any_provider_config(self) -> bool:
@@ -448,7 +489,8 @@ class ResearchPage(QWidget):
             return
         ext = {"markdown": ".md", "json": ".json", "html": ".html"}[fmt]
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save report",
+            self,
+            "Save report",
             f"{self._last_report.mode}__{_slug(self._last_report.query)}{ext}",
             f"*{ext}",
         )
@@ -474,7 +516,8 @@ class ResearchPage(QWidget):
         if self._last_report is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save PDF",
+            self,
+            "Save PDF",
             f"{self._last_report.mode}__{_slug(self._last_report.query)}.pdf",
             "*.pdf",
         )
@@ -514,8 +557,8 @@ class ResearchPage(QWidget):
         if self._last_report is None:
             return
         exec_section = next(
-            (s for s in self._last_report.sections
-             if s.heading.lower().startswith("executive")), None,
+            (s for s in self._last_report.sections if s.heading.lower().startswith("executive")),
+            None,
         )
         text = exec_section.body if exec_section else to_markdown(self._last_report)
         QGuiApplication.clipboard().setText(text)

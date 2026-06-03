@@ -31,15 +31,22 @@ import math
 logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import (
-    QEasingCurve, QEvent, QPoint, QPointF, QPropertyAnimation,
-    QTimer, Qt, Property,
+    Property,
+    QEasingCurve,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
 )
 from PySide6.QtGui import (
-    QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent,
+    QColor,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPaintEvent,
 )
 from PySide6.QtWidgets import QPushButton, QStyle, QStyleOptionButton, QStylePainter
 
-from researchhq.gui.reduce_motion import is_reduced, ReduceMotion
+from researchhq.gui.reduce_motion import ReduceMotion, is_reduced
 from researchhq.gui.theme import ThemeManager, theme
 
 
@@ -85,24 +92,40 @@ class ShimmerButton(QPushButton):
 
     # ── Qt properties so QPropertyAnimation can drive them ─────────────────
 
-    def _get_phase(self) -> float: return self._shimmer_phase
+    def _get_phase(self) -> float:
+        return self._shimmer_phase
+
     def _set_phase(self, v: float) -> None:
-        self._shimmer_phase = float(v); self.update()
+        self._shimmer_phase = float(v)
+        self.update()
+
     shimmerPhase = Property(float, _get_phase, _set_phase)
 
-    def _get_alpha(self) -> float: return self._shimmer_alpha
+    def _get_alpha(self) -> float:
+        return self._shimmer_alpha
+
     def _set_alpha(self, v: float) -> None:
-        self._shimmer_alpha = float(v); self.update()
+        self._shimmer_alpha = float(v)
+        self.update()
+
     shimmerAlpha = Property(float, _get_alpha, _set_alpha)
 
-    def _get_mag_x(self) -> float: return self._mag_x
+    def _get_mag_x(self) -> float:
+        return self._mag_x
+
     def _set_mag_x(self, v: float) -> None:
-        self._mag_x = float(v); self.update()
+        self._mag_x = float(v)
+        self.update()
+
     magneticX = Property(float, _get_mag_x, _set_mag_x)
 
-    def _get_mag_y(self) -> float: return self._mag_y
+    def _get_mag_y(self) -> float:
+        return self._mag_y
+
     def _set_mag_y(self, v: float) -> None:
-        self._mag_y = float(v); self.update()
+        self._mag_y = float(v)
+        self.update()
+
     magneticY = Property(float, _get_mag_y, _set_mag_y)
 
     # ── lifecycle ──────────────────────────────────────────────────────────
@@ -150,8 +173,7 @@ class ShimmerButton(QPushButton):
         self._alpha_anim.start()
 
         # Magnetic snap-back to centre.
-        for anim, val in ((self._mag_x_anim, "magneticX"),
-                          (self._mag_y_anim, "magneticY")):
+        for anim, val in ((self._mag_x_anim, "magneticX"), (self._mag_y_anim, "magneticY")):
             anim.stop()
             anim.setStartValue(getattr(self, val[0].lower() + val[1:]))
             anim.setEndValue(0.0)
@@ -179,10 +201,8 @@ class ShimmerButton(QPushButton):
             dy = float(p.y()) - cy
 
         # Scale to ±MAGNETIC_LIMIT range — strong near centre, capped.
-        target_x = max(-self.MAGNETIC_LIMIT_X,
-                       min(self.MAGNETIC_LIMIT_X, dx * 0.08))
-        target_y = max(-self.MAGNETIC_LIMIT_Y,
-                       min(self.MAGNETIC_LIMIT_Y, dy * 0.08))
+        target_x = max(-self.MAGNETIC_LIMIT_X, min(self.MAGNETIC_LIMIT_X, dx * 0.08))
+        target_y = max(-self.MAGNETIC_LIMIT_Y, min(self.MAGNETIC_LIMIT_Y, dy * 0.08))
 
         # Animate to the new target so the magnetic pull eases smoothly
         # rather than tracking the cursor 1:1.
@@ -248,10 +268,12 @@ class ShimmerButton(QPushButton):
         y1 = cy + ny * thickness
 
         grad = QLinearGradient(x0, y0, x1, y1)
-        c_clear = QColor(t.accent2); c_clear.setAlpha(0)
-        c_peak  = QColor(t.accent2)
+        c_clear = QColor(t.accent2)
+        c_clear.setAlpha(0)
+        c_peak = QColor(t.accent2)
         c_peak.setAlpha(int(140 * self._shimmer_alpha))
-        c_tail  = QColor(t.accent); c_tail.setAlpha(int(60 * self._shimmer_alpha))
+        c_tail = QColor(t.accent)
+        c_tail.setAlpha(int(60 * self._shimmer_alpha))
         grad.setColorAt(0.0, c_clear)
         grad.setColorAt(0.5, c_peak)
         grad.setColorAt(1.0, c_tail)

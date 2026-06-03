@@ -72,47 +72,123 @@ class RankedSource(BaseModel):
 
 # Domain registries
 NEWS_DOMAINS = {
-    "techcrunch.com", "theverge.com", "venturebeat.com", "bloomberg.com",
-    "reuters.com", "wsj.com", "forbes.com", "businesswire.com", "prnewswire.com",
-    "axios.com", "cnbc.com", "ft.com", "businessinsider.com", "fortune.com",
-    "fastcompany.com", "thenextweb.com", "wired.com", "arstechnica.com",
-    "engadget.com", "bbc.com", "cnn.com", "nytimes.com", "theinformation.com",
-    "sifted.eu", "techradar.com", "zdnet.com", "economist.com", "guardian.com",
-    "theguardian.com", "apnews.com", "npr.org", "aljazeera.com",
+    "techcrunch.com",
+    "theverge.com",
+    "venturebeat.com",
+    "bloomberg.com",
+    "reuters.com",
+    "wsj.com",
+    "forbes.com",
+    "businesswire.com",
+    "prnewswire.com",
+    "axios.com",
+    "cnbc.com",
+    "ft.com",
+    "businessinsider.com",
+    "fortune.com",
+    "fastcompany.com",
+    "thenextweb.com",
+    "wired.com",
+    "arstechnica.com",
+    "engadget.com",
+    "bbc.com",
+    "cnn.com",
+    "nytimes.com",
+    "theinformation.com",
+    "sifted.eu",
+    "techradar.com",
+    "zdnet.com",
+    "economist.com",
+    "guardian.com",
+    "theguardian.com",
+    "apnews.com",
+    "npr.org",
+    "aljazeera.com",
 }
 
 ACADEMIC_DOMAINS = {
-    "arxiv.org", "ssrn.com", "biorxiv.org", "medrxiv.org",
-    "papers.nips.cc", "openreview.net", "aclanthology.org",
-    "semanticscholar.org", "scholar.google.com",
-    "nature.com", "science.org", "cell.com", "ieee.org", "acm.org",
-    "springer.com", "link.springer.com", "sciencedirect.com",
-    "tandfonline.com", "wiley.com", "onlinelibrary.wiley.com",
-    "pubmed.ncbi.nlm.nih.gov", "ncbi.nlm.nih.gov", "plos.org", "mdpi.com",
+    "arxiv.org",
+    "ssrn.com",
+    "biorxiv.org",
+    "medrxiv.org",
+    "papers.nips.cc",
+    "openreview.net",
+    "aclanthology.org",
+    "semanticscholar.org",
+    "scholar.google.com",
+    "nature.com",
+    "science.org",
+    "cell.com",
+    "ieee.org",
+    "acm.org",
+    "springer.com",
+    "link.springer.com",
+    "sciencedirect.com",
+    "tandfonline.com",
+    "wiley.com",
+    "onlinelibrary.wiley.com",
+    "pubmed.ncbi.nlm.nih.gov",
+    "ncbi.nlm.nih.gov",
+    "plos.org",
+    "mdpi.com",
 }
 
 SEARCH_AGGREGATOR_DOMAINS = {
-    "google.com", "bing.com", "yandex.com", "yahoo.com", "duckduckgo.com",
-    "html.duckduckgo.com", "brave.com", "search.brave.com", "mojeek.com",
-    "grokipedia.com", "presearch.com", "ecosia.org", "startpage.com",
+    "google.com",
+    "bing.com",
+    "yandex.com",
+    "yahoo.com",
+    "duckduckgo.com",
+    "html.duckduckgo.com",
+    "brave.com",
+    "search.brave.com",
+    "mojeek.com",
+    "grokipedia.com",
+    "presearch.com",
+    "ecosia.org",
+    "startpage.com",
     "search.yahoo.com",
 }
 
 COMMUNITY_DOMAINS = {
-    "reddit.com", "old.reddit.com", "news.ycombinator.com", "lobste.rs",
-    "stackoverflow.com", "stackexchange.com", "quora.com", "indiehackers.com",
-    "dev.to", "hashnode.com", "medium.com",
+    "reddit.com",
+    "old.reddit.com",
+    "news.ycombinator.com",
+    "lobste.rs",
+    "stackoverflow.com",
+    "stackexchange.com",
+    "quora.com",
+    "indiehackers.com",
+    "dev.to",
+    "hashnode.com",
+    "medium.com",
 }
 
 SOCIAL_DOMAINS = {
-    "twitter.com", "x.com", "linkedin.com", "mastodon.social", "bsky.app",
-    "facebook.com", "instagram.com", "youtube.com", "tiktok.com", "threads.net",
+    "twitter.com",
+    "x.com",
+    "linkedin.com",
+    "mastodon.social",
+    "bsky.app",
+    "facebook.com",
+    "instagram.com",
+    "youtube.com",
+    "tiktok.com",
+    "threads.net",
 }
 
 COMPARISON_DOMAINS = {
-    "g2.com", "capterra.com", "gartner.com", "trustradius.com",
-    "alternativeto.net", "producthunt.com", "saasworthy.com", "softwareadvice.com",
-    "getapp.com", "slashdot.org", "pcmag.com",
+    "g2.com",
+    "capterra.com",
+    "gartner.com",
+    "trustradius.com",
+    "alternativeto.net",
+    "producthunt.com",
+    "saasworthy.com",
+    "softwareadvice.com",
+    "getapp.com",
+    "slashdot.org",
+    "pcmag.com",
 }
 
 WIKI_DOMAINS = {"wikipedia.org", "en.wikipedia.org", "wikidata.org", "fandom.com"}
@@ -120,7 +196,10 @@ WIKI_DOMAINS = {"wikipedia.org", "en.wikipedia.org", "wikidata.org", "fandom.com
 GITHUB_DOMAINS = {"github.com", "gist.github.com", "gitlab.com", "bitbucket.org", "huggingface.co"}
 
 LOW_QUALITY_HINTS = {
-    "ezinearticles.com", "buzzfeed.com", "answers.com", "wikihow.com",
+    "ezinearticles.com",
+    "buzzfeed.com",
+    "answers.com",
+    "wikihow.com",
 }
 
 
@@ -154,7 +233,12 @@ def classify(url: str, subject: str = "") -> SourceTier:
         return SourceTier.SEARCH_ENGINE
 
     # Government / institutional first (.gov, .mil, .int, .edu)
-    if domain.endswith(".gov") or ".gov." in domain or domain.endswith(".mil") or domain.endswith(".int"):
+    if (
+        domain.endswith(".gov")
+        or ".gov." in domain
+        or domain.endswith(".mil")
+        or domain.endswith(".int")
+    ):
         return SourceTier.GOVERNMENT
     if domain.endswith(".edu") or ".edu." in domain:
         return SourceTier.ACADEMIC

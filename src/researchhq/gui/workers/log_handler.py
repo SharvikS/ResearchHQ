@@ -9,13 +9,24 @@ import logging
 from PySide6.QtCore import QObject, Signal
 
 _HTTP_LOGGERS = (
-    "httpx", "httpcore", "urllib3", "requests", "ddgs", "primp",
-    "asyncio", "google", "groq", "ollama", "openai", "anthropic",
+    "httpx",
+    "httpcore",
+    "urllib3",
+    "requests",
+    "ddgs",
+    "primp",
+    "asyncio",
+    "google",
+    "groq",
+    "ollama",
+    "openai",
+    "anthropic",
 )
 
 
 class QtLogBridge(QObject):
     """Emits a signal per log record. Install once, enable() to attach to root."""
+
     line = Signal(str, str)  # (level_name, formatted message)
 
     def __init__(self) -> None:
@@ -28,8 +39,9 @@ class QtLogBridge(QObject):
         if self._handler is None:
             self._handler = _BridgeHandler(self)
             self._handler.setFormatter(
-                logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                                  datefmt="%H:%M:%S")
+                logging.Formatter(
+                    "%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S"
+                )
             )
             logging.getLogger().addHandler(self._handler)
         self._apply_levels()

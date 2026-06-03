@@ -23,8 +23,6 @@ from __future__ import annotations
 import logging
 import os
 
-logger = logging.getLogger(__name__)
-
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
@@ -40,6 +38,8 @@ from researchhq.tui.screens.splash import SplashScreen
 from researchhq.tui.theme import DEFAULT_THEME, PALETTES, THEME_CYCLE, render_css
 from researchhq.tui.widgets.header import StatusHeader
 from researchhq.tui.widgets.sidebar import NavRequest, Sidebar
+
+logger = logging.getLogger(__name__)
 
 
 class ResearchHQApp(App):
@@ -71,6 +71,7 @@ class ResearchHQApp(App):
         """Append a (timestamp, message) entry to the dashboard activity feed.
         Bounded to the last 30 entries."""
         from datetime import datetime
+
         self._activity_log.append((datetime.now().strftime("%H:%M"), message))
         del self._activity_log[:-30]
 
@@ -123,6 +124,7 @@ class ResearchHQApp(App):
         Logs an activity line either way and pops a one-time toast if we're
         on the free-tier Groq path with no working local fallback."""
         import httpx
+
         host = (settings.ollama_host or "http://localhost:11434").rstrip("/")
         url = f"{host}/api/tags"
         ok = False
@@ -158,10 +160,17 @@ class ResearchHQApp(App):
 
     # --- screen routing -------------------------------------------------------
 
-    def action_show_dashboard(self) -> None: self._show("dashboard")
-    def action_show_research(self) -> None:  self._show("research")
-    def action_show_reports(self) -> None:   self._show("reports")
-    def action_show_settings(self) -> None:  self._show("settings")
+    def action_show_dashboard(self) -> None:
+        self._show("dashboard")
+
+    def action_show_research(self) -> None:
+        self._show("research")
+
+    def action_show_reports(self) -> None:
+        self._show("reports")
+
+    def action_show_settings(self) -> None:
+        self._show("settings")
 
     def action_focus_query(self) -> None:
         try:
@@ -246,6 +255,7 @@ class ResearchHQApp(App):
         self._theme_name = theme_name
         try:
             from textual.css.stylesheet import Stylesheet
+
             new_ss = Stylesheet()
             new_ss.add_source(render_css(theme_name), is_default_css=False)
             new_ss.parse()
@@ -269,6 +279,7 @@ class ResearchHQApp(App):
                 ResponsiveWordmark,
                 Wordmark,
             )
+
             for wm_cls in (Wordmark, ResponsiveWordmark, CompactWordmark):
                 for wm in self.query(wm_cls):
                     if hasattr(wm, "set_theme"):
@@ -320,6 +331,7 @@ class ResearchHQApp(App):
         if effort:
             try:
                 from researchhq.tui.widgets.effort_selector import EffortSelector
+
                 for sel in self.query(EffortSelector):
                     sel.set_value(effort)
             except (LookupError, RuntimeError):
@@ -330,6 +342,7 @@ class ResearchHQApp(App):
             # In-flight runs are unaffected — they captured a router ref at start.
             try:
                 from researchhq.llm import router as _r
+
                 _r.router = _r.LLMRouter()
             except (ImportError, RuntimeError, ValueError):
                 logger.debug("apply_runtime_settings: LLM router rebuild failed", exc_info=True)

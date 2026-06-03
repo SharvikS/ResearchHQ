@@ -27,7 +27,9 @@ def is_retryable(err: BaseException) -> bool:
         return False
     msg = str(err).lower()
     # Auth failures should not be retried.
-    if any(t in msg for t in ("invalid api key", "unauthorized", "401", "403", "permission denied")):
+    if any(
+        t in msg for t in ("invalid api key", "unauthorized", "401", "403", "permission denied")
+    ):
         return False
     return True
 
@@ -58,8 +60,14 @@ async def with_retry(
                 raise
             sleep = min(max_delay, base_delay * (2 ** (i - 1)))
             sleep = sleep * (0.5 + random.random())  # jitter 0.5x..1.5x
-            logger.info("%s: attempt %d/%d failed (%s); retrying in %.2fs",
-                        label, i, attempts, type(e).__name__, sleep)
+            logger.info(
+                "%s: attempt %d/%d failed (%s); retrying in %.2fs",
+                label,
+                i,
+                attempts,
+                type(e).__name__,
+                sleep,
+            )
             await asyncio.sleep(sleep)
     # Unreachable, but keeps type checker happy.
     assert last is not None

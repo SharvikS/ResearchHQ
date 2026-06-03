@@ -15,8 +15,6 @@ Public surface
 
 from __future__ import annotations
 
-from typing import Optional
-
 from PySide6.QtCore import QObject, QSettings, Signal
 
 
@@ -25,10 +23,10 @@ class _ReduceMotionManager(QObject):
 
     changed = Signal(bool)
 
-    _instance: Optional["_ReduceMotionManager"] = None
+    _instance: _ReduceMotionManager | None = None
 
     @classmethod
-    def instance(cls) -> "_ReduceMotionManager":
+    def instance(cls) -> _ReduceMotionManager:
         if cls._instance is None:
             cls._instance = _ReduceMotionManager()
         return cls._instance

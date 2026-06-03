@@ -13,7 +13,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QThreadPool, Qt
+from pydantic import ValidationError
+from PySide6.QtCore import Qt, QThreadPool
 from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -26,7 +27,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from pydantic import ValidationError
 
 from researchhq.gui.workers.db_worker import DbCallable
 from researchhq.reports.exporter import to_markdown
@@ -56,7 +56,9 @@ class ComparePage(QWidget):
         title.setObjectName("PageTitle")
         outer.addWidget(title)
 
-        sub = QLabel("Pick two saved reports to view side by side. To create a new report, use Research.")
+        sub = QLabel(
+            "Pick two saved reports to view side by side. To create a new report, use Research."
+        )
         sub.setObjectName("Muted")
         outer.addWidget(sub)
 
@@ -65,8 +67,10 @@ class ComparePage(QWidget):
         self._right = QComboBox()
         self._left.setMinimumWidth(280)
         self._right.setMinimumWidth(280)
-        controls.addWidget(QLabel("A")); controls.addWidget(self._left, 1)
-        controls.addWidget(QLabel("vs")); controls.addWidget(self._right, 1)
+        controls.addWidget(QLabel("A"))
+        controls.addWidget(self._left, 1)
+        controls.addWidget(QLabel("vs"))
+        controls.addWidget(self._right, 1)
         load = QPushButton("Compare")
         load.setObjectName("Primary")
         load.clicked.connect(self._on_compare)
@@ -162,7 +166,8 @@ class ComparePage(QWidget):
             QMessageBox.information(self, "Nothing to export", "Run Compare first.")
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, "Save comparison",
+            self,
+            "Save comparison",
             f"compare__{_slug(self._loaded_left.get('query', 'a'))}__vs__{_slug(self._loaded_right.get('query', 'b'))}.md",
             "*.md",
         )

@@ -13,22 +13,23 @@ from textual.widgets import Button, Static
 # (target, label, number_key, icon)
 SECTIONS = [
     ("dashboard", "Dashboard", "1", "◈"),
-    ("research",  "Research",  "2", "⌖"),
-    ("reports",   "Reports",   "3", "⊞"),
-    ("settings",  "Settings",  "4", "◎"),
+    ("research", "Research", "2", "⌖"),
+    ("reports", "Reports", "3", "⊞"),
+    ("settings", "Settings", "4", "◎"),
 ]
 
 SHORTCUTS = [
-    ("ctrl+/",  "Query"),
-    ("ctrl+r",  "Research"),
-    ("ctrl+h",  "History"),
-    ("ctrl+,",  "Settings"),
-    ("ctrl+t",  "Theme"),
-    ("ctrl+q",  "Quit"),
+    ("ctrl+/", "Query"),
+    ("ctrl+r", "Research"),
+    ("ctrl+h", "History"),
+    ("ctrl+,", "Settings"),
+    ("ctrl+t", "Theme"),
+    ("ctrl+q", "Quit"),
 ]
 
 
 # ── Messages ──────────────────────────────────────────────────────────
+
 
 @dataclass
 class NavRequest(Message):
@@ -36,6 +37,7 @@ class NavRequest(Message):
 
 
 # ── Sidebar widget ────────────────────────────────────────────────────
+
 
 class Sidebar(Widget):
     # Default the DOM id to "sidebar" so the CSS selector #sidebar in
@@ -48,7 +50,7 @@ class Sidebar(Widget):
 
     def compose(self) -> ComposeResult:
         yield Static("  WORKSPACE", classes="sidebar_section")
-        for target, label, key, icon in SECTIONS:
+        for target, label, _key, icon in SECTIONS:
             yield Button(
                 f"  {icon}  {label}",
                 id=f"nav_{target}",

@@ -8,8 +8,8 @@ back to the longest successful provider output if the meta-call fails.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
 
 from researchhq.agents.citation_guard import CitationViolation, strip_unknown_citations
 from researchhq.ensemble.confidence import ConfidenceReport
@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 
 # Max chars per provider output sent to meta-synthesis prompt
 _BUDGET_PER_PROVIDER: dict[str, int] = {
-    "cheap":          3_000,
-    "balanced":       6_000,
+    "cheap": 3_000,
+    "balanced": 6_000,
     "max_confidence": 12_000,
 }
 
@@ -39,13 +39,14 @@ _MAX_CONTESTED_IN_PROMPT = 8
 @dataclass
 class EnsembleMeta:
     """Summary attached to ResearchReport when ensemble mode ran."""
+
     providers_attempted: list[str] = field(default_factory=list)
     providers_succeeded: list[str] = field(default_factory=list)
     providers_failed: list[str] = field(default_factory=list)
     provider_results: list[ProviderResult] = field(default_factory=list)
-    consensus: Optional[ConsensusResult] = None
-    confidence: Optional[ConfidenceReport] = None
-    disagreements: Optional[DisagreementReport] = None
+    consensus: ConsensusResult | None = None
+    confidence: ConfidenceReport | None = None
+    disagreements: DisagreementReport | None = None
     ensemble_mode: str = "balanced"
     total_elapsed: float = 0.0
     consensus_groups_count: int = 0
@@ -53,6 +54,7 @@ class EnsembleMeta:
 
 
 # ── Prompt construction ────────────────────────────────────────────────────────
+
 
 def _format_provider_outputs(results: list[ProviderResult], budget: int) -> str:
     parts: list[str] = []
@@ -106,13 +108,13 @@ def _format_sources(sources: list[RankedSource]) -> str:
     if not sources:
         return "(no sources)"
     return "\n".join(
-        f"  [{i}] ({s.tier.value}) {s.title} — {s.url}"
-        for i, s in enumerate(sources, 1)
+        f"  [{i}] ({s.tier.value}) {s.title} — {s.url}" for i, s in enumerate(sources, 1)
     )
 
 
 def _meta_system(mode: ResearchMode) -> str:
     from researchhq.agents.synthesizer import _section_brief
+
     sections = _section_brief(mode)
     persona = mode.config.synthesizer_persona or "You are a senior research analyst."
     return f"""{persona}
@@ -149,7 +151,8 @@ def _meta_user(
     if ensemble_run.failed:
         failed_note = (
             f" [{len(ensemble_run.failed)} failed: "
-            + ", ".join(r.provider for r in ensemble_run.failed) + "]"
+            + ", ".join(r.provider for r in ensemble_run.failed)
+            + "]"
         )
 
     return f"""Research query: {query}
@@ -173,6 +176,7 @@ Agreement rate: {disagreements.agreement_rate:.0%}
 
 # ── Main merge function ────────────────────────────────────────────────────────
 
+
 async def merge_synthesis(
     mode: ResearchMode,
     query: str,
@@ -184,7 +188,7 @@ async def merge_synthesis(
     *,
     ensemble_mode: str = "balanced",
     max_tokens: int = 3500,
-    on_event: Optional[Callable] = None,
+    on_event: Callable | None = None,
 ) -> tuple[list[Section], str, list[CitationViolation]]:
     """Generate the final synthesized report from ensemble analysis.
 
@@ -200,14 +204,13 @@ async def merge_synthesis(
 
     budget = _BUDGET_PER_PROVIDER.get(ensemble_mode, 6_000)
     system = _meta_system(mode)
-    user = _meta_user(
-        query, ensemble_run, consensus, confidence, disagreements, sources, budget
-    )
+    user = _meta_user(query, ensemble_run, consensus, confidence, disagreements, sources, budget)
     provider_label = f"ensemble({len(ensemble_run.successful)})"
 
     try:
         response = await router.complete(
-            prompt=user, system=system,
+            prompt=user,
+            system=system,
             max_tokens=max_tokens,
             stage="ensemble_merge",
         )
@@ -225,6 +228,7 @@ async def merge_synthesis(
 
     # Parse sections
     from researchhq.agents.synthesizer import _split_markdown_sections
+
     raw_sections = _split_markdown_sections(response.text, mode)
 
     # Strip unknown citations

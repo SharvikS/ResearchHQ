@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Center, Middle
 from textual.screen import Screen
 from textual.widgets import Static
-from textual.containers import Center, Middle
 
-from researchhq.tui.theme import DEFAULT_THEME, get_palette
+from researchhq.tui.theme import DEFAULT_THEME
 from researchhq.tui.widgets.logo import AnimatedWordmark
 
 
@@ -31,10 +31,10 @@ class SplashScreen(Screen):
     ) -> None:
         super().__init__(**kwargs)
         self._theme_name = theme_name
-        self._duration   = duration
+        self._duration = duration
 
     def compose(self) -> ComposeResult:
-        p = get_palette(self._theme_name)
+
         yield Middle(
             Center(
                 AnimatedWordmark(
@@ -48,13 +48,13 @@ class SplashScreen(Screen):
             ),
             Center(
                 Static(
-                    f"[dim]initializing workspace …[/dim]",
+                    "[dim]initializing workspace …[/dim]",
                     id="splash_hint",
                 ),
             ),
             Center(
                 Static(
-                    f"[dim]press [bold]Enter[/bold] to skip[/dim]",
+                    "[dim]press [bold]Enter[/bold] to skip[/dim]",
                     id="splash_skip",
                 ),
             ),

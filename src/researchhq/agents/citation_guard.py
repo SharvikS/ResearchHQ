@@ -65,9 +65,7 @@ def validate_evidence_urls(
                 )
             )
             new_conf = 0.5
-        cleaned.append(
-            Fact(claim=f.claim, evidence_urls=kept, confidence=new_conf)
-        )
+        cleaned.append(Fact(claim=f.claim, evidence_urls=kept, confidence=new_conf))
     return cleaned, violations
 
 

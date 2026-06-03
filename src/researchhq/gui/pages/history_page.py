@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QThreadPool, QTimer, Qt, Signal
+from PySide6.QtCore import Qt, QThreadPool, QTimer, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -28,9 +28,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from researchhq.gui.widgets.animated_list import AnimatedTableWidget
-
 from researchhq.gui.state import delete_report
+from researchhq.gui.widgets.animated_list import AnimatedTableWidget
 from researchhq.gui.workers.db_worker import DbCallable
 
 logger = logging.getLogger(__name__)
@@ -46,6 +45,7 @@ _SEARCH_DEBOUNCE_MS = 250
 class _ListPayload:
     """Result of a list_runs query (paired with workspaces so a single round-
     trip can refresh the workspace dropdown alongside the table)."""
+
     workspaces: list[str]
     rows: list[Any]
 
@@ -60,7 +60,9 @@ def _fetch_list_payload(workspace: str, mode: str | None, text: str | None) -> _
     return _ListPayload(workspaces=workspaces, rows=rows)
 
 
-def _reindex_then_list(workspace: str, mode: str | None, text: str | None) -> tuple[int, _ListPayload]:
+def _reindex_then_list(
+    workspace: str, mode: str | None, text: str | None
+) -> tuple[int, _ListPayload]:
     """Worker-side: reindex from disk, then re-fetch the list. Returns count."""
     from researchhq import history as histdb
 
@@ -331,7 +333,8 @@ class HistoryPage(QWidget):
         if not path:
             return
         confirm = QMessageBox.question(
-            self, "Delete report",
+            self,
+            "Delete report",
             f"Delete this report and its sibling exports?\n\n{path}",
         )
         if confirm != QMessageBox.StandardButton.Yes:

@@ -16,9 +16,13 @@ collapse the animation to instant.
 from __future__ import annotations
 
 from PySide6.QtCore import (
-    QEasingCurve, QPointF, QPropertyAnimation, QRectF, Qt, Property,
+    Property,
+    QEasingCurve,
+    QPropertyAnimation,
+    QRectF,
+    Qt,
 )
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
+from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from researchhq.gui.reduce_motion import scaled
@@ -55,9 +59,13 @@ class ConfidenceRing(QWidget):
         self._start_sweep()
 
     # ── Qt property for the sweep animation ────────────────────────────────
-    def _get_sweep(self) -> float: return self._sweep
+    def _get_sweep(self) -> float:
+        return self._sweep
+
     def _set_sweep(self, v: float) -> None:
-        self._sweep = float(v); self.update()
+        self._sweep = float(v)
+        self.update()
+
     sweep = Property(float, _get_sweep, _set_sweep)
 
     # ── public API ─────────────────────────────────────────────────────────
@@ -126,7 +134,7 @@ class ConfidenceRing(QWidget):
             p.setPen(tail_pen)
             # Tail extends slightly past the current leading edge in
             # the sweep direction. Qt arc angles use 1/16 deg; CCW.
-            tail_start = 90 + sweep_deg          # leading edge of the main sweep
+            tail_start = 90 + sweep_deg  # leading edge of the main sweep
             p.drawArc(rect, int(tail_start * 16), int(-tail_len * 16))
 
         # ── value arc (main) ─────────────────────────────────────────
@@ -146,5 +154,4 @@ class ConfidenceRing(QWidget):
             p.setFont(font)
             p.setPen(QColor(t.text))
             text = f".{int(round(self._sweep * 100)):02d}"
-            p.drawText(QRectF(0, 0, s, s),
-                       Qt.AlignmentFlag.AlignCenter, text)
+            p.drawText(QRectF(0, 0, s, s), Qt.AlignmentFlag.AlignCenter, text)

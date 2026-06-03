@@ -20,17 +20,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import (
-    QEasingCurve, QEvent, QObject, QPoint, QPropertyAnimation, QRect, Qt,
     Property,
+    QEasingCurve,
+    QEvent,
+    QObject,
+    QPropertyAnimation,
+    QRect,
+    Qt,
 )
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
 from PySide6.QtWidgets import (
-    QAbstractItemView, QListWidget, QTableWidget, QWidget,
+    QAbstractItemView,
+    QListWidget,
+    QTableWidget,
+    QWidget,
 )
 
 from researchhq.gui.reduce_motion import scaled
 from researchhq.gui.theme import ThemeManager, theme
-
 
 # Width of the accent bar painted at the left edge of the hovered row.
 _BAR_WIDTH = 3
@@ -72,7 +79,8 @@ class _RowHoverIndicator(QWidget):
         self._slide_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
 
     # ── animated Qt property ──────────────────────────────────────────
-    def _get_row_y(self) -> int: return self._row_y
+    def _get_row_y(self) -> int:
+        return self._row_y
 
     def _set_row_y(self, v) -> None:
         self._row_y = int(v)
@@ -127,8 +135,10 @@ class _RowHoverIndicator(QWidget):
         path.addRoundedRect(bar_rect, _BAR_WIDTH / 2, _BAR_WIDTH / 2)
 
         grad = QLinearGradient(0, bar_rect.top(), 0, bar_rect.bottom())
-        c_dim = QColor(t.accent); c_dim.setAlpha(40)
-        c_peak = QColor(t.accent); c_peak.setAlpha(255)
+        c_dim = QColor(t.accent)
+        c_dim.setAlpha(40)
+        c_peak = QColor(t.accent)
+        c_peak.setAlpha(255)
         grad.setColorAt(0.0, c_dim)
         grad.setColorAt(0.5, c_peak)
         grad.setColorAt(1.0, c_dim)

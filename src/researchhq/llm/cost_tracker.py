@@ -36,8 +36,7 @@ class CostTracker:
             response.provider, {"input": 0.0, "output": 0.0}
         )
         equiv = (
-            response.input_tokens * pricing["input"]
-            + response.output_tokens * pricing["output"]
+            response.input_tokens * pricing["input"] + response.output_tokens * pricing["output"]
         ) / 1_000_000
         with self._lock:
             self.records.append(
@@ -76,7 +75,12 @@ class CostTracker:
             for r in self.records:
                 row = agg.setdefault(
                     r.stage,
-                    {"calls": 0, "input_tokens": 0, "output_tokens": 0, "equivalent_paid_cost_usd": 0.0},
+                    {
+                        "calls": 0,
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "equivalent_paid_cost_usd": 0.0,
+                    },
                 )
                 row["calls"] += 1
                 row["input_tokens"] += r.input_tokens

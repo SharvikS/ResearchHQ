@@ -26,20 +26,26 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from typing import Optional
 
 from PySide6.QtCore import (
-    QEasingCurve, QEvent, QObject, QPoint, QPropertyAnimation,
-    QTimer, Qt,
+    QEasingCurve,
+    QEvent,
+    QObject,
+    QPoint,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
 )
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QLabel, QWidget,
+    QGraphicsDropShadowEffect,
+    QGraphicsOpacityEffect,
+    QLabel,
+    QWidget,
 )
 
 from researchhq.gui.reduce_motion import scaled
 from researchhq.gui.theme import ThemeManager, theme
-
 
 # Delay before the tooltip is allowed to appear (ms). Matches Qt's
 # default tooltip dwell, so behaviour feels familiar.
@@ -127,10 +133,10 @@ class _TooltipBubble(QWidget):
 class _TooltipManager(QObject):
     """Singleton — keeps the shared bubble + per-source state."""
 
-    _instance: Optional["_TooltipManager"] = None
+    _instance: _TooltipManager | None = None
 
     @classmethod
-    def instance(cls) -> "_TooltipManager":
+    def instance(cls) -> _TooltipManager:
         if cls._instance is None:
             cls._instance = _TooltipManager()
         return cls._instance

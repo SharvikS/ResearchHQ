@@ -13,44 +13,129 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 from researchhq.ensemble.claim_extractor import Claim
 
 logger = logging.getLogger(__name__)
 
-_STOPWORDS = frozenset({
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "has", "have", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "shall", "of", "to", "in", "for", "on",
-    "with", "at", "by", "from", "as", "this", "that", "these", "those",
-    "it", "its", "and", "or", "but", "not", "also", "than", "then",
-    "more", "very", "so", "such", "there", "their", "they", "we", "our",
-    "one", "two", "three", "can", "all", "both", "each", "its", "been",
-    "which", "what", "when", "where", "how", "why", "who",
-})
+_STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "has",
+        "have",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "of",
+        "to",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "this",
+        "that",
+        "these",
+        "those",
+        "it",
+        "its",
+        "and",
+        "or",
+        "but",
+        "not",
+        "also",
+        "than",
+        "then",
+        "more",
+        "very",
+        "so",
+        "such",
+        "there",
+        "their",
+        "they",
+        "we",
+        "our",
+        "one",
+        "two",
+        "three",
+        "can",
+        "all",
+        "both",
+        "each",
+        "which",
+        "what",
+        "when",
+        "where",
+        "how",
+        "why",
+        "who",
+    }
+)
 
 _NUMERIC_RE = re.compile(r"\b(\d[\d,.]*)(?:\s*[%$BbMmKkTt])?\b")
 
-_POSITIVE_WORDS = frozenset({
-    "increase", "growth", "improved", "higher", "better", "rising",
-    "leading", "advantage", "gain", "ahead", "stronger", "outperform",
-})
-_NEGATIVE_WORDS = frozenset({
-    "decrease", "decline", "worse", "lower", "falling", "lagging",
-    "behind", "disadvantage", "loss", "weaker", "underperform",
-})
+_POSITIVE_WORDS = frozenset(
+    {
+        "increase",
+        "growth",
+        "improved",
+        "higher",
+        "better",
+        "rising",
+        "leading",
+        "advantage",
+        "gain",
+        "ahead",
+        "stronger",
+        "outperform",
+    }
+)
+_NEGATIVE_WORDS = frozenset(
+    {
+        "decrease",
+        "decline",
+        "worse",
+        "lower",
+        "falling",
+        "lagging",
+        "behind",
+        "disadvantage",
+        "loss",
+        "weaker",
+        "underperform",
+    }
+)
 
 
 @dataclass
 class ClaimGroup:
-    representative: str                         # most representative claim text
+    representative: str  # most representative claim text
     claims: list[Claim] = field(default_factory=list)
     providers_supporting: list[str] = field(default_factory=list)
-    agreement_score: float = 0.0               # fraction of total providers
+    agreement_score: float = 0.0  # fraction of total providers
     claim_type: str = "fact"
     is_contested: bool = False
-    contradiction_note: Optional[str] = None
+    contradiction_note: str | None = None
 
 
 @dataclass
@@ -73,11 +158,9 @@ class ConsensusResult:
 
 # ── Similarity ─────────────────────────────────────────────────────────────────
 
+
 def _words(text: str) -> frozenset[str]:
-    return frozenset(
-        w for w in re.findall(r"\b[a-z]{3,}\b", text.lower())
-        if w not in _STOPWORDS
-    )
+    return frozenset(w for w in re.findall(r"\b[a-z]{3,}\b", text.lower()) if w not in _STOPWORDS)
 
 
 def jaccard_similarity(a: str, b: str) -> float:
@@ -91,7 +174,8 @@ def jaccard_similarity(a: str, b: str) -> float:
 
 # ── Contradiction detection ────────────────────────────────────────────────────
 
-def _is_contradictory(group: ClaimGroup) -> tuple[bool, Optional[str]]:
+
+def _is_contradictory(group: ClaimGroup) -> tuple[bool, str | None]:
     """Detect numeric or sentiment contradictions within a claim group."""
     claims = group.claims
     if len(claims) < 2:
@@ -129,6 +213,7 @@ def _is_contradictory(group: ClaimGroup) -> tuple[bool, Optional[str]]:
 
 # ── Provider agreement matrix ──────────────────────────────────────────────────
 
+
 def _build_agreement_matrix(
     claims_by_provider: dict[str, list[Claim]],
 ) -> dict[str, dict[str, float]]:
@@ -146,8 +231,7 @@ def _build_agreement_matrix(
                 score = 0.0
             else:
                 scores = [
-                    max(jaccard_similarity(ca.text, cb.text) for cb in cb_list)
-                    for ca in ca_list
+                    max(jaccard_similarity(ca.text, cb.text) for cb in cb_list) for ca in ca_list
                 ]
                 score = sum(scores) / len(scores)
             matrix[pa][pb] = round(score, 3)
@@ -157,6 +241,7 @@ def _build_agreement_matrix(
 
 
 # ── Main analysis ──────────────────────────────────────────────────────────────
+
 
 def analyze_consensus(
     claims_by_provider: dict[str, list[Claim]],
@@ -238,7 +323,9 @@ def analyze_consensus(
     contested_groups.sort(key=lambda g: g.agreement_score, reverse=True)
 
     # Overall agreement rate: fraction of claim instances in consensus groups
-    total_instances = sum(len(g.claims) for g in consensus_groups + contested_groups + unique_groups)
+    total_instances = sum(
+        len(g.claims) for g in consensus_groups + contested_groups + unique_groups
+    )
     consensus_instances = sum(len(g.claims) for g in consensus_groups)
     overall_rate = consensus_instances / max(total_instances, 1)
 

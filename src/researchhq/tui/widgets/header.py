@@ -45,15 +45,32 @@ class StatusHeader(Static):
         self._run_started_at: float | None = None
         self._available_width: int = 120
 
-    def watch_provider(self) -> None: self._refresh()
-    def watch_model(self) -> None: self._refresh()
-    def watch_workspace(self) -> None: self._refresh()
-    def watch_effort(self) -> None: self._refresh()
-    def watch_active_agent(self) -> None: self._refresh()
-    def watch_tokens_in(self) -> None: self._refresh()
-    def watch_tokens_out(self) -> None: self._refresh()
-    def watch_cost_usd(self) -> None: self._refresh()
-    def watch_runtime_s(self) -> None: self._refresh()
+    def watch_provider(self) -> None:
+        self._refresh()
+
+    def watch_model(self) -> None:
+        self._refresh()
+
+    def watch_workspace(self) -> None:
+        self._refresh()
+
+    def watch_effort(self) -> None:
+        self._refresh()
+
+    def watch_active_agent(self) -> None:
+        self._refresh()
+
+    def watch_tokens_in(self) -> None:
+        self._refresh()
+
+    def watch_tokens_out(self) -> None:
+        self._refresh()
+
+    def watch_cost_usd(self) -> None:
+        self._refresh()
+
+    def watch_runtime_s(self) -> None:
+        self._refresh()
 
     def on_mount(self) -> None:
         self._refresh()

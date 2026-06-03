@@ -34,11 +34,11 @@ class ProviderCard(_Card):
     def compose(self):
         yield from super().compose()
         rows = [
-            ("groq",      bool(settings.groq_api_key),      settings.models.get("groq", "")),
-            ("gemini",    bool(settings.gemini_api_key),    settings.models.get("gemini", "")),
-            ("openai",    bool(settings.openai_api_key),    settings.models.get("openai", "")),
+            ("groq", bool(settings.groq_api_key), settings.models.get("groq", "")),
+            ("gemini", bool(settings.gemini_api_key), settings.models.get("gemini", "")),
+            ("openai", bool(settings.openai_api_key), settings.models.get("openai", "")),
             ("anthropic", bool(settings.anthropic_api_key), settings.models.get("anthropic", "")),
-            ("ollama",    True,                              settings.models.get("ollama", "")),
+            ("ollama", True, settings.models.get("ollama", "")),
         ]
         t = Table.grid(padding=(0, 2))
         t.add_column(justify="left", no_wrap=True)
@@ -59,15 +59,16 @@ class RecentReportsCard(_Card):
         yield from super().compose()
         import logging
         import sqlite3
+
         try:
             rows = list_runs(limit=6)
         except sqlite3.Error:
-            logging.getLogger(__name__).exception(
-                "TUI dashboard: history DB unavailable"
-            )
+            logging.getLogger(__name__).exception("TUI dashboard: history DB unavailable")
             rows = []
         if not rows:
-            yield Static("[dim]No reports yet — start one with [bold]/research[/bold] or [bold]Ctrl+R[/].[/]")
+            yield Static(
+                "[dim]No reports yet — start one with [bold]/research[/bold] or [bold]Ctrl+R[/].[/]"
+            )
             return
         t = Table.grid(padding=(0, 1))
         t.add_column(no_wrap=True)
@@ -134,11 +135,12 @@ class UsageCard(_Card):
         out_tok = sum(r.output_tokens for r in records)
         cost = sum(r.equivalent_cost_usd for r in records)
         t = Table.grid(padding=(0, 3))
-        t.add_column(); t.add_column(justify="right")
-        t.add_row(Text("LLM calls", style="dim"),     Text(str(calls), style="bold"))
-        t.add_row(Text("input tokens", style="dim"),  Text(f"{in_tok:,}"))
+        t.add_column()
+        t.add_column(justify="right")
+        t.add_row(Text("LLM calls", style="dim"), Text(str(calls), style="bold"))
+        t.add_row(Text("input tokens", style="dim"), Text(f"{in_tok:,}"))
         t.add_row(Text("output tokens", style="dim"), Text(f"{out_tok:,}"))
-        t.add_row(Text("equiv cost", style="dim"),    Text(f"${cost:.4f}"))
+        t.add_row(Text("equiv cost", style="dim"), Text(f"${cost:.4f}"))
         yield Static(t)
 
 

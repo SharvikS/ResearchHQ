@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 
@@ -11,6 +9,7 @@ import pytest
 def isolated_reports(tmp_path, monkeypatch):
     """Point settings.output_folder to a tmp dir; force history DB into it."""
     from researchhq.config import settings
+
     monkeypatch.setattr(settings, "output_folder", str(tmp_path))
     yield tmp_path
 
@@ -29,14 +28,20 @@ def _payload(mode: str, query: str, sources: int = 2, conf: float = 0.8) -> dict
         "sources": [{"url": f"u{i}", "tier": "news", "score": 8} for i in range(sources)],
         "facts": [],
         "stage_costs": [
-            {"stage": "planner", "calls": 1, "input_tokens": 10, "output_tokens": 5,
-             "equivalent_paid_cost_usd": 0.001},
+            {
+                "stage": "planner",
+                "calls": 1,
+                "input_tokens": 10,
+                "output_tokens": 5,
+                "equivalent_paid_cost_usd": 0.001,
+            },
         ],
     }
 
 
 def test_insert_and_list_runs(isolated_reports):
     from researchhq import history as h
+
     p1 = isolated_reports / "topic__a.json"
     p1.write_text("{}", encoding="utf-8")
     h.index_report_dict(p1, _payload("topic", "alpha"))
@@ -50,8 +55,11 @@ def test_insert_and_list_runs(isolated_reports):
 
 def test_filter_by_mode(isolated_reports):
     from researchhq import history as h
-    a = isolated_reports / "topic__a.json"; a.write_text("{}")
-    b = isolated_reports / "company__b.json"; b.write_text("{}")
+
+    a = isolated_reports / "topic__a.json"
+    a.write_text("{}")
+    b = isolated_reports / "company__b.json"
+    b.write_text("{}")
     h.index_report_dict(a, _payload("topic", "alpha"))
     h.index_report_dict(b, _payload("company", "beta"))
 
@@ -61,7 +69,9 @@ def test_filter_by_mode(isolated_reports):
 
 def test_text_search(isolated_reports):
     from researchhq import history as h
-    a = isolated_reports / "topic__a.json"; a.write_text("{}")
+
+    a = isolated_reports / "topic__a.json"
+    a.write_text("{}")
     h.index_report_dict(a, _payload("topic", "Supabase deep dive"))
     rows = h.list_runs(text="supabase")
     assert any("Supabase" in r.query for r in rows)
@@ -69,8 +79,11 @@ def test_text_search(isolated_reports):
 
 def test_workspace_filtering(isolated_reports):
     from researchhq import history as h
-    a = isolated_reports / "topic__a.json"; a.write_text("{}")
-    b = isolated_reports / "topic__b.json"; b.write_text("{}")
+
+    a = isolated_reports / "topic__a.json"
+    a.write_text("{}")
+    b = isolated_reports / "topic__b.json"
+    b.write_text("{}")
     h.index_report_dict(a, _payload("topic", "alpha"), workspace="default")
     h.index_report_dict(b, _payload("topic", "beta"), workspace="acme")
 
@@ -81,8 +94,11 @@ def test_workspace_filtering(isolated_reports):
 
 def test_aggregate_totals(isolated_reports):
     from researchhq import history as h
-    a = isolated_reports / "topic__a.json"; a.write_text("{}")
-    b = isolated_reports / "topic__b.json"; b.write_text("{}")
+
+    a = isolated_reports / "topic__a.json"
+    a.write_text("{}")
+    b = isolated_reports / "topic__b.json"
+    b.write_text("{}")
     h.index_report_dict(a, _payload("topic", "alpha", sources=3))
     h.index_report_dict(b, _payload("topic", "beta", sources=5))
     agg = h.aggregate(workspace="all")
@@ -92,7 +108,9 @@ def test_aggregate_totals(isolated_reports):
 
 def test_delete_run(isolated_reports):
     from researchhq import history as h
-    p = isolated_reports / "topic__a.json"; p.write_text("{}")
+
+    p = isolated_reports / "topic__a.json"
+    p.write_text("{}")
     h.index_report_dict(p, _payload("topic", "alpha"))
     assert len(h.list_runs()) == 1
     h.delete_run(p)
@@ -101,6 +119,7 @@ def test_delete_run(isolated_reports):
 
 def test_reindex_from_folder(isolated_reports, tmp_path):
     import json
+
     from researchhq import history as h
 
     p = isolated_reports / "topic__a.json"
@@ -114,6 +133,7 @@ def test_reindex_from_folder(isolated_reports, tmp_path):
 
 def test_corrupt_db_recreates(isolated_reports):
     from researchhq import history as h
+
     # Write garbage to the DB file, then ensure ensure_db recovers.
     db = isolated_reports / ".researchhq.db"
     db.write_bytes(b"not a sqlite database at all")

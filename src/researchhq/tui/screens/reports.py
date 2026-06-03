@@ -7,9 +7,8 @@ read-only listing so users can confirm runs were saved correctly.
 from __future__ import annotations
 
 from rich.table import Table
-from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical, VerticalScroll
+from textual.containers import Container, VerticalScroll
 from textual.widgets import Input, Static
 
 from researchhq.history import list_runs
@@ -40,14 +39,19 @@ class ReportsView(Container):
                 "[dim italic]No reports match — adjust the filter or run new research.[/]"
             )
             return
-        t = Table(show_header=True, header_style="bold #34d4bb",
-                  show_edge=False, expand=True, pad_edge=False)
-        t.add_column("when",   no_wrap=True, style="dim", width=14)
-        t.add_column("mode",   no_wrap=True, width=10)
-        t.add_column("query",  ratio=4)
-        t.add_column("conf",   no_wrap=True, justify="right", width=6)
-        t.add_column("cost",   no_wrap=True, justify="right", width=9)
-        t.add_column("toks",   no_wrap=True, justify="right", width=12)
+        t = Table(
+            show_header=True,
+            header_style="bold #34d4bb",
+            show_edge=False,
+            expand=True,
+            pad_edge=False,
+        )
+        t.add_column("when", no_wrap=True, style="dim", width=14)
+        t.add_column("mode", no_wrap=True, width=10)
+        t.add_column("query", ratio=4)
+        t.add_column("conf", no_wrap=True, justify="right", width=6)
+        t.add_column("cost", no_wrap=True, justify="right", width=9)
+        t.add_column("toks", no_wrap=True, justify="right", width=12)
         for r in rows:
             t.add_row(
                 r.generated_at[:16] if r.generated_at else "",

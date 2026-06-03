@@ -14,24 +14,24 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 # ── Palette ───────────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class Palette:
     name: str
     description: str
     # Backgrounds
-    bg: str        # base surface
-    bg_alt: str    # raised surface (sidebar, header)
-    panel: str     # card / panel glass
-    border: str    # subtle divider
+    bg: str  # base surface
+    bg_alt: str  # raised surface (sidebar, header)
+    panel: str  # card / panel glass
+    border: str  # subtle divider
     # Typography
-    text: str       # primary
-    text_dim: str   # secondary
+    text: str  # primary
+    text_dim: str  # secondary
     text_mute: str  # tertiary / placeholder
     # Brand accents
-    accent: str    # primary (purple / blue / cyan …)
+    accent: str  # primary (purple / blue / cyan …)
     accent_2: str  # secondary contrasting pop
     # Status
     success: str
@@ -52,7 +52,7 @@ _DEEP_SPACE = Palette(
     text="#dde7f4",
     text_dim="#7689a4",
     text_mute="#4a5b78",
-    accent="#00d4ff",    # electric cyan — primary brand accent
+    accent="#00d4ff",  # electric cyan — primary brand accent
     accent_2="#ff5cd0",  # magenta — secondary typographic pop
     success="#00e57a",
     warning="#ffaa00",
@@ -69,7 +69,7 @@ _ARCTIC = Palette(
     text="#0f1629",
     text_dim="#4b5675",
     text_mute="#9ba3bd",
-    accent="#4f46e5",    # indigo
+    accent="#4f46e5",  # indigo
     accent_2="#7c3aed",  # violet
     success="#059669",
     warning="#d97706",
@@ -86,7 +86,7 @@ _CYBER_NOIR = Palette(
     text="#e4e4ff",
     text_dim="#7272aa",
     text_mute="#363660",
-    accent="#00d4ff",    # electric cyan
+    accent="#00d4ff",  # electric cyan
     accent_2="#cc44ff",  # neon magenta
     success="#00e599",
     warning="#ffb700",
@@ -103,7 +103,7 @@ _MONO = Palette(
     text="#f5f5f5",
     text_dim="#737373",
     text_mute="#404040",
-    accent="#e5e5e5",    # bright near-white
+    accent="#e5e5e5",  # bright near-white
     accent_2="#a3a3a3",  # mid-gray
     success="#d4d4d4",
     warning="#a3a3a3",
@@ -114,32 +114,48 @@ _MONO = Palette(
 _AMBER = Palette(
     name="amber",
     description="Warm amber CRT vintage",
-    bg="#0e0a05", bg_alt="#15100a", panel="#1d160c", border="#2c2114",
-    text="#f5d893", text_dim="#c69b54", text_mute="#7a5a32",
-    accent="#ffb43c", accent_2="#ff7a45",
-    success="#9bd864", warning="#ffd166", error="#ef6c5b",
+    bg="#0e0a05",
+    bg_alt="#15100a",
+    panel="#1d160c",
+    border="#2c2114",
+    text="#f5d893",
+    text_dim="#c69b54",
+    text_mute="#7a5a32",
+    accent="#ffb43c",
+    accent_2="#ff7a45",
+    success="#9bd864",
+    warning="#ffd166",
+    error="#ef6c5b",
 )
 _MATRIX = Palette(
     name="matrix",
     description="Phosphor green hacker terminal",
-    bg="#02060a", bg_alt="#040c0a", panel="#06120e", border="#0d2820",
-    text="#9bf2b8", text_dim="#46b577", text_mute="#1f5e3e",
-    accent="#39ff7a", accent_2="#00d4a3",
-    success="#5eff9c", warning="#ffd84a", error="#ff5454",
+    bg="#02060a",
+    bg_alt="#040c0a",
+    panel="#06120e",
+    border="#0d2820",
+    text="#9bf2b8",
+    text_dim="#46b577",
+    text_mute="#1f5e3e",
+    accent="#39ff7a",
+    accent_2="#00d4a3",
+    success="#5eff9c",
+    warning="#ffd84a",
+    error="#ff5454",
 )
 
 PALETTES: dict[str, Palette] = {
     # Premium quartet
     "deep_space": _DEEP_SPACE,
-    "arctic":     _ARCTIC,
+    "arctic": _ARCTIC,
     "cyber_noir": _CYBER_NOIR,
-    "mono":       _MONO,
+    "mono": _MONO,
     # Legacy aliases
-    "default":    _DEEP_SPACE,
-    "amber":      _AMBER,
-    "nord":       _ARCTIC,    # nord → arctic
-    "midnight":   _DEEP_SPACE,
-    "matrix":     _MATRIX,
+    "default": _DEEP_SPACE,
+    "amber": _AMBER,
+    "nord": _ARCTIC,  # nord → arctic
+    "midnight": _DEEP_SPACE,
+    "matrix": _MATRIX,
 }
 
 DEFAULT_THEME = "deep_space"
@@ -535,16 +551,16 @@ def render_css(theme: str = DEFAULT_THEME) -> str:
     p = get_palette(theme)
     css = CSS_TEMPLATE
     # Order matters: longer tokens must be replaced before shorter prefixes
-    css = css.replace("$bg_alt",    p.bg_alt)
-    css = css.replace("$bg",        p.bg)
-    css = css.replace("$panel",     p.panel)
-    css = css.replace("$border",    p.border)
-    css = css.replace("$text_dim",  p.text_dim)
+    css = css.replace("$bg_alt", p.bg_alt)
+    css = css.replace("$bg", p.bg)
+    css = css.replace("$panel", p.panel)
+    css = css.replace("$border", p.border)
+    css = css.replace("$text_dim", p.text_dim)
     css = css.replace("$text_mute", p.text_mute)
-    css = css.replace("$text",      p.text)
-    css = css.replace("$accent_2",  p.accent_2)
-    css = css.replace("$accent",    p.accent)
-    css = css.replace("$success",   p.success)
-    css = css.replace("$warning",   p.warning)
-    css = css.replace("$error",     p.error)
+    css = css.replace("$text", p.text)
+    css = css.replace("$accent_2", p.accent_2)
+    css = css.replace("$accent", p.accent)
+    css = css.replace("$success", p.success)
+    css = css.replace("$warning", p.warning)
+    css = css.replace("$error", p.error)
     return css

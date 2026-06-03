@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import pytest
 
-PySide6 = pytest.importorskip("PySide6")  # GUI tests only run when GUI extras present.
-
 from researchhq.events import PipelineEvent
 from researchhq.gui.workers.research_worker import ResearchWorker
+
+PySide6 = pytest.importorskip("PySide6")  # GUI tests only run when GUI extras present.
 
 
 def _make_worker():
@@ -24,10 +24,8 @@ def test_source_found_increments_counter():
     w._started_at = 0
     captured: list[dict] = []
     w.live_stats.connect(lambda s: captured.append(dict(s)))
-    w._handle_event(PipelineEvent(type="source_found", stage="searcher",
-                                  data={"url": "u1"}))
-    w._handle_event(PipelineEvent(type="source_found", stage="searcher",
-                                  data={"url": "u2"}))
+    w._handle_event(PipelineEvent(type="source_found", stage="searcher", data={"url": "u1"}))
+    w._handle_event(PipelineEvent(type="source_found", stage="searcher", data={"url": "u2"}))
     assert captured[-1]["sources"] == 2
 
 
@@ -36,12 +34,20 @@ def test_llm_call_finished_aggregates_tokens_and_cost():
     w._started_at = 0
     captured: list[dict] = []
     w.live_stats.connect(lambda s: captured.append(dict(s)))
-    w._handle_event(PipelineEvent(type="llm_call_finished", stage="planner",
-                                  data={"input_tokens": 100, "output_tokens": 50,
-                                        "equivalent_cost_usd": 0.01}))
-    w._handle_event(PipelineEvent(type="llm_call_finished", stage="extractor",
-                                  data={"input_tokens": 200, "output_tokens": 80,
-                                        "equivalent_cost_usd": 0.02}))
+    w._handle_event(
+        PipelineEvent(
+            type="llm_call_finished",
+            stage="planner",
+            data={"input_tokens": 100, "output_tokens": 50, "equivalent_cost_usd": 0.01},
+        )
+    )
+    w._handle_event(
+        PipelineEvent(
+            type="llm_call_finished",
+            stage="extractor",
+            data={"input_tokens": 200, "output_tokens": 80, "equivalent_cost_usd": 0.02},
+        )
+    )
     final = captured[-1]
     assert final["llm_calls"] == 2
     assert final["input_tokens"] == 300

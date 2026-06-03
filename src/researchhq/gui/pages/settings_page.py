@@ -50,7 +50,9 @@ class SettingsPage(QWidget):
 
         # --- LLM provider card ---
         prov = Card("LLM provider", "Default provider, model, and API key status")
-        grid = QGridLayout(); grid.setHorizontalSpacing(10); grid.setVerticalSpacing(6)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(6)
 
         grid.addWidget(QLabel("Default provider"), 0, 0)
         self._provider = QComboBox()
@@ -76,7 +78,9 @@ class SettingsPage(QWidget):
 
         # --- Search & sources card ---
         src = Card("Search & sources", "Engines and source caps")
-        grid2 = QGridLayout(); grid2.setHorizontalSpacing(10); grid2.setVerticalSpacing(6)
+        grid2 = QGridLayout()
+        grid2.setHorizontalSpacing(10)
+        grid2.setVerticalSpacing(6)
 
         grid2.addWidget(QLabel("Max sources per run"), 0, 0)
         self._max_sources = QSpinBox()
@@ -99,7 +103,8 @@ class SettingsPage(QWidget):
             engines_row.addWidget(cb)
             self._engine_checks[eng] = cb
         engines_row.addStretch(1)
-        engines_w = QWidget(); engines_w.setLayout(engines_row)
+        engines_w = QWidget()
+        engines_w.setLayout(engines_row)
         grid2.addWidget(engines_w, 2, 1)
 
         src.add_layout(grid2)
@@ -107,7 +112,9 @@ class SettingsPage(QWidget):
 
         # --- Output / appearance card ---
         out_card = Card("Output & appearance", "Where reports are saved and how the app looks")
-        grid3 = QGridLayout(); grid3.setHorizontalSpacing(10); grid3.setVerticalSpacing(6)
+        grid3 = QGridLayout()
+        grid3.setHorizontalSpacing(10)
+        grid3.setVerticalSpacing(6)
 
         grid3.addWidget(QLabel("Output folder"), 0, 0)
         folder_row = QHBoxLayout()
@@ -119,7 +126,8 @@ class SettingsPage(QWidget):
         open_folder = QPushButton("Open")
         open_folder.clicked.connect(self._on_open_folder)
         folder_row.addWidget(open_folder)
-        folder_w = QWidget(); folder_w.setLayout(folder_row)
+        folder_w = QWidget()
+        folder_w.setLayout(folder_row)
         grid3.addWidget(folder_w, 0, 1)
 
         grid3.addWidget(QLabel("Default format"), 1, 0)
@@ -136,8 +144,10 @@ class SettingsPage(QWidget):
         theme_row.addWidget(self._theme)
         coming = QLabel("Light theme & accent picker coming soon")
         coming.setObjectName("MutedItalic")
-        theme_row.addWidget(coming); theme_row.addStretch(1)
-        theme_w = QWidget(); theme_w.setLayout(theme_row)
+        theme_row.addWidget(coming)
+        theme_row.addStretch(1)
+        theme_w = QWidget()
+        theme_w.setLayout(theme_row)
         grid3.addWidget(theme_w, 2, 1)
 
         out_card.add_layout(grid3)
@@ -162,10 +172,11 @@ class SettingsPage(QWidget):
         # for inline-formatted rich text; the colour values match the QSS
         # palette so the result is theme-consistent.
         from researchhq.gui.theme import PALETTE
+
         rows = [
-            ("Groq",      bool(settings.groq_api_key)),
-            ("Gemini",    bool(settings.gemini_api_key)),
-            ("OpenAI",    bool(settings.openai_api_key)),
+            ("Groq", bool(settings.groq_api_key)),
+            ("Gemini", bool(settings.gemini_api_key)),
+            ("OpenAI", bool(settings.openai_api_key)),
             ("Anthropic", bool(settings.anthropic_api_key)),
         ]
         ok_colour = PALETTE["ok"]

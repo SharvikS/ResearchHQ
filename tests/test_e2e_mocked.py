@@ -13,12 +13,9 @@ from __future__ import annotations
 import asyncio
 import json
 
-import pytest
-
 from researchhq.agents.fetcher import FetchedPage
 from researchhq.llm.providers.base import LLMResponse
 from researchhq.search.web_search import SearchResult
-
 
 # --------------- fixtures: mocked search + LLM + fetcher ---------------------
 
@@ -26,6 +23,7 @@ from researchhq.search.web_search import SearchResult
 def _make_mock_search(results: list[SearchResult]):
     async def _mock(queries, **kwargs):  # signature matches searcher.search_all
         return list(results)
+
     return _mock
 
 
@@ -34,12 +32,23 @@ def _make_mock_router(reply_for_stage: dict[str, str]):
     from researchhq.llm.cost_tracker import tracker
 
     class _Router:
-        async def complete(self, prompt, system=None, max_tokens=2048,
-                           prefer=None, timeout=None, attempts=None, stage="llm"):
+        async def complete(
+            self,
+            prompt,
+            system=None,
+            max_tokens=2048,
+            prefer=None,
+            timeout=None,
+            attempts=None,
+            stage="llm",
+        ):
             text = reply_for_stage.get(stage, "{}")
             resp = LLMResponse(
-                text=text, model="mock", provider="mock",
-                input_tokens=10, output_tokens=20,
+                text=text,
+                model="mock",
+                provider="mock",
+                input_tokens=10,
+                output_tokens=20,
             )
             tracker.record(resp, stage=stage)
             return resp
@@ -51,13 +60,16 @@ def _make_mock_fetcher(pages_by_url: dict[str, str]):
     async def _mock(sources, **kwargs):
         return [
             FetchedPage(
-                url=s.url, title=s.title, text=pages_by_url.get(s.url, ""),
+                url=s.url,
+                title=s.title,
+                text=pages_by_url.get(s.url, ""),
                 status=200 if pages_by_url.get(s.url) else 0,
                 bytes_in=len(pages_by_url.get(s.url, "")),
                 truncated=False,
             )
             for s in sources[:8]
         ]
+
     return _mock
 
 
@@ -65,17 +77,18 @@ def _make_mock_fetcher(pages_by_url: dict[str, str]):
 
 
 def _run(mode, monkeypatch, search_results, llm_replies, fetched_pages):
+    from researchhq import pipeline as pl
     from researchhq.agents import (
-        searcher,
+        extractor,
         fetcher,
         planner,
-        extractor,
+        searcher,
         synthesizer,
+    )
+    from researchhq.agents import (
         formatter as fmt_agent,
-        verifier as v_mod,
     )
     from researchhq.llm import cost_tracker
-    from researchhq import pipeline as pl
 
     # Mock search
     monkeypatch.setattr(searcher, "search_all", _make_mock_search(search_results))
@@ -99,8 +112,12 @@ def _run(mode, monkeypatch, search_results, llm_replies, fetched_pages):
 
 def test_e2e_topic_clean_run(monkeypatch):
     search_results = [
-        SearchResult(title="BBC article", url="https://www.bbc.com/news/x", snippet="A real news article"),
-        SearchResult(title="ArXiv paper", url="https://arxiv.org/abs/1", snippet="An academic paper"),
+        SearchResult(
+            title="BBC article", url="https://www.bbc.com/news/x", snippet="A real news article"
+        ),
+        SearchResult(
+            title="ArXiv paper", url="https://arxiv.org/abs/1", snippet="An academic paper"
+        ),
         SearchResult(title="GitHub repo", url="https://github.com/foo/bar", snippet="A repo"),
     ]
     fetched = {
@@ -110,13 +127,17 @@ def test_e2e_topic_clean_run(monkeypatch):
     }
     llm_replies = {
         "planner": json.dumps({"queries": ["test a", "test b"], "rationale": "split"}),
-        "extractor": json.dumps({
-            "facts": [
-                {"claim": "Topic exists",
-                 "evidence_urls": ["https://www.bbc.com/news/x"],
-                 "confidence": 0.85},
-            ]
-        }),
+        "extractor": json.dumps(
+            {
+                "facts": [
+                    {
+                        "claim": "Topic exists",
+                        "evidence_urls": ["https://www.bbc.com/news/x"],
+                        "confidence": 0.85,
+                    },
+                ]
+            }
+        ),
         "synthesizer": (
             "## Executive summary\nThe topic is real per [BBC](https://www.bbc.com/news/x).\n"
             "## Key findings\n- Finding A [arxiv](https://arxiv.org/abs/1)\n"
@@ -153,11 +174,17 @@ def test_e2e_invented_url_in_synth_is_stripped_and_flagged(monkeypatch):
     fetched = {url: "content" for url in [s.url for s in search_results]}
     llm_replies = {
         "planner": json.dumps({"queries": ["q"], "rationale": ""}),
-        "extractor": json.dumps({"facts": [
-            {"claim": "Real claim",
-             "evidence_urls": ["https://www.bbc.com/news/x"],
-             "confidence": 0.85},
-        ]}),
+        "extractor": json.dumps(
+            {
+                "facts": [
+                    {
+                        "claim": "Real claim",
+                        "evidence_urls": ["https://www.bbc.com/news/x"],
+                        "confidence": 0.85,
+                    },
+                ]
+            }
+        ),
         "synthesizer": (
             "## Executive summary\nA claim per [BBC](https://www.bbc.com/news/x) "
             "and another per [INVENTED](https://totally-fake.example/abc).\n"
@@ -188,11 +215,17 @@ def test_e2e_invented_url_in_extractor_demotes_confidence(monkeypatch):
     fetched = {url: "content" for url in [s.url for s in search_results]}
     llm_replies = {
         "planner": json.dumps({"queries": ["q"], "rationale": ""}),
-        "extractor": json.dumps({"facts": [
-            {"claim": "Hallucinated claim",
-             "evidence_urls": ["https://total.hallucination/foo"],
-             "confidence": 0.95},
-        ]}),
+        "extractor": json.dumps(
+            {
+                "facts": [
+                    {
+                        "claim": "Hallucinated claim",
+                        "evidence_urls": ["https://total.hallucination/foo"],
+                        "confidence": 0.95,
+                    },
+                ]
+            }
+        ),
         "synthesizer": "## Executive summary\nNothing.\n",
         "formatter": json.dumps({"questions": ["q1"]}),
     }
@@ -212,11 +245,17 @@ def test_e2e_news_single_source_flagged_unconfirmed(monkeypatch):
     fetched = {url: "content" for url in [s.url for s in search_results]}
     llm_replies = {
         "planner": json.dumps({"queries": ["q"], "rationale": ""}),
-        "extractor": json.dumps({"facts": [
-            {"claim": "OpenAI announced product Z today",
-             "evidence_urls": ["https://www.bbc.com/news/x"],  # only ONE news source
-             "confidence": 0.9},
-        ]}),
+        "extractor": json.dumps(
+            {
+                "facts": [
+                    {
+                        "claim": "OpenAI announced product Z today",
+                        "evidence_urls": ["https://www.bbc.com/news/x"],  # only ONE news source
+                        "confidence": 0.9,
+                    },
+                ]
+            }
+        ),
         "synthesizer": "## Executive summary\nClaim per [BBC](https://www.bbc.com/news/x).\n",
         "formatter": json.dumps({"questions": ["q1"]}),
     }
@@ -236,14 +275,20 @@ def test_e2e_news_multi_source_passes(monkeypatch):
     fetched = {url: "content" for url in [s.url for s in search_results]}
     llm_replies = {
         "planner": json.dumps({"queries": ["q"], "rationale": ""}),
-        "extractor": json.dumps({"facts": [
-            {"claim": "OpenAI announced product Z",
-             "evidence_urls": [
-                 "https://www.bbc.com/news/x",
-                 "https://www.reuters.com/y",
-             ],
-             "confidence": 0.9},
-        ]}),
+        "extractor": json.dumps(
+            {
+                "facts": [
+                    {
+                        "claim": "OpenAI announced product Z",
+                        "evidence_urls": [
+                            "https://www.bbc.com/news/x",
+                            "https://www.reuters.com/y",
+                        ],
+                        "confidence": 0.9,
+                    },
+                ]
+            }
+        ),
         "synthesizer": "## Executive summary\nClaim per [BBC](https://www.bbc.com/news/x).\n",
         "formatter": json.dumps({"questions": ["q1"]}),
     }

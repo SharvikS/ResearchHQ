@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 # we *intend* to bundle so the asset README + audit tooling stay in sync.
 EXPECTED_FAMILIES = {
     "display": ["Geist", "Satoshi"],
-    "body":    ["Inter"],
-    "mono":    ["JetBrains Mono", "Geist Mono"],
+    "body": ["Inter"],
+    "mono": ["JetBrains Mono", "Geist Mono"],
 }
 
 
@@ -66,12 +66,10 @@ def load_bundled_fonts() -> list[str]:
             registered.add(family)
 
     if registered:
-        logger.info("Loaded %d bundled font families: %s",
-                    len(registered), sorted(registered))
+        logger.info("Loaded %d bundled font families: %s", len(registered), sorted(registered))
     else:
         logger.info(
-            "No bundled fonts found in %s — drop %s into that folder "
-            "to upgrade the typography",
+            "No bundled fonts found in %s — drop %s into that folder to upgrade the typography",
             folder,
             ", ".join(sum(EXPECTED_FAMILIES.values(), [])),
         )

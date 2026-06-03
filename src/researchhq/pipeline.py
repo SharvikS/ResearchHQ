@@ -49,7 +49,7 @@ async def _run_ensemble_synthesis(
     pages: list,
     profile,
     emit: Callable,
-) -> tuple[list, str, list, "EnsembleReportSection | None"]:
+) -> tuple[list, str, list, EnsembleReportSection | None]:
     """Run parallel multi-model synthesis. Returns (sections, provider, violations, meta).
 
     Falls back to single-provider synthesis if no ensemble providers are available.
@@ -59,7 +59,7 @@ async def _run_ensemble_synthesis(
     from researchhq.ensemble.confidence import score_confidence
     from researchhq.ensemble.consensus import analyze_consensus
     from researchhq.ensemble.disagreement import analyze_disagreements
-    from researchhq.ensemble.merger import EnsembleMeta, merge_synthesis
+    from researchhq.ensemble.merger import merge_synthesis
     from researchhq.ensemble.orchestrator import (
         ENSEMBLE_PROFILES,
         EnsembleRun,
@@ -69,9 +69,8 @@ async def _run_ensemble_synthesis(
     from researchhq.ensemble.verifier import verify_synthesis as ensemble_verify
 
     # Resolve which providers to use
-    provider_names = (
-        settings.ensemble_providers
-        or ENSEMBLE_PROFILES.get(settings.ensemble_mode, ["groq", "gemini"])
+    provider_names = settings.ensemble_providers or ENSEMBLE_PROFILES.get(
+        settings.ensemble_mode, ["groq", "gemini"]
     )
     providers = build_ensemble_providers(
         provider_names,
@@ -79,9 +78,15 @@ async def _run_ensemble_synthesis(
     )
 
     if not providers:
-        logger.warning("Ensemble enabled but no providers available; falling back to single-provider.")
+        logger.warning(
+            "Ensemble enabled but no providers available; falling back to single-provider."
+        )
         sections, prov, violations = await synthesizer.synthesize(
-            mode, query, ranked, facts, pages,
+            mode,
+            query,
+            ranked,
+            facts,
+            pages,
             max_tokens=profile.synth_max_tokens,
             depth_directive=synth_directive(profile),
             page_budget_chars=profile.synth_page_budget_chars,
@@ -90,7 +95,8 @@ async def _run_ensemble_synthesis(
 
     provider_names_label = " + ".join(p.name for p in providers)
     emit(
-        "agent_started", stage="ensemble",
+        "agent_started",
+        stage="ensemble",
         detail=f"[ensemble: {provider_names_label}] running in parallel",
         providers=[p.name for p in providers],
         ensemble_mode=settings.ensemble_mode,
@@ -103,6 +109,7 @@ async def _run_ensemble_synthesis(
         _format_sources,
         _system,
     )
+
     depth_dir = synth_directive(profile)
     sys_prompt = _system(mode, depth_dir)
     user_prompt = (
@@ -118,7 +125,8 @@ async def _run_ensemble_synthesis(
     def _on_provider_done(result) -> None:
         icon = "✓" if result.status == "success" else "✗"
         emit(
-            "ensemble_provider_finished", stage="ensemble",
+            "ensemble_provider_finished",
+            stage="ensemble",
             detail=f"{icon} {result.provider} ({result.elapsed:.1f}s, {result.status})",
             provider=result.provider,
             status=result.status,
@@ -141,14 +149,17 @@ async def _run_ensemble_synthesis(
     n_ok = len(ensemble_run.successful)
     n_fail = len(ensemble_run.failed)
     emit(
-        "ensemble_providers_done", stage="ensemble",
+        "ensemble_providers_done",
+        stage="ensemble",
         detail=f"{n_ok}/{len(providers)} succeeded in {ensemble_run.elapsed_total:.1f}s",
-        successful=n_ok, failed=n_fail,
+        successful=n_ok,
+        failed=n_fail,
         elapsed=ensemble_run.elapsed_total,
     )
 
     if not ensemble_run.successful:
         from researchhq.reports.schema import Section
+
         stub = Section(
             heading="Findings",
             body="_Ensemble synthesis failed — all configured providers returned errors._",
@@ -163,16 +174,14 @@ async def _run_ensemble_synthesis(
 
     # ── 2. Claim extraction ───────────────────────────────────────────────────
     emit("agent_progress", stage="ensemble", detail="extracting claims from provider outputs")
-    use_llm = (
-        settings.ensemble_use_llm_extraction
-        and settings.ensemble_mode == "max_confidence"
-    )
+    use_llm = settings.ensemble_use_llm_extraction and settings.ensemble_mode == "max_confidence"
     claims_by_provider = await extract_all_claims(
         ensemble_run.successful, llm_router, use_llm=use_llm
     )
     total_claims = sum(len(v) for v in claims_by_provider.values())
     emit(
-        "ensemble_claims_extracted", stage="ensemble",
+        "ensemble_claims_extracted",
+        stage="ensemble",
         detail=f"{total_claims} claims from {len(claims_by_provider)} providers",
         total_claims=total_claims,
         providers=list(claims_by_provider.keys()),
@@ -186,7 +195,8 @@ async def _run_ensemble_synthesis(
         min_providers_for_consensus=settings.ensemble_min_providers_consensus,
     )
     emit(
-        "ensemble_consensus_ready", stage="ensemble",
+        "ensemble_consensus_ready",
+        stage="ensemble",
         detail=(
             f"{len(consensus_result.consensus_groups)} consensus · "
             f"{len(consensus_result.contested_groups)} contested · "
@@ -201,7 +211,8 @@ async def _run_ensemble_synthesis(
     # ── 4. Confidence scoring ─────────────────────────────────────────────────
     confidence = score_confidence(ensemble_run, consensus_result, ranked)
     emit(
-        "ensemble_confidence_scored", stage="ensemble",
+        "ensemble_confidence_scored",
+        stage="ensemble",
         detail=f"confidence={confidence.overall_score:.0%} ({confidence.confidence_label})",
         confidence=confidence.overall_score,
         label=confidence.confidence_label,
@@ -213,7 +224,8 @@ async def _run_ensemble_synthesis(
     disagreements = analyze_disagreements(consensus_result)
     if disagreements.has_major_conflicts:
         emit(
-            "ensemble_disagreements_found", stage="ensemble",
+            "ensemble_disagreements_found",
+            stage="ensemble",
             detail=f"⚠ {disagreements.major_count} major + {disagreements.minor_count} minor conflicts",
             major=disagreements.major_count,
             moderate=disagreements.moderate_count,
@@ -224,13 +236,19 @@ async def _run_ensemble_synthesis(
     # ── 6. Meta-synthesis merge ───────────────────────────────────────────────
     emit("agent_progress", stage="ensemble", detail="merging into final synthesis")
     sections, provider_label, violations = await merge_synthesis(
-        mode, query, ensemble_run, consensus_result,
-        confidence, disagreements, ranked,
+        mode,
+        query,
+        ensemble_run,
+        consensus_result,
+        confidence,
+        disagreements,
+        ranked,
         ensemble_mode=settings.ensemble_mode,
         max_tokens=max(profile.synth_max_tokens, 3000),
     )
     emit(
-        "ensemble_merge_done", stage="ensemble",
+        "ensemble_merge_done",
+        stage="ensemble",
         detail=f"{len(sections)} sections produced",
         sections=len(sections),
         provider_label=provider_label,
@@ -240,7 +258,8 @@ async def _run_ensemble_synthesis(
     verifier_note = ensemble_verify(sections, ensemble_run, confidence, ranked)
 
     emit(
-        "agent_finished", stage="ensemble",
+        "agent_finished",
+        stage="ensemble",
         detail=(
             f"{len(sections)} sections · conf={verifier_note.adjusted_confidence:.0%} "
             f"({verifier_note.support_strength} support) · {provider_label}"
@@ -298,8 +317,8 @@ async def _run_ensemble_synthesis(
 async def run(
     mode_name: str,
     query: str,
-    on_event: "Callable[[PipelineEvent], None] | None" = None,
-    cancel_check: "Callable[[], bool] | None" = None,
+    on_event: Callable[[PipelineEvent], None] | None = None,
+    cancel_check: Callable[[], bool] | None = None,
     effort: str = DEFAULT_EFFORT,
 ) -> ResearchReport:
     """Execute the full research pipeline. Reset cost tracker per run.
@@ -337,9 +356,12 @@ async def run(
                 "llm_call_finished",
                 stage=stage,
                 detail=f"{r.provider}/{r.model}",
-                provider=r.provider, model=r.model,
-                input_tokens=r.input_tokens, output_tokens=r.output_tokens,
-                equivalent_cost_usd=r.equivalent_cost_usd, stage_tag=r.stage,
+                provider=r.provider,
+                model=r.model,
+                input_tokens=r.input_tokens,
+                output_tokens=r.output_tokens,
+                equivalent_cost_usd=r.equivalent_cost_usd,
+                stage_tag=r.stage,
             )
         prev_calls = len(records)
 
@@ -352,34 +374,40 @@ async def run(
     # ----- Planner -----
     emit("agent_started", stage="planner", detail=f"decomposing query (effort={profile.name})")
     plan = await planner.plan(
-        mode, query,
+        mode,
+        query,
         min_queries=profile.planner_min_queries,
         max_queries=profile.planner_max_queries,
         max_tokens=profile.planner_max_tokens,
     )
     emit_llm_delta("planner")
-    emit("agent_finished", stage="planner",
-         detail=f"{len(plan.queries)} queries planned",
-         queries=list(plan.queries))
+    emit(
+        "agent_finished",
+        stage="planner",
+        detail=f"{len(plan.queries)} queries planned",
+        queries=list(plan.queries),
+    )
     _check_cancel()
 
     # ----- Searcher -----
     emit("agent_started", stage="searcher", detail="running searches")
     raw = await searcher.search_all(plan.queries, results_per_query=profile.results_per_query)
     for r in raw:
-        emit("source_found", stage="searcher",
-             url=r.url, title=r.title, snippet=r.snippet[:280])
-    emit("agent_finished", stage="searcher", detail=f"{len(raw)} unique results",
-         count=len(raw))
+        emit("source_found", stage="searcher", url=r.url, title=r.title, snippet=r.snippet[:280])
+    emit("agent_finished", stage="searcher", detail=f"{len(raw)} unique results", count=len(raw))
     _check_cancel()
 
     # ----- Ranker -----
     emit("agent_started", stage="source_ranker", detail="classifying & ranking")
     ranked = source_ranker.rank(raw, mode, subject=query, cap=profile.max_total_sources)
     top_tier = ranked[0].tier.value if ranked else "n/a"
-    emit("agent_finished", stage="source_ranker",
-         detail=f"{len(ranked)} kept; top tier: {top_tier}",
-         count=len(ranked), top_tier=top_tier)
+    emit(
+        "agent_finished",
+        stage="source_ranker",
+        detail=f"{len(ranked)} kept; top tier: {top_tier}",
+        count=len(ranked),
+        top_tier=top_tier,
+    )
     _check_cancel()
 
     # ----- Fetcher -----
@@ -390,22 +418,32 @@ async def run(
         per_page_chars=profile.per_page_chars,
     )
     fetched_ok = sum(1 for p in pages if p.text)
-    emit("agent_finished", stage="fetcher",
-         detail=f"{fetched_ok}/{len(pages)} pages",
-         fetched=fetched_ok, attempted=len(pages))
+    emit(
+        "agent_finished",
+        stage="fetcher",
+        detail=f"{fetched_ok}/{len(pages)} pages",
+        fetched=fetched_ok,
+        attempted=len(pages),
+    )
     _check_cancel()
 
     # ----- Extractor -----
     emit("agent_started", stage="extractor", detail="extracting facts")
     facts, extractor_violations = await extractor.extract(
-        query, ranked, pages,
+        query,
+        ranked,
+        pages,
         max_tokens=profile.extractor_max_tokens,
         min_facts=profile.extractor_min_facts,
     )
     emit_llm_delta("extractor")
-    emit("agent_finished", stage="extractor",
-         detail=f"{len(facts)} facts; {len(extractor_violations)} violation(s)",
-         facts=len(facts), violations=len(extractor_violations))
+    emit(
+        "agent_finished",
+        stage="extractor",
+        detail=f"{len(facts)} facts; {len(extractor_violations)} violation(s)",
+        facts=len(facts),
+        violations=len(extractor_violations),
+    )
     _check_cancel()
 
     # ----- Synthesizer (single-provider) or Ensemble -----
@@ -418,51 +456,69 @@ async def run(
     else:
         emit("agent_started", stage="synthesizer", detail="composing sections")
         sections, provider, synth_violations = await synthesizer.synthesize(
-            mode, query, ranked, facts, pages,
+            mode,
+            query,
+            ranked,
+            facts,
+            pages,
             max_tokens=profile.synth_max_tokens,
             depth_directive=synth_directive(profile),
             page_budget_chars=profile.synth_page_budget_chars,
         )
         emit_llm_delta("synthesizer")
     for s in sections:
-        emit("report_section_ready", stage="synthesizer" if not settings.ensemble_enabled else "ensemble",
-             heading=s.heading, body_preview=s.body[:200])
+        emit(
+            "report_section_ready",
+            stage="synthesizer" if not settings.ensemble_enabled else "ensemble",
+            heading=s.heading,
+            body_preview=s.body[:200],
+        )
     if not settings.ensemble_enabled:
-        emit("agent_finished", stage="synthesizer",
-             detail=f"{len(sections)} sections via {provider}",
-             provider=provider, sections=len(sections),
-             violations=len(synth_violations))
+        emit(
+            "agent_finished",
+            stage="synthesizer",
+            detail=f"{len(sections)} sections via {provider}",
+            provider=provider,
+            sections=len(sections),
+            violations=len(synth_violations),
+        )
     _check_cancel()
 
     # ----- Verifier -----
     emit("agent_started", stage="verifier", detail="rule checks + confidence")
     note = verifier.verify(
-        mode, ranked, facts,
+        mode,
+        ranked,
+        facts,
         sections=sections,
         violations=extractor_violations + synth_violations,
     )
     fails = sum(1 for r in note.rules if not r.passed)
-    emit("agent_finished", stage="verifier",
-         detail=f"confidence {note.overall_confidence:.2f}; {fails} rule(s) failed",
-         confidence=note.overall_confidence, rules_failed=fails,
-         rules_total=len(note.rules))
+    emit(
+        "agent_finished",
+        stage="verifier",
+        detail=f"confidence {note.overall_confidence:.2f}; {fails} rule(s) failed",
+        confidence=note.overall_confidence,
+        rules_failed=fails,
+        rules_total=len(note.rules),
+    )
     _check_cancel()
 
     # ----- Formatter -----
     emit("agent_started", stage="formatter", detail="next research questions")
     next_qs = await formatter.next_questions(
-        mode, query, sections,
+        mode,
+        query,
+        sections,
         min_q=profile.formatter_min_q,
         max_q=profile.formatter_max_q,
     )
     emit_llm_delta("formatter")
-    emit("agent_finished", stage="formatter", detail=f"{len(next_qs)} follow-ups",
-         count=len(next_qs))
+    emit(
+        "agent_finished", stage="formatter", detail=f"{len(next_qs)} follow-ups", count=len(next_qs)
+    )
 
-    stage_costs = [
-        StageCost(stage=stage, **stats)
-        for stage, stats in tracker.by_stage().items()
-    ]
+    stage_costs = [StageCost(stage=stage, **stats) for stage, stats in tracker.by_stage().items()]
     elapsed = round(time.monotonic() - started_at, 2)
 
     report = ResearchReport(
@@ -473,8 +529,11 @@ async def run(
         sources=ranked,
         fetched_pages=[
             FetchedPageSummary(
-                url=p.url, title=p.title, status=p.status,
-                chars=len(p.text), truncated=p.truncated,
+                url=p.url,
+                title=p.title,
+                status=p.status,
+                chars=len(p.text),
+                truncated=p.truncated,
             )
             for p in pages
         ],
@@ -487,9 +546,7 @@ async def run(
         ensemble=ensemble_meta,
     )
 
-    ensemble_conf = (
-        ensemble_meta.adjusted_confidence if ensemble_meta else note.overall_confidence
-    )
+    ensemble_conf = ensemble_meta.adjusted_confidence if ensemble_meta else note.overall_confidence
     summary_data = {
         "elapsed_s": elapsed,
         "sources": len(ranked),
@@ -502,15 +559,15 @@ async def run(
         "llm_calls": len(tracker.records),
         "input_tokens": sum(r.input_tokens for r in tracker.records),
         "output_tokens": sum(r.output_tokens for r in tracker.records),
-        "equivalent_cost_usd": round(
-            sum(r.equivalent_cost_usd for r in tracker.records), 4
-        ),
+        "equivalent_cost_usd": round(sum(r.equivalent_cost_usd for r in tracker.records), 4),
     }
     emit("run_completed", detail=f"completed in {elapsed:.1f}s", **summary_data)
     return report
 
 
-async def stream_events(mode_name: str, query: str) -> AsyncIterator[PipelineEvent]:  # pragma: no cover
+async def stream_events(
+    mode_name: str, query: str
+) -> AsyncIterator[PipelineEvent]:  # pragma: no cover
     queue: list[PipelineEvent] = []
 
     def collector(ev: PipelineEvent) -> None:

@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import logging
 
-logger = logging.getLogger(__name__)
-
 from textual.containers import Container
 from textual.widgets import Static
+
+logger = logging.getLogger(__name__)
 
 
 class Toast(Container):

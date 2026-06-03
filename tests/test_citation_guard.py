@@ -6,13 +6,16 @@ from researchhq.agents.citation_guard import (
 )
 from researchhq.reports.schema import Fact
 
-
 KNOWN = ["https://arxiv.org/abs/1", "https://www.bbc.com/x"]
 
 
 def test_validate_drops_invented_urls_from_evidence():
     facts = [
-        Fact(claim="A", evidence_urls=["https://arxiv.org/abs/1", "https://invented.example/foo"], confidence=0.9),
+        Fact(
+            claim="A",
+            evidence_urls=["https://arxiv.org/abs/1", "https://invented.example/foo"],
+            confidence=0.9,
+        ),
     ]
     cleaned, violations = validate_evidence_urls(facts, KNOWN)
     assert cleaned[0].evidence_urls == ["https://arxiv.org/abs/1"]

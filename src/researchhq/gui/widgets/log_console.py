@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -15,10 +14,10 @@ from PySide6.QtWidgets import (
 )
 
 LEVEL_COLORS = {
-    "DEBUG":    "#8a96a8",
-    "INFO":     "#a9b6c8",
-    "WARNING":  "#f4b740",
-    "ERROR":    "#ef5b5b",
+    "DEBUG": "#8a96a8",
+    "INFO": "#a9b6c8",
+    "WARNING": "#f4b740",
+    "ERROR": "#ef5b5b",
     "CRITICAL": "#ef5b5b",
 }
 

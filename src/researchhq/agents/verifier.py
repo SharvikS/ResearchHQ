@@ -13,7 +13,7 @@ Severity levels:
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from researchhq.agents.citation_guard import CitationViolation
 from researchhq.modes.base import ResearchMode
@@ -33,7 +33,9 @@ CONF_PENALTIES = {"fail": 0.10, "warn": 0.05, "info": 0.0}
 
 # --- helpers -----------------------------------------------------------------
 
-_NUMERIC = re.compile(r"\$?\d|\b\d+(?:\.\d+)?(?:\s?(?:%|bn|billion|m|million|k|thousand))\b", re.IGNORECASE)
+_NUMERIC = re.compile(
+    r"\$?\d|\b\d+(?:\.\d+)?(?:\s?(?:%|bn|billion|m|million|k|thousand))\b", re.IGNORECASE
+)
 _YEAR = re.compile(r"\b(19|20)\d{2}\b")
 _ATTRIBUTION_HINT = re.compile(
     r"\b(according to|reports?|stated|said|by\s+[A-Z][a-zA-Z]+|gartner|idc|forrester|statista|mckinsey|bloomberg|reuters|tech\w+|press release)\b",
@@ -48,6 +50,7 @@ _PAPER_REF = re.compile(
 def _domain_of(url: str) -> str:
     try:
         from urllib.parse import urlparse
+
         host = urlparse(url).netloc.lower()
         return host[4:] if host.startswith("www.") else host
     except Exception:
@@ -67,16 +70,17 @@ def _evidence_domains(fact: Fact, sources: list[RankedSource]) -> set[str]:
 # --- shared rules ------------------------------------------------------------
 
 
-def rule_no_citation_violations(
-    violations: list[CitationViolation], **_: object
-) -> RuleResult:
+def rule_no_citation_violations(violations: list[CitationViolation], **_: object) -> RuleResult:
     n = len(violations)
     return RuleResult(
         name="citations.all_known_urls",
         severity="fail" if n else "info",
         passed=n == 0,
-        message=("No invented URLs in citations." if n == 0
-                 else f"{n} citation violation(s) — invented or unknown URLs detected and stripped/recorded."),
+        message=(
+            "No invented URLs in citations."
+            if n == 0
+            else f"{n} citation violation(s) — invented or unknown URLs detected and stripped/recorded."
+        ),
     )
 
 
@@ -93,8 +97,11 @@ def rule_high_conf_needs_high_tier(
         name="claims.high_conf_high_tier",
         severity="fail" if bad else "info",
         passed=not bad,
-        message=("All high-confidence claims have at least one high-tier source." if not bad
-                 else f"{len(bad)} high-confidence claim(s) lack a high-tier source: " + "; ".join(bad)),
+        message=(
+            "All high-confidence claims have at least one high-tier source."
+            if not bad
+            else f"{len(bad)} high-confidence claim(s) lack a high-tier source: " + "; ".join(bad)
+        ),
     )
 
 
@@ -142,8 +149,12 @@ def rule_news_multi_source(
         name="news.multi_source_corroboration",
         severity="fail" if failures else "info",
         passed=not failures,
-        message=("All key claims corroborated by >=2 NEWS domains." if not failures
-                 else f"{len(failures)} single-source news claim(s) flagged unconfirmed: " + "; ".join(failures)),
+        message=(
+            "All key claims corroborated by >=2 NEWS domains."
+            if not failures
+            else f"{len(failures)} single-source news claim(s) flagged unconfirmed: "
+            + "; ".join(failures)
+        ),
     )
 
 
@@ -163,8 +174,12 @@ def rule_market_dated_attribution(
         name="market.dated_attributable_figures",
         severity="fail" if failures else "info",
         passed=not failures,
-        message=("All market figures carry a date or attribution." if not failures
-                 else f"{len(failures)} numeric figure(s) lack date/attribution: " + " | ".join(failures[:3])),
+        message=(
+            "All market figures carry a date or attribution."
+            if not failures
+            else f"{len(failures)} numeric figure(s) lack date/attribution: "
+            + " | ".join(failures[:3])
+        ),
     )
 
 
@@ -186,8 +201,12 @@ def rule_academic_paper_attribution(
         name="academic.paper_level_attribution",
         severity="fail" if failures else "info",
         passed=not failures,
-        message=("All key claims trace to an academic paper reference." if not failures
-                 else f"{len(failures)} claim(s) lack academic source or paper reference: " + "; ".join(failures)),
+        message=(
+            "All key claims trace to an academic paper reference."
+            if not failures
+            else f"{len(failures)} claim(s) lack academic source or paper reference: "
+            + "; ".join(failures)
+        ),
     )
 
 

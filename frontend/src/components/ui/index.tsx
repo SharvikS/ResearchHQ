@@ -3,8 +3,8 @@ import { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttribu
 
 // ── Card ──────────────────────────────────────────────────────────────────────
 
-interface CardProps { children: ReactNode; className?: string; glass?: boolean; hover?: boolean; }
-export function Card({ children, className, glass = true, hover = false }: CardProps) {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> { children: ReactNode; className?: string; glass?: boolean; hover?: boolean; }
+export function Card({ children, className, glass = true, hover = false, ...props }: CardProps) {
   return (
     <div className={clsx(
       'rounded-xl border transition-all duration-200',
@@ -14,7 +14,8 @@ export function Card({ children, className, glass = true, hover = false }: CardP
       hover && 'hover:border-brand-500/40 hover:bg-white/[0.07] cursor-pointer',
       'shadow-glass-sm',
       className,
-    )}>
+    )}
+    {...props}>
       {children}
     </div>
   );
@@ -76,7 +77,7 @@ Button.displayName = 'Button';
 
 // ── Input ─────────────────────────────────────────────────────────────────────
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> { label?: string; error?: string; hint?: string; prefix?: ReactNode; }
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix'> { label?: string; error?: string; hint?: string; prefix?: ReactNode; }
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, hint, prefix, className, ...props }, ref) => (
     <div className="space-y-1.5">

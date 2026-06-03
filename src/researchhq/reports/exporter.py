@@ -37,11 +37,15 @@ def _confidence_label(value: float) -> str:
 def to_markdown(report: ResearchReport) -> str:
     lines: list[str] = []
     lines.append(f"# Research report — {report.query}")
-    lines.append(f"_Mode_: **{report.mode}** · _Generated_: {report.generated_at} · _Provider_: {report.provider_used or 'n/a'}")
+    lines.append(
+        f"_Mode_: **{report.mode}** · _Generated_: {report.generated_at} · _Provider_: {report.provider_used or 'n/a'}"
+    )
     lines.append("")
 
     # Executive summary is the first synthesized section by convention; otherwise pick the first section.
-    exec_section = next((s for s in report.sections if s.heading.lower().startswith("executive")), None)
+    exec_section = next(
+        (s for s in report.sections if s.heading.lower().startswith("executive")), None
+    )
     if exec_section:
         lines.append("## Executive summary")
         lines.append(exec_section.body.strip())
@@ -187,9 +191,11 @@ def save(
     # Index into history DB. Failures here must not break the save.
     try:
         from researchhq.history import index_report_dict
+
         index_report_dict(json_path, report.model_dump(mode="json"), workspace=workspace)
     except Exception:  # noqa: BLE001
         import logging
+
         logging.getLogger(__name__).exception("history index skipped")
 
     return path

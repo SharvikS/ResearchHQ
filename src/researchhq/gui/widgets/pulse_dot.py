@@ -17,7 +17,11 @@ from __future__ import annotations
 from typing import Literal
 
 from PySide6.QtCore import (
-    QEasingCurve, QPointF, QPropertyAnimation, QTimer, Qt, Property,
+    Property,
+    QEasingCurve,
+    QPointF,
+    QPropertyAnimation,
+    Qt,
 )
 from PySide6.QtGui import QBrush, QColor, QPainter, QPen
 from PySide6.QtWidgets import QWidget
@@ -49,9 +53,13 @@ class PulseDot(QWidget):
         self._sync_animation()
 
     # ── Qt property for QPropertyAnimation ─────────────────────────────────
-    def _get_pulse(self) -> float: return self._pulse
+    def _get_pulse(self) -> float:
+        return self._pulse
+
     def _set_pulse(self, v: float) -> None:
-        self._pulse = float(v); self.update()
+        self._pulse = float(v)
+        self.update()
+
     pulse = Property(float, _get_pulse, _set_pulse)
 
     # ── public API ─────────────────────────────────────────────────────────
@@ -88,7 +96,8 @@ class PulseDot(QWidget):
         # Manual ping-pong loop — reverse direction on finish.
         def _reverse() -> None:
             s, e = anim.startValue(), anim.endValue()
-            anim.setStartValue(e); anim.setEndValue(s)
+            anim.setStartValue(e)
+            anim.setEndValue(s)
             anim.start()
 
         anim.finished.connect(_reverse)

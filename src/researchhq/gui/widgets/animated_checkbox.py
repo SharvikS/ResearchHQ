@@ -14,14 +14,17 @@ default ``QCheckBox`` behaviour.
 from __future__ import annotations
 
 from PySide6.QtCore import (
-    QEasingCurve, QPointF, QPropertyAnimation, QRectF, Qt, Property,
+    Property,
+    QEasingCurve,
+    QPropertyAnimation,
+    QRectF,
+    Qt,
 )
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QCheckBox
 
 from researchhq.gui.reduce_motion import scaled
 from researchhq.gui.theme import ThemeManager, theme
-
 
 # Switch dimensions — track width / height, in px.
 _TRACK_W = 36
@@ -51,9 +54,13 @@ class AnimatedCheckBox(QCheckBox):
 
     # ── Qt property for the animation ──────────────────────────────────────
 
-    def _get_thumb(self) -> float: return self._thumb_progress
+    def _get_thumb(self) -> float:
+        return self._thumb_progress
+
     def _set_thumb(self, v: float) -> None:
-        self._thumb_progress = float(v); self.update()
+        self._thumb_progress = float(v)
+        self.update()
+
     thumbProgress = Property(float, _get_thumb, _set_thumb)
 
     # ── state ──────────────────────────────────────────────────────────────
@@ -86,7 +93,7 @@ class AnimatedCheckBox(QCheckBox):
 
         # Track colour blends from muted (off) to accent (on).
         track_off = QColor(t.bg_hover)
-        track_on  = QColor(t.accent)
+        track_on = QColor(t.accent)
         track_color = _blend(track_off, track_on, self._thumb_progress)
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(track_color)
@@ -110,8 +117,8 @@ def _blend(a: QColor, b: QColor, t: float) -> QColor:
     """Linear interpolation between two colours."""
     t = max(0.0, min(1.0, t))
     return QColor(
-        int(a.red()   + (b.red()   - a.red())   * t),
+        int(a.red() + (b.red() - a.red()) * t),
         int(a.green() + (b.green() - a.green()) * t),
-        int(a.blue()  + (b.blue()  - a.blue())  * t),
+        int(a.blue() + (b.blue() - a.blue()) * t),
         int(a.alpha() + (b.alpha() - a.alpha()) * t),
     )

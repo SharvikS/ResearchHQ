@@ -49,8 +49,8 @@ DEFAULT_YAML: dict[str, Any] = {
     },
     "ensemble": {
         "enabled": False,
-        "providers": [],           # empty → derived from mode profile
-        "mode": "balanced",        # cheap | balanced | max_confidence
+        "providers": [],  # empty → derived from mode profile
+        "mode": "balanced",  # cheap | balanced | max_confidence
         "provider_timeout": 60.0,
         "max_parallel_providers": 5,
         "consensus_threshold": 0.35,
@@ -170,9 +170,15 @@ def load_settings() -> Settings:
         ensemble_providers=list(raw.get("ensemble", {}).get("providers", [])),
         ensemble_mode=str(raw.get("ensemble", {}).get("mode", "balanced")),
         ensemble_provider_timeout=float(raw.get("ensemble", {}).get("provider_timeout", 60.0)),
-        ensemble_max_parallel_providers=int(raw.get("ensemble", {}).get("max_parallel_providers", 5)),
-        ensemble_consensus_threshold=float(raw.get("ensemble", {}).get("consensus_threshold", 0.35)),
-        ensemble_min_providers_consensus=int(raw.get("ensemble", {}).get("min_providers_consensus", 2)),
+        ensemble_max_parallel_providers=int(
+            raw.get("ensemble", {}).get("max_parallel_providers", 5)
+        ),
+        ensemble_consensus_threshold=float(
+            raw.get("ensemble", {}).get("consensus_threshold", 0.35)
+        ),
+        ensemble_min_providers_consensus=int(
+            raw.get("ensemble", {}).get("min_providers_consensus", 2)
+        ),
         ensemble_use_llm_extraction=bool(raw.get("ensemble", {}).get("use_llm_extraction", False)),
         ensemble_cost_optimize=bool(raw.get("ensemble", {}).get("cost_optimize", True)),
     )
@@ -183,6 +189,7 @@ settings = load_settings()
 
 
 # --- Live config edits (used by the TUI Settings screen) --------------------
+
 
 def save_settings(updates: dict[str, Any], path: Path | None = None) -> Path:
     """Merge `updates` into `config.yaml` on disk and return the file path.
@@ -201,25 +208,25 @@ def save_settings(updates: dict[str, Any], path: Path | None = None) -> Path:
             current = yaml.safe_load(f) or {}
 
     section_for = {
-        "default_provider":   ("provider", "default"),
-        "fallback_chain":     ("provider", "fallback_chain"),
-        "models":             ("models", None),
-        "search_engines":     ("search", "engines"),
+        "default_provider": ("provider", "default"),
+        "fallback_chain": ("provider", "fallback_chain"),
+        "models": ("models", None),
+        "search_engines": ("search", "engines"),
         "max_results_per_query": ("search", "max_results_per_query"),
-        "max_total_sources":  ("search", "max_total_sources"),
-        "output_folder":      ("report", "output_folder"),
-        "default_format":     ("report", "default_format"),
+        "max_total_sources": ("search", "max_total_sources"),
+        "output_folder": ("report", "output_folder"),
+        "default_format": ("report", "default_format"),
         "include_recent_developments": ("report", "include_recent_developments"),
-        "verbosity_default":  ("verbosity", "default"),
-        "ensemble_enabled":              ("ensemble", "enabled"),
-        "ensemble_providers":            ("ensemble", "providers"),
-        "ensemble_mode":                 ("ensemble", "mode"),
-        "ensemble_provider_timeout":     ("ensemble", "provider_timeout"),
+        "verbosity_default": ("verbosity", "default"),
+        "ensemble_enabled": ("ensemble", "enabled"),
+        "ensemble_providers": ("ensemble", "providers"),
+        "ensemble_mode": ("ensemble", "mode"),
+        "ensemble_provider_timeout": ("ensemble", "provider_timeout"),
         "ensemble_max_parallel_providers": ("ensemble", "max_parallel_providers"),
-        "ensemble_consensus_threshold":  ("ensemble", "consensus_threshold"),
+        "ensemble_consensus_threshold": ("ensemble", "consensus_threshold"),
         "ensemble_min_providers_consensus": ("ensemble", "min_providers_consensus"),
-        "ensemble_use_llm_extraction":   ("ensemble", "use_llm_extraction"),
-        "ensemble_cost_optimize":        ("ensemble", "cost_optimize"),
+        "ensemble_use_llm_extraction": ("ensemble", "use_llm_extraction"),
+        "ensemble_cost_optimize": ("ensemble", "cost_optimize"),
     }
     for k, v in updates.items():
         section_key = section_for.get(k)
@@ -238,7 +245,7 @@ def save_settings(updates: dict[str, Any], path: Path | None = None) -> Path:
     return target
 
 
-def reload_settings() -> "Settings":
+def reload_settings() -> Settings:
     """Re-read config from disk, mutate the global `settings` in place so any
     code that imported the singleton picks up the new values."""
     new_s = load_settings()

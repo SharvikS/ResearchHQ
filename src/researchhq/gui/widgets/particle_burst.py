@@ -19,19 +19,18 @@ from __future__ import annotations
 import math
 import random
 
-from PySide6.QtCore import QPointF, QTimer, Qt
+from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QWidget
 
 from researchhq.gui.reduce_motion import is_reduced
 from researchhq.gui.theme import theme
 
-
 # Total lifetime of the burst in milliseconds. After this the widget
 # self-destructs. 900 ms is enough for the particles to drift to their
 # final radius and fade out without lingering.
 _LIFETIME_MS = 900
-_TICK_MS = 16    # ~60 fps for the brief burst — particles are simple
+_TICK_MS = 16  # ~60 fps for the brief burst — particles are simple
 
 
 class _Particle:
@@ -39,15 +38,16 @@ class _Particle:
 
     __slots__ = ("vx", "vy", "x", "y", "life", "color", "radius")
 
-    def __init__(self, x: float, y: float, vx: float, vy: float,
-                 color: QColor, radius: float) -> None:
+    def __init__(
+        self, x: float, y: float, vx: float, vy: float, color: QColor, radius: float
+    ) -> None:
         self.x = x
         self.y = y
         self.vx = vx
         self.vy = vy
         self.color = color
         self.radius = radius
-        self.life = 1.0   # 1.0 → 0.0 as the particle ages out
+        self.life = 1.0  # 1.0 → 0.0 as the particle ages out
 
 
 class ParticleBurst(QWidget):
@@ -77,7 +77,7 @@ class ParticleBurst(QWidget):
     # ── factory ────────────────────────────────────────────────────────────
 
     @classmethod
-    def fire_at(cls, parent: QWidget, origin: QPointF) -> "ParticleBurst | None":
+    def fire_at(cls, parent: QWidget, origin: QPointF) -> ParticleBurst | None:
         """Spawn a burst at *origin* (in *parent*-local coords).
 
         Returns the widget so callers can keep a ref if they need to

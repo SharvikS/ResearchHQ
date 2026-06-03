@@ -11,11 +11,11 @@ Use this anywhere we want a "busy" affordance during background work
 
 from __future__ import annotations
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath
 from PySide6.QtWidgets import QWidget
 
-from researchhq.gui.reduce_motion import is_reduced, ReduceMotion
+from researchhq.gui.reduce_motion import ReduceMotion, is_reduced
 from researchhq.gui.theme import ThemeManager, theme
 
 
@@ -115,9 +115,12 @@ class AnimatedBusyBar(QWidget):
         x1 = x0 + band_w
 
         grad = QLinearGradient(x0, 0, x1, 0)
-        c_clear = QColor(t.accent); c_clear.setAlpha(0)
-        c_peak  = QColor(t.accent); c_peak.setAlpha(255)
-        c_tail  = QColor(t.accent2); c_tail.setAlpha(180)
+        c_clear = QColor(t.accent)
+        c_clear.setAlpha(0)
+        c_peak = QColor(t.accent)
+        c_peak.setAlpha(255)
+        c_tail = QColor(t.accent2)
+        c_tail.setAlpha(180)
         grad.setColorAt(0.0, c_clear)
         grad.setColorAt(0.5, c_peak)
         grad.setColorAt(1.0, c_tail)

@@ -13,16 +13,15 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QPointF, QTimer, Qt
+from PySide6.QtCore import QPointF, Qt, QTimer
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QWidget
 
-from researchhq.gui.reduce_motion import is_reduced, ReduceMotion
+from researchhq.gui.reduce_motion import ReduceMotion, is_reduced
 from researchhq.gui.theme import ThemeManager, theme
 
-
 _DOT_COUNT = 8
-_TICK_MS = 30   # ~33 fps
+_TICK_MS = 30  # ~33 fps
 
 
 class Spinner(QWidget):
@@ -38,7 +37,7 @@ class Spinner(QWidget):
         self._size = int(size)
         self.setFixedSize(self._size, self._size)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self._phase = 0.0   # 0..1, wraps
+        self._phase = 0.0  # 0..1, wraps
         self._running = False
 
         self._timer = QTimer(self)
@@ -103,7 +102,7 @@ class Spinner(QWidget):
             # Each dot's alpha is offset by its position around the ring,
             # then modulated by the global phase so the bright spot
             # appears to chase around.
-            offset = (i / _DOT_COUNT)
+            offset = i / _DOT_COUNT
             local = (self._phase - offset) % 1.0
             # Convert to a sine-shaped pulse — brightest at local=0, dim
             # at local=0.5.

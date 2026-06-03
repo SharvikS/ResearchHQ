@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
 
 from rich.markdown import Markdown
 from rich.text import Text
@@ -18,8 +17,6 @@ from textual.containers import Container, Horizontal, Vertical
 from textual.message import Message
 from textual.widgets import RichLog, Select, Static
 
-logger = logging.getLogger(__name__)
-
 from researchhq.config import settings
 from researchhq.effort import DEFAULT_EFFORT
 from researchhq.events import PipelineEvent
@@ -27,6 +24,8 @@ from researchhq.pipeline import run as pipeline_run
 from researchhq.reports.exporter import save as save_report
 from researchhq.tui.widgets.agent_pipeline import AgentPipeline
 from researchhq.tui.widgets.effort_selector import EffortChanged, EffortSelector
+
+logger = logging.getLogger(__name__)
 
 _ENSEMBLE_BADGE = "[bold #7c5cff]⬡ ENSEMBLE[/]"
 
@@ -84,7 +83,7 @@ class ResearchView(Container):
         self._effort = DEFAULT_EFFORT
         self._mode = "topic"
         self._cancel_flag = False
-        self._worker_task: Optional[asyncio.Task] = None
+        self._worker_task: asyncio.Task | None = None
 
     def compose(self) -> ComposeResult:
         with Vertical(id="research_top"):

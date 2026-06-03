@@ -15,8 +15,12 @@ class GeneralMode(ResearchMode):
             "{q} examples case studies",
         ],
         preferred_tiers=[
-            SourceTier.OFFICIAL, SourceTier.ACADEMIC, SourceTier.GOVERNMENT,
-            SourceTier.NEWS, SourceTier.DOCS, SourceTier.WIKI,
+            SourceTier.OFFICIAL,
+            SourceTier.ACADEMIC,
+            SourceTier.GOVERNMENT,
+            SourceTier.NEWS,
+            SourceTier.DOCS,
+            SourceTier.WIKI,
         ],
         drop_tiers={SourceTier.SEARCH_ENGINE, SourceTier.LOW_QUALITY},
         report_sections=[

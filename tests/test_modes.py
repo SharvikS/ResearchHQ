@@ -3,7 +3,18 @@ from researchhq.modes.base import ResearchMode
 
 
 def test_all_advertised_modes_resolvable():
-    for name in ["topic", "company", "competitor", "tech", "technology", "market", "news", "academic", "paper", "general"]:
+    for name in [
+        "topic",
+        "company",
+        "competitor",
+        "tech",
+        "technology",
+        "market",
+        "news",
+        "academic",
+        "paper",
+        "general",
+    ]:
         mode = get_mode(name)
         assert isinstance(mode, ResearchMode)
         assert mode.config.name

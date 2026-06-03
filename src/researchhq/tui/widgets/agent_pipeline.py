@@ -10,58 +10,72 @@ from __future__ import annotations
 import logging
 import time
 
-logger = logging.getLogger(__name__)
 from textual.app import ComposeResult
 from textual.widget import Widget
 from textual.widgets import Static
 
+logger = logging.getLogger(__name__)
+
 # ── Stage metadata ────────────────────────────────────────────────────
 
 AGENT_ORDER = [
-    "planner", "searcher", "source_ranker", "fetcher",
-    "extractor", "synthesizer", "verifier", "formatter",
+    "planner",
+    "searcher",
+    "source_ranker",
+    "fetcher",
+    "extractor",
+    "synthesizer",
+    "verifier",
+    "formatter",
 ]
 
 ENSEMBLE_AGENT_ORDER = [
-    "planner", "searcher", "source_ranker", "fetcher",
-    "extractor", "ensemble", "verifier", "formatter",
+    "planner",
+    "searcher",
+    "source_ranker",
+    "fetcher",
+    "extractor",
+    "ensemble",
+    "verifier",
+    "formatter",
 ]
 
 # Geometric glyphs: pending ○, active spinner, done ◆, fail ✕
 # Premium aesthetic — geometric over ASCII characters.
-SPINNER     = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-GLYPH_DONE  = "◆"
-GLYPH_FAIL  = "✕"
-GLYPH_IDLE  = "○"
+SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+GLYPH_DONE = "◆"
+GLYPH_FAIL = "✕"
+GLYPH_IDLE = "○"
 
 # Stage display names (right-pad to 14 chars)
 STAGE_LABELS: dict[str, str] = {
-    "planner":      "planner",
-    "searcher":     "searcher",
+    "planner": "planner",
+    "searcher": "searcher",
     "source_ranker": "ranker",
-    "fetcher":      "fetcher",
-    "extractor":    "extractor",
-    "synthesizer":  "synthesizer",
-    "ensemble":     "ensemble",
-    "verifier":     "verifier",
-    "formatter":    "formatter",
+    "fetcher": "fetcher",
+    "extractor": "extractor",
+    "synthesizer": "synthesizer",
+    "ensemble": "ensemble",
+    "verifier": "verifier",
+    "formatter": "formatter",
 }
 
 # Per-stage accent colors (Textual Rich markup) — cool color ramp
 STAGE_COLORS: dict[str, str] = {
-    "planner":      "#7c5cff",   # violet
-    "searcher":     "#4a9eff",   # blue
+    "planner": "#7c5cff",  # violet
+    "searcher": "#4a9eff",  # blue
     "source_ranker": "#38bdf8",  # sky
-    "fetcher":      "#34d4bb",   # teal
-    "extractor":    "#a3e635",   # lime
-    "synthesizer":  "#f59e0b",   # amber
-    "ensemble":     "#f59e0b",   # amber
-    "verifier":     "#10b981",   # emerald
-    "formatter":    "#e879f9",   # fuchsia
+    "fetcher": "#34d4bb",  # teal
+    "extractor": "#a3e635",  # lime
+    "synthesizer": "#f59e0b",  # amber
+    "ensemble": "#f59e0b",  # amber
+    "verifier": "#10b981",  # emerald
+    "formatter": "#e879f9",  # fuchsia
 }
 
 
 # ── AgentRow ──────────────────────────────────────────────────────────
+
 
 class AgentRow(Static):
     """Single pipeline stage row.
@@ -74,14 +88,14 @@ class AgentRow(Static):
 
     def __init__(self, name: str, **kwargs) -> None:
         super().__init__("", **kwargs)
-        self._name      = name
-        self._label     = STAGE_LABELS.get(name, name)
-        self._state     = "pending"   # pending | active | done | fail
-        self._detail    = ""
-        self._started   = 0.0
-        self._elapsed   = 0.0
-        self._spin_idx  = 0
-        self._tick_ref  = None
+        self._name = name
+        self._label = STAGE_LABELS.get(name, name)
+        self._state = "pending"  # pending | active | done | fail
+        self._detail = ""
+        self._started = 0.0
+        self._elapsed = 0.0
+        self._spin_idx = 0
+        self._tick_ref = None
 
     # ── Public API ────────────────────────────────────────────────────
 
@@ -93,8 +107,8 @@ class AgentRow(Static):
         self._render()
 
     def set_active(self, detail: str = "") -> None:
-        self._state   = "active"
-        self._detail  = detail
+        self._state = "active"
+        self._detail = detail
         self._started = time.monotonic()
         self._spin_idx = 0
         self._stop_tick()
@@ -109,18 +123,18 @@ class AgentRow(Static):
             self._render()
 
     def set_done(self, detail: str = "") -> None:
-        self._state   = "done"
+        self._state = "done"
         self._elapsed = time.monotonic() - self._started
-        self._detail  = detail
+        self._detail = detail
         self._stop_tick()
         self.add_class("-done")
         self.remove_class("-active", "-pending", "-fail")
         self._render()
 
     def set_fail(self, detail: str = "") -> None:
-        self._state   = "fail"
+        self._state = "fail"
         self._elapsed = time.monotonic() - self._started
-        self._detail  = detail or "failed"
+        self._detail = detail or "failed"
         self._stop_tick()
         self.add_class("-fail")
         self.remove_class("-active", "-pending", "-done")
@@ -136,7 +150,9 @@ class AgentRow(Static):
             try:
                 self._tick_ref.stop()
             except (RuntimeError, AttributeError):  # noqa: BLE001
-                logger.debug("AgentRow timer stop failed (already stopped or detached)", exc_info=True)
+                logger.debug(
+                    "AgentRow timer stop failed (already stopped or detached)", exc_info=True
+                )
             self._tick_ref = None
 
     def _tick(self) -> None:
@@ -144,39 +160,40 @@ class AgentRow(Static):
         self._render()
 
     def _render(self) -> None:
-        state   = self._state
-        label   = self._label
-        detail  = self._detail
+        state = self._state
+        label = self._label
+        detail = self._detail
         elapsed = self._elapsed
-        color   = STAGE_COLORS.get(self._name, "#888888")
+        color = STAGE_COLORS.get(self._name, "#888888")
 
         if state == "done":
-            glyph       = f"[bold {color}]{GLYPH_DONE}[/]"
+            glyph = f"[bold {color}]{GLYPH_DONE}[/]"
             name_markup = f"[dim]{label:<13}[/dim]"
-            detail_mu   = f"[dim]{detail[:50]}[/dim]"
-            elapsed_mu  = f"[dim]{elapsed:5.1f}s[/dim]"
+            detail_mu = f"[dim]{detail[:50]}[/dim]"
+            elapsed_mu = f"[dim]{elapsed:5.1f}s[/dim]"
         elif state == "fail":
-            glyph       = f"[bold red]{GLYPH_FAIL}[/]"
+            glyph = f"[bold red]{GLYPH_FAIL}[/]"
             name_markup = f"[bold red]{label:<13}[/bold red]"
-            detail_mu   = f"[red]{detail[:50]}[/red]"
-            elapsed_mu  = f"[dim red]{elapsed:5.1f}s[/dim red]"
+            detail_mu = f"[red]{detail[:50]}[/red]"
+            elapsed_mu = f"[dim red]{elapsed:5.1f}s[/dim red]"
         elif state == "active":
-            spin        = SPINNER[self._spin_idx]
-            glyph       = f"[bold {color}]{spin}[/]"
+            spin = SPINNER[self._spin_idx]
+            glyph = f"[bold {color}]{spin}[/]"
             name_markup = f"[bold {color}]{label:<13}[/bold {color}]"
-            detail_mu   = f"[{color}]{detail[:50]}[/{color}]"
-            now         = time.monotonic() - self._started
-            elapsed_mu  = f"[dim]{now:5.1f}s[/dim]"
+            detail_mu = f"[{color}]{detail[:50]}[/{color}]"
+            now = time.monotonic() - self._started
+            elapsed_mu = f"[dim]{now:5.1f}s[/dim]"
         else:  # pending
-            glyph       = f"[dim]{GLYPH_IDLE}[/dim]"
+            glyph = f"[dim]{GLYPH_IDLE}[/dim]"
             name_markup = f"[dim]{label:<13}[/dim]"
-            detail_mu   = ""
-            elapsed_mu  = ""
+            detail_mu = ""
+            elapsed_mu = ""
 
         self.update(f"{glyph} {name_markup}  {detail_mu:<50}  {elapsed_mu}")
 
 
 # ── AgentPipeline ─────────────────────────────────────────────────────
+
 
 class AgentPipeline(Widget):
     """Vertical stack of AgentRow widgets, one per pipeline stage."""
@@ -185,8 +202,8 @@ class AgentPipeline(Widget):
 
     def __init__(self, ensemble_mode: bool = False, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._ensemble   = ensemble_mode
-        self._order      = ENSEMBLE_AGENT_ORDER if ensemble_mode else AGENT_ORDER
+        self._ensemble = ensemble_mode
+        self._order = ENSEMBLE_AGENT_ORDER if ensemble_mode else AGENT_ORDER
         self._rows: dict[str, AgentRow] = {}
 
     # ── Composition ───────────────────────────────────────────────────
@@ -207,8 +224,8 @@ class AgentPipeline(Widget):
         if enabled == self._ensemble:
             return
         self._ensemble = enabled
-        self._order    = ENSEMBLE_AGENT_ORDER if enabled else AGENT_ORDER
-        self._rows     = {}
+        self._order = ENSEMBLE_AGENT_ORDER if enabled else AGENT_ORDER
+        self._rows = {}
         self.remove_children()
         for name in self._order:
             row = AgentRow(name, id=f"row_{name}", classes="agent_row -pending")

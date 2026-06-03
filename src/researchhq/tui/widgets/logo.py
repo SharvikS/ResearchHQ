@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+
 from textual.app import ComposeResult
 from textual.widget import Widget
 from textual.widgets import Static
@@ -37,9 +38,9 @@ HQ_LINES = [
     "╚═╝  ╚═╝ ╚══▀▀═╝ ",
 ]
 
-SUB_LINE      = "multi-agent AI research platform"
-LOGO_WIDTH    = len(RESEARCH_LINES[0]) + 2 + len(HQ_LINES[0])  # approx
-MIN_FULL_COLS = 88   # below this threshold use compact wordmark
+SUB_LINE = "multi-agent AI research platform"
+LOGO_WIDTH = len(RESEARCH_LINES[0]) + 2 + len(HQ_LINES[0])  # approx
+MIN_FULL_COLS = 88  # below this threshold use compact wordmark
 
 
 def _render_full(palette_name: str = DEFAULT_THEME, reveal: int | None = None) -> str:
@@ -50,12 +51,12 @@ def _render_full(palette_name: str = DEFAULT_THEME, reveal: int | None = None) -
     total_cols = max(len(r) for r in RESEARCH_LINES) + 2 + max(len(h) for h in HQ_LINES)
     cap = reveal if reveal is not None else total_cols
 
-    for r_line, h_line in zip(RESEARCH_LINES, HQ_LINES):
+    for r_line, h_line in zip(RESEARCH_LINES, HQ_LINES, strict=False):
         combined = r_line + "  " + h_line
-        visible  = combined[:cap]
-        r_part   = visible[:len(r_line)]
-        gap_part = visible[len(r_line):len(r_line) + 2]
-        h_part   = visible[len(r_line) + 2:]
+        visible = combined[:cap]
+        r_part = visible[: len(r_line)]
+        gap_part = visible[len(r_line) : len(r_line) + 2]
+        h_part = visible[len(r_line) + 2 :]
         row = ""
         if r_part:
             row += f"[bold {p.accent}]{r_part}[/]"
@@ -82,6 +83,7 @@ def _render_compact(palette_name: str = DEFAULT_THEME) -> str:
 
 # ── Static wordmark ───────────────────────────────────────────────────
 
+
 class Wordmark(Static):
     """Full ASCII wordmark, static. Pass `theme_name` to colorize."""
 
@@ -95,6 +97,7 @@ class Wordmark(Static):
 
 
 # ── Compact wordmark ──────────────────────────────────────────────────
+
 
 class CompactWordmark(Static):
     """Single-line brand line for sidebars / narrow headers."""
@@ -113,6 +116,7 @@ class CompactWordmark(Static):
 
 # ── Responsive wordmark ───────────────────────────────────────────────
 
+
 class ResponsiveWordmark(Widget):
     """Shows full ASCII logo when wide enough, compact text when narrow."""
 
@@ -122,7 +126,7 @@ class ResponsiveWordmark(Widget):
         kwargs.setdefault("classes", "dash_brand")
         super().__init__(**kwargs)
         self._theme_name = theme_name
-        self._compact    = False
+        self._compact = False
 
     def compose(self) -> ComposeResult:
         yield Static(id="rw_inner")
@@ -150,6 +154,7 @@ class ResponsiveWordmark(Widget):
 
 # ── Animated wordmark (splash) ────────────────────────────────────────
 
+
 class AnimatedWordmark(Widget):
     """Full ASCII logo revealed left-to-right over `duration` seconds."""
 
@@ -163,11 +168,9 @@ class AnimatedWordmark(Widget):
     ) -> None:
         super().__init__(**kwargs)
         self._theme_name = theme_name
-        self._duration   = duration
-        self._total_cols = (
-            max(len(r) for r in RESEARCH_LINES) + 2 + max(len(h) for h in HQ_LINES)
-        )
-        self._reveal     = 0
+        self._duration = duration
+        self._total_cols = max(len(r) for r in RESEARCH_LINES) + 2 + max(len(h) for h in HQ_LINES)
+        self._reveal = 0
 
     def compose(self) -> ComposeResult:
         yield Static(id="aw_inner")

@@ -6,15 +6,27 @@ import logging
 import re
 
 _HTTP_LOGGERS = (
-    "httpx", "httpcore", "urllib3", "requests", "ddgs", "primp",
-    "asyncio", "google", "groq", "ollama", "openai", "anthropic",
+    "httpx",
+    "httpcore",
+    "urllib3",
+    "requests",
+    "ddgs",
+    "primp",
+    "asyncio",
+    "google",
+    "groq",
+    "ollama",
+    "openai",
+    "anthropic",
 )
 
 # Patterns that may carry secrets in third-party debug logs (headers, bodies).
 _SECRET_PATTERNS = (
     re.compile(r"(authorization\s*[:=]\s*)(\S+)", re.IGNORECASE),
     re.compile(r"(x-api-key\s*[:=]\s*)(\S+)", re.IGNORECASE),
-    re.compile(r"((?:api[_-]?key|secret|token)\"?\s*[:=]\s*\"?)([A-Za-z0-9_\-]{8,})", re.IGNORECASE),
+    re.compile(
+        r"((?:api[_-]?key|secret|token)\"?\s*[:=]\s*\"?)([A-Za-z0-9_\-]{8,})", re.IGNORECASE
+    ),
     re.compile(r"\b(sk-[A-Za-z0-9_\-]{8,}|gsk_[A-Za-z0-9_\-]{8,})\b"),
 )
 

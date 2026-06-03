@@ -15,11 +15,18 @@ from __future__ import annotations
 from typing import Literal
 
 from PySide6.QtCore import (
-    QEasingCurve, QPoint, QPropertyAnimation, QTimer, Qt,
+    QEasingCurve,
+    QPoint,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
 )
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QHBoxLayout, QLabel,
+    QGraphicsDropShadowEffect,
+    QGraphicsOpacityEffect,
+    QHBoxLayout,
+    QLabel,
     QWidget,
 )
 
@@ -36,7 +43,7 @@ _MARGIN_Y = 24
 _STACK_GAP = 8
 
 
-def _stack_for(parent: QWidget) -> list["Toast"]:
+def _stack_for(parent: QWidget) -> list[Toast]:
     """Return the list of live toasts parented to *parent*.
 
     We attach the list as an attribute on the parent so cascading
@@ -97,18 +104,13 @@ class Toast(QWidget):
         # Style the chip by kind — different border colour per severity.
         accent = _accent_for(kind)
         self.setStyleSheet(
-            "#Toast {{"
-            "  background-color: {bg};"
-            "  border: 1px solid {accent};"
+            "#Toast {"
+            f"  background-color: {theme().bg_raised};"
+            f"  border: 1px solid {accent};"
             "  border-radius: 10px;"
-            "}}"
-            "#ToastMessage {{ color: {text}; font-weight: 500; background: transparent; }}"
-            "#ToastGlyph   {{ color: {accent}; font-weight: 700; background: transparent; }}"
-            .format(
-                bg=theme().bg_raised,
-                text=theme().text,
-                accent=accent,
-            )
+            "}"
+            f"#ToastMessage {{ color: {theme().text}; font-weight: 500; background: transparent; }}"
+            f"#ToastGlyph   {{ color: {accent}; font-weight: 700; background: transparent; }}"
         )
 
         # Drop shadow — gives the chip elevation off the page below.
@@ -138,7 +140,7 @@ class Toast(QWidget):
         *,
         kind: ToastKind = "info",
         duration_ms: int = 3000,
-    ) -> "Toast":
+    ) -> Toast:
         """Create and show a toast on *parent*. Returns the toast so the
         caller can cancel early via ``toast.dismiss()`` if needed.
 
@@ -195,7 +197,8 @@ class Toast(QWidget):
         pos_anim.setEasingCurve(QEasingCurve.Type.InQuad)
 
         op_anim.finished.connect(self.deleteLater)
-        op_anim.start(); pos_anim.start()
+        op_anim.start()
+        pos_anim.start()
         # Pin refs so GC doesn't reap mid-anim.
         self._dismiss_anims = (op_anim, pos_anim)  # type: ignore[attr-defined]
 
@@ -268,9 +271,9 @@ class Toast(QWidget):
 
 def _glyph_for(kind: ToastKind) -> str:
     return {
-        "info":  "ℹ",
-        "ok":    "✓",
-        "warn":  "!",
+        "info": "ℹ",
+        "ok": "✓",
+        "warn": "!",
         "error": "✕",
     }[kind]
 
@@ -278,8 +281,8 @@ def _glyph_for(kind: ToastKind) -> str:
 def _accent_for(kind: ToastKind) -> str:
     t = theme()
     return {
-        "info":  t.accent,
-        "ok":    t.ok,
-        "warn":  t.warn,
+        "info": t.accent,
+        "ok": t.ok,
+        "warn": t.warn,
         "error": t.err,
     }[kind]

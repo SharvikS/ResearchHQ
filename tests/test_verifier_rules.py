@@ -28,6 +28,7 @@ def _src(url: str, tier: SourceTier, score: int = 8, domain: str | None = None) 
 
 # ---------- shared rules ----------
 
+
 def test_high_conf_without_high_tier_fails():
     facts = [Fact(claim="X", evidence_urls=["https://reddit.com/x"], confidence=0.9)]
     sources = [_src("https://reddit.com/x", SourceTier.COMMUNITY)]
@@ -51,6 +52,7 @@ def test_invented_citations_fail_rule():
 
 
 # ---------- news mode ----------
+
 
 def test_news_single_source_high_conf_fails():
     facts = [
@@ -87,6 +89,7 @@ def test_news_low_conf_claim_not_evaluated():
 
 # ---------- market mode ----------
 
+
 def test_market_figure_without_date_fails():
     facts = [Fact(claim="The market is worth $50 billion", evidence_urls=[], confidence=0.5)]
     r = rule_market_dated_attribution(facts=facts, sections=[])
@@ -94,13 +97,19 @@ def test_market_figure_without_date_fails():
 
 
 def test_market_figure_with_year_passes():
-    facts = [Fact(claim="The market is worth $50 billion in 2026", evidence_urls=[], confidence=0.5)]
+    facts = [
+        Fact(claim="The market is worth $50 billion in 2026", evidence_urls=[], confidence=0.5)
+    ]
     r = rule_market_dated_attribution(facts=facts, sections=[])
     assert r.passed
 
 
 def test_market_figure_with_attribution_passes():
-    facts = [Fact(claim="According to Gartner the market is $50 billion", evidence_urls=[], confidence=0.5)]
+    facts = [
+        Fact(
+            claim="According to Gartner the market is $50 billion", evidence_urls=[], confidence=0.5
+        )
+    ]
     r = rule_market_dated_attribution(facts=facts, sections=[])
     assert r.passed
 
@@ -113,21 +122,35 @@ def test_market_section_body_also_checked():
 
 # ---------- academic mode ----------
 
+
 def test_academic_high_conf_without_academic_source_fails():
-    facts = [Fact(claim="RAG outperforms baselines (et al.)", evidence_urls=["https://blog.example/x"], confidence=0.9)]
+    facts = [
+        Fact(
+            claim="RAG outperforms baselines (et al.)",
+            evidence_urls=["https://blog.example/x"],
+            confidence=0.9,
+        )
+    ]
     sources = [_src("https://blog.example/x", SourceTier.BLOG)]
     r = rule_academic_paper_attribution(facts=facts, sources=sources)
     assert not r.passed
 
 
 def test_academic_with_paper_ref_and_arxiv_source_passes():
-    facts = [Fact(claim="Lewis et al. evaluated RAG benchmarks", evidence_urls=["https://arxiv.org/abs/2005.11401"], confidence=0.9)]
+    facts = [
+        Fact(
+            claim="Lewis et al. evaluated RAG benchmarks",
+            evidence_urls=["https://arxiv.org/abs/2005.11401"],
+            confidence=0.9,
+        )
+    ]
     sources = [_src("https://arxiv.org/abs/2005.11401", SourceTier.ACADEMIC)]
     r = rule_academic_paper_attribution(facts=facts, sources=sources)
     assert r.passed
 
 
 # ---------- end-to-end verifier ----------
+
 
 def test_verify_includes_news_rule_only_in_news_mode():
     facts = [Fact(claim="X", evidence_urls=["https://bbc.com/a"], confidence=0.9)]
@@ -147,7 +170,9 @@ def test_verify_propagates_violations_into_note():
         _src("https://reuters.com/b", SourceTier.NEWS, domain="reuters.com"),
         _src("https://wsj.com/c", SourceTier.NEWS, domain="wsj.com"),
     ]
-    violations = [CitationViolation(kind="synth.unknown_url", location="Findings", url="https://fake")]
+    violations = [
+        CitationViolation(kind="synth.unknown_url", location="Findings", url="https://fake")
+    ]
     note = verify(get_mode("topic"), sources, facts, violations=violations)
     assert any(v.kind == "synth.unknown_url" for v in note.violations)
     failed = [r for r in note.rules if not r.passed]

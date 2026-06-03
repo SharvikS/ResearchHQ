@@ -32,17 +32,30 @@ Public surface
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from PySide6.QtCore import (
-    QEasingCurve, QEvent, QObject, QPoint, QPropertyAnimation,
-    QTimer, QVariantAnimation, Qt,
+    QEasingCurve,
+    QEvent,
+    QObject,
+    QPoint,
+    QPropertyAnimation,
+    Qt,
+    QTimer,
+    QVariantAnimation,
 )
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QGraphicsDropShadowEffect, QLineEdit,
-    QPlainTextEdit, QPushButton, QSpinBox, QStackedWidget, QTextEdit,
-    QToolButton, QWidget,
+    QApplication,
+    QComboBox,
+    QGraphicsDropShadowEffect,
+    QLineEdit,
+    QPlainTextEdit,
+    QPushButton,
+    QSpinBox,
+    QStackedWidget,
+    QTextEdit,
+    QToolButton,
+    QWidget,
 )
 
 from researchhq.gui.reduce_motion import is_reduced, scaled
@@ -59,32 +72,32 @@ class MOTION:
 
     # Durations (ms). Anything > 220ms feels sluggish for hover;
     # anything < 80ms reads as a glitch.
-    HOVER_IN   = 140
-    HOVER_OUT  = 180
-    PRESS      = 90
-    RELEASE    = 160
-    FOCUS_IN   = 160
-    FOCUS_OUT  = 200
-    PAGE_FADE  = 220
-    RIPPLE     = 480
-    INTRO      = 360
-    PULSE      = 1800   # full breathing cycle for the brand glow
+    HOVER_IN = 140
+    HOVER_OUT = 180
+    PRESS = 90
+    RELEASE = 160
+    FOCUS_IN = 160
+    FOCUS_OUT = 200
+    PAGE_FADE = 220
+    RIPPLE = 480
+    INTRO = 360
+    PULSE = 1800  # full breathing cycle for the brand glow
 
     # Easing — sharp decel for "in", soft for "out".
-    EASE_IN     = QEasingCurve.Type.OutCubic
-    EASE_OUT    = QEasingCurve.Type.InOutQuad
-    EASE_PRESS  = QEasingCurve.Type.OutQuad
-    EASE_PAGE   = QEasingCurve.Type.InOutCubic
+    EASE_IN = QEasingCurve.Type.OutCubic
+    EASE_OUT = QEasingCurve.Type.InOutQuad
+    EASE_PRESS = QEasingCurve.Type.OutQuad
+    EASE_PAGE = QEasingCurve.Type.InOutCubic
     EASE_RIPPLE = QEasingCurve.Type.OutCubic
 
     # Visual amplitudes — conservative so the UI never feels noisy.
-    HOVER_BLUR        = 18.0
-    HOVER_BLUR_PRIM   = 28.0   # primary / accent buttons get a touch more
-    HOVER_ALPHA       = 110
-    HOVER_ALPHA_PRIM  = 165
-    PRESS_ALPHA       = 220
-    FOCUS_BLUR        = 22.0
-    FOCUS_ALPHA       = 160
+    HOVER_BLUR = 18.0
+    HOVER_BLUR_PRIM = 28.0  # primary / accent buttons get a touch more
+    HOVER_ALPHA = 110
+    HOVER_ALPHA_PRIM = 165
+    PRESS_ALPHA = 220
+    FOCUS_BLUR = 22.0
+    FOCUS_ALPHA = 160
 
 
 # Marker property so the global event filter never instruments a widget twice.
@@ -198,13 +211,17 @@ def _hover_in(btn: QWidget) -> None:
     if anims is None:
         return
     blur, alpha = anims
-    blur.stop(); alpha.stop()
-    blur.setDuration(scaled(MOTION.HOVER_IN)); blur.setEasingCurve(MOTION.EASE_IN)
+    blur.stop()
+    alpha.stop()
+    blur.setDuration(scaled(MOTION.HOVER_IN))
+    blur.setEasingCurve(MOTION.EASE_IN)
     blur.setEndValue(_hover_blur(btn))
-    alpha.setDuration(scaled(MOTION.HOVER_IN)); alpha.setEasingCurve(MOTION.EASE_IN)
+    alpha.setDuration(scaled(MOTION.HOVER_IN))
+    alpha.setEasingCurve(MOTION.EASE_IN)
     alpha.setStartValue(int(btn._rhq_glow.color().alpha()))  # type: ignore[attr-defined]
     alpha.setEndValue(_hover_alpha(btn))
-    blur.start(); alpha.start()
+    blur.start()
+    alpha.start()
 
 
 def _hover_out(btn: QWidget) -> None:
@@ -212,13 +229,17 @@ def _hover_out(btn: QWidget) -> None:
     if anims is None:
         return
     blur, alpha = anims
-    blur.stop(); alpha.stop()
-    blur.setDuration(scaled(MOTION.HOVER_OUT)); blur.setEasingCurve(MOTION.EASE_OUT)
+    blur.stop()
+    alpha.stop()
+    blur.setDuration(scaled(MOTION.HOVER_OUT))
+    blur.setEasingCurve(MOTION.EASE_OUT)
     blur.setEndValue(0.0)
-    alpha.setDuration(scaled(MOTION.HOVER_OUT)); alpha.setEasingCurve(MOTION.EASE_OUT)
+    alpha.setDuration(scaled(MOTION.HOVER_OUT))
+    alpha.setEasingCurve(MOTION.EASE_OUT)
     alpha.setStartValue(int(btn._rhq_glow.color().alpha()))  # type: ignore[attr-defined]
     alpha.setEndValue(0)
-    blur.start(); alpha.start()
+    blur.start()
+    alpha.start()
 
 
 def _press_pulse(btn: QWidget) -> None:
@@ -227,7 +248,8 @@ def _press_pulse(btn: QWidget) -> None:
         return
     _, alpha = anims
     alpha.stop()
-    alpha.setDuration(scaled(MOTION.PRESS)); alpha.setEasingCurve(MOTION.EASE_PRESS)
+    alpha.setDuration(scaled(MOTION.PRESS))
+    alpha.setEasingCurve(MOTION.EASE_PRESS)
     alpha.setStartValue(int(btn._rhq_glow.color().alpha()))  # type: ignore[attr-defined]
     alpha.setEndValue(_press_alpha(btn))
     alpha.start()
@@ -270,7 +292,7 @@ class _ButtonMotionFilter(QObject):
         return False
 
 
-_FILTER_SINGLETON: Optional[_ButtonMotionFilter] = None
+_FILTER_SINGLETON: _ButtonMotionFilter | None = None
 
 
 def _button_filter() -> _ButtonMotionFilter:
@@ -315,7 +337,7 @@ class Ripple(QWidget):
         self._anim_a.valueChanged.connect(self._on_alpha)
 
     @staticmethod
-    def spawn(parent: QWidget, origin: QPoint) -> "Ripple":
+    def spawn(parent: QWidget, origin: QPoint) -> Ripple:
         r = Ripple(parent, origin)
         r.show()
         r._anim_r.start()
@@ -360,34 +382,44 @@ def attach_focus_glow(widget: QWidget) -> None:
     alpha_anim.valueChanged.connect(lambda v: glow.set_alpha(int(v)))
 
     def on_focus_in(_e) -> None:
-        blur_anim.stop(); alpha_anim.stop()
-        blur_anim.setDuration(MOTION.FOCUS_IN); blur_anim.setEasingCurve(MOTION.EASE_IN)
+        blur_anim.stop()
+        alpha_anim.stop()
+        blur_anim.setDuration(MOTION.FOCUS_IN)
+        blur_anim.setEasingCurve(MOTION.EASE_IN)
         blur_anim.setEndValue(MOTION.FOCUS_BLUR)
-        alpha_anim.setDuration(MOTION.FOCUS_IN); alpha_anim.setEasingCurve(MOTION.EASE_IN)
+        alpha_anim.setDuration(MOTION.FOCUS_IN)
+        alpha_anim.setEasingCurve(MOTION.EASE_IN)
         alpha_anim.setStartValue(int(glow.color().alpha()))
         alpha_anim.setEndValue(MOTION.FOCUS_ALPHA)
-        blur_anim.start(); alpha_anim.start()
+        blur_anim.start()
+        alpha_anim.start()
 
     def on_focus_out(_e) -> None:
-        blur_anim.stop(); alpha_anim.stop()
-        blur_anim.setDuration(MOTION.FOCUS_OUT); blur_anim.setEasingCurve(MOTION.EASE_OUT)
+        blur_anim.stop()
+        alpha_anim.stop()
+        blur_anim.setDuration(MOTION.FOCUS_OUT)
+        blur_anim.setEasingCurve(MOTION.EASE_OUT)
         blur_anim.setEndValue(0.0)
-        alpha_anim.setDuration(MOTION.FOCUS_OUT); alpha_anim.setEasingCurve(MOTION.EASE_OUT)
+        alpha_anim.setDuration(MOTION.FOCUS_OUT)
+        alpha_anim.setEasingCurve(MOTION.EASE_OUT)
         alpha_anim.setStartValue(int(glow.color().alpha()))
         alpha_anim.setEndValue(0)
-        blur_anim.start(); alpha_anim.start()
+        blur_anim.start()
+        alpha_anim.start()
 
     # Chain into existing focus handlers without breaking them.
     _prev_in = widget.focusInEvent
     _prev_out = widget.focusOutEvent
 
     def _focus_in(e) -> None:
-        _prev_in(e); on_focus_in(e)
+        _prev_in(e)
+        on_focus_in(e)
 
     def _focus_out(e) -> None:
-        _prev_out(e); on_focus_out(e)
+        _prev_out(e)
+        on_focus_out(e)
 
-    widget.focusInEvent = _focus_in   # type: ignore[method-assign]
+    widget.focusInEvent = _focus_in  # type: ignore[method-assign]
     widget.focusOutEvent = _focus_out  # type: ignore[method-assign]
 
     ThemeManager.instance().theme_changed.connect(
@@ -398,8 +430,7 @@ def attach_focus_glow(widget: QWidget) -> None:
 # ── Cross-fade for QStackedWidget ──────────────────────────────────────────
 
 
-def cross_fade(stack: QStackedWidget, new_index: int,
-               duration: int = MOTION.PAGE_FADE) -> None:
+def cross_fade(stack: QStackedWidget, new_index: int, duration: int = MOTION.PAGE_FADE) -> None:
     """Animated swap from the current page to *new_index*.
 
     Pages in this app contain instrumented buttons / inputs that already
@@ -455,8 +486,7 @@ def cross_fade(stack: QStackedWidget, new_index: int,
         slide = QPropertyAnimation(snapshot, b"pos", snapshot)
         slide.setDuration(scaled(duration))
         slide.setStartValue(snapshot.pos())
-        slide.setEndValue(QPoint(snapshot.pos().x() - direction * slide_px,
-                                 snapshot.pos().y()))
+        slide.setEndValue(QPoint(snapshot.pos().x() - direction * slide_px, snapshot.pos().y()))
         slide.setEasingCurve(MOTION.EASE_PAGE)
         slide.start()
 
@@ -467,6 +497,7 @@ def cross_fade(stack: QStackedWidget, new_index: int,
     new = stack.currentWidget()
     if new is not None and not is_reduced():
         from PySide6.QtCore import QPoint
+
         # Cache the final position once we know the layout has placed
         # the page; then offset by +/- slide_px in the page's local
         # coords. The container is a QStackedWidget so each child
@@ -559,9 +590,9 @@ def pulse_color(label, color: QColor, duration: int = 600) -> None:
     anim.setEndValue(1.0)
 
     def _step(t: float) -> None:
-        r = int(start.red()   + (end.red()   - start.red())   * t)
+        r = int(start.red() + (end.red() - start.red()) * t)
         g = int(start.green() + (end.green() - start.green()) * t)
-        b = int(start.blue()  + (end.blue()  - start.blue())  * t)
+        b = int(start.blue() + (end.blue() - start.blue()) * t)
         _set_css(QColor(r, g, b, 255))
 
     anim.valueChanged.connect(lambda v: _step(float(v)))
@@ -583,9 +614,15 @@ class PulseGlow(QObject):
         glow.start()
     """
 
-    def __init__(self, target: QWidget, color: QColor,
-                 min_alpha: int = 30, max_alpha: int = 180,
-                 blur: float = 32.0, duration: int = MOTION.PULSE) -> None:
+    def __init__(
+        self,
+        target: QWidget,
+        color: QColor,
+        min_alpha: int = 30,
+        max_alpha: int = 180,
+        blur: float = 32.0,
+        duration: int = MOTION.PULSE,
+    ) -> None:
         super().__init__(target)
         self._glow = _GlowEffect(target, color)
         self._glow.setBlurRadius(blur)
@@ -646,8 +683,8 @@ def attach_card_hover(card: QWidget) -> None:
     blur_anim.setDuration(MOTION.HOVER_IN)
     blur_anim.setEasingCurve(MOTION.EASE_IN)
 
-    card._rhq_card_shadow = shadow         # type: ignore[attr-defined]
-    card._rhq_card_blur_anim = blur_anim   # type: ignore[attr-defined]
+    card._rhq_card_shadow = shadow  # type: ignore[attr-defined]
+    card._rhq_card_blur_anim = blur_anim  # type: ignore[attr-defined]
     card.installEventFilter(_card_filter())
 
 
@@ -679,7 +716,7 @@ class _CardHoverFilter(QObject):
         return False
 
 
-_CARD_FILTER_SINGLETON: Optional[_CardHoverFilter] = None
+_CARD_FILTER_SINGLETON: _CardHoverFilter | None = None
 
 
 def _card_filter() -> _CardHoverFilter:
@@ -693,8 +730,9 @@ def _card_filter() -> _CardHoverFilter:
 # ── Staggered slide-in entrance ────────────────────────────────────────────
 
 
-def stagger_in(widgets: list[QWidget], *, step_ms: int = 60,
-               distance_px: int = 18, duration: int = 320) -> None:
+def stagger_in(
+    widgets: list[QWidget], *, step_ms: int = 60, distance_px: int = 18, duration: int = 320
+) -> None:
     """Animate *widgets* into place one after another.
 
     Each widget starts shifted down by ``distance_px`` and at zero
@@ -739,7 +777,9 @@ def stagger_in(widgets: list[QWidget], *, step_ms: int = 60,
             op_anim.finished.connect(lambda _w=w: _w.setGraphicsEffect(None))
 
             def _start_both(_p=pos_anim, _o=op_anim) -> None:
-                _p.start(); _o.start()
+                _p.start()
+                _o.start()
+
             QTimer.singleShot(i * step_ms, _start_both)
             w._rhq_stagger = (pos_anim, op_anim)  # type: ignore[attr-defined]
         else:
@@ -750,8 +790,9 @@ def stagger_in(widgets: list[QWidget], *, step_ms: int = 60,
 # ── Animated integer count-up ──────────────────────────────────────────────
 
 
-def count_up(label, end_value: int, *, duration: int = 700,
-             prefix: str = "", suffix: str = "") -> None:
+def count_up(
+    label, end_value: int, *, duration: int = 700, prefix: str = "", suffix: str = ""
+) -> None:
     """Tween the ``setText`` of *label* from 0 → ``end_value``.
 
     Used for the dashboard stat cards so big numbers animate in instead
@@ -773,8 +814,9 @@ def count_up(label, end_value: int, *, duration: int = 700,
     label._rhq_countup = anim  # type: ignore[attr-defined]
 
 
-def count_up_float(label, end_value: float, *, duration: int = 700,
-                   fmt: str = "{:.4f}", prefix: str = "$") -> None:
+def count_up_float(
+    label, end_value: float, *, duration: int = 700, fmt: str = "{:.4f}", prefix: str = "$"
+) -> None:
     """Float variant of count_up — used for currency / confidence values."""
     anim = QVariantAnimation(label)
     anim.setStartValue(0.0)
@@ -796,10 +838,13 @@ def count_up_float(label, end_value: float, *, duration: int = 700,
 # ── Page entrance choreography ─────────────────────────────────────────────
 
 
-def page_entrance(page: QWidget, *,
-                  title_widget: Optional[QWidget] = None,
-                  cards: Optional[list[QWidget]] = None,
-                  step_ms: int = 60) -> None:
+def page_entrance(
+    page: QWidget,
+    *,
+    title_widget: QWidget | None = None,
+    cards: list[QWidget] | None = None,
+    step_ms: int = 60,
+) -> None:
     """Wire a "title fades + cards stagger in" reveal for a page.
 
     Call this from the page's ``showEvent`` (gated behind a once-only
@@ -843,12 +888,10 @@ def flash_value_change(label: QWidget, *, duration: int = 480) -> None:
     def _step(v) -> None:
         try:
             v = float(v)
-            r = int(start_color.red()   + (end_color.red()   - start_color.red())   * v)
+            r = int(start_color.red() + (end_color.red() - start_color.red()) * v)
             g = int(start_color.green() + (end_color.green() - start_color.green()) * v)
-            b = int(start_color.blue()  + (end_color.blue()  - start_color.blue())  * v)
-            label.setStyleSheet(
-                f"color: rgb({r},{g},{b}); background-color: transparent;"
-            )
+            b = int(start_color.blue() + (end_color.blue() - start_color.blue()) * v)
+            label.setStyleSheet(f"color: rgb({r},{g},{b}); background-color: transparent;")
         except RuntimeError:
             logger.debug("flash_value_change: label destroyed mid-animation", exc_info=True)
 

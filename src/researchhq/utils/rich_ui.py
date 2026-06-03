@@ -27,11 +27,13 @@ STAGE_COLORS = {
 
 
 def banner(query: str, mode: str) -> None:
-    console.print(Panel(
-        f"[bold]Research[/bold] - [italic]{mode}[/italic] mode\n[bold cyan]{query}[/bold cyan]",
-        border_style="cyan",
-        expand=False,
-    ))
+    console.print(
+        Panel(
+            f"[bold]Research[/bold] - [italic]{mode}[/italic] mode\n[bold cyan]{query}[/bold cyan]",
+            border_style="cyan",
+            expand=False,
+        )
+    )
 
 
 def progress(stage: str, detail: str, verbose: bool) -> None:
@@ -44,11 +46,13 @@ def progress(stage: str, detail: str, verbose: bool) -> None:
 def render_report(report: ResearchReport) -> None:
     md = to_markdown(report)
     console.print()
-    console.print(Panel(
-        Markdown(md),
-        title=f"Report - {report.mode} - {report.query}",
-        border_style="green",
-    ))
+    console.print(
+        Panel(
+            Markdown(md),
+            title=f"Report - {report.mode} - {report.query}",
+            border_style="green",
+        )
+    )
 
 
 def render_summary(report: ResearchReport, output_path: str | None) -> None:
@@ -72,7 +76,9 @@ def render_summary(report: ResearchReport, output_path: str | None) -> None:
         table.add_row("Citation violations", str(len(report.verifier.violations)))
         table.add_row("Confidence", f"{report.verifier.overall_confidence:.2f}")
     if sources_by_tier:
-        table.add_row("Sources by tier", ", ".join(f"{k}:{v}" for k, v in sorted(sources_by_tier.items())))
+        table.add_row(
+            "Sources by tier", ", ".join(f"{k}:{v}" for k, v in sorted(sources_by_tier.items()))
+        )
     if output_path:
         table.add_row("Saved to", output_path)
     console.print(table)
@@ -103,8 +109,11 @@ def render_stage_costs(report: ResearchReport) -> None:
     table.add_column("Equiv $", justify="right")
     for sc in report.stage_costs:
         table.add_row(
-            sc.stage, str(sc.calls), f"{sc.input_tokens:,}",
-            f"{sc.output_tokens:,}", f"${sc.equivalent_paid_cost_usd:.4f}",
+            sc.stage,
+            str(sc.calls),
+            f"{sc.input_tokens:,}",
+            f"{sc.output_tokens:,}",
+            f"${sc.equivalent_paid_cost_usd:.4f}",
         )
     console.print(table)
 

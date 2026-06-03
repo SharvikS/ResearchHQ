@@ -26,7 +26,7 @@ class EnsembleVerifierNote:
     adjustments: list[str] = field(default_factory=list)
     verification_notes: list[str] = field(default_factory=list)
     provider_matrix_summary: str = ""
-    support_strength: str = "medium"   # weak | medium | strong
+    support_strength: str = "medium"  # weak | medium | strong
 
 
 def _cited_urls(sections: list[Section]) -> set[str]:
@@ -81,14 +81,10 @@ def verify_synthesis(
 
     # Informational notes
     if ensemble_run.successful:
-        notes.append(
-            "Synthesis covers "
-            + ", ".join(r.provider for r in ensemble_run.successful)
-        )
+        notes.append("Synthesis covers " + ", ".join(r.provider for r in ensemble_run.successful))
     if ensemble_run.failed:
         notes.append(
-            "Degraded ensemble — failed: "
-            + ", ".join(r.provider for r in ensemble_run.failed)
+            "Degraded ensemble — failed: " + ", ".join(r.provider for r in ensemble_run.failed)
         )
     notes.extend(confidence.uncertainty_notes)
 

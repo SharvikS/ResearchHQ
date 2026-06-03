@@ -15,19 +15,35 @@ def _mock_router(replies: dict[str, str]):
     from researchhq.llm.cost_tracker import tracker
 
     class _R:
-        async def complete(self, prompt, system=None, max_tokens=2048,
-                           prefer=None, timeout=None, attempts=None, stage="llm"):
+        async def complete(
+            self,
+            prompt,
+            system=None,
+            max_tokens=2048,
+            prefer=None,
+            timeout=None,
+            attempts=None,
+            stage="llm",
+        ):
             text = replies.get(stage, "{}")
-            resp = LLMResponse(text=text, model="mock", provider="mock",
-                               input_tokens=10, output_tokens=20)
+            resp = LLMResponse(
+                text=text, model="mock", provider="mock", input_tokens=10, output_tokens=20
+            )
             tracker.record(resp, stage=stage)
             return resp
+
     return _R()
 
 
 def _setup(monkeypatch):
     from researchhq.agents import (
-        searcher, fetcher, planner, extractor, synthesizer,
+        extractor,
+        fetcher,
+        planner,
+        searcher,
+        synthesizer,
+    )
+    from researchhq.agents import (
         formatter as fmt_agent,
     )
 
@@ -40,8 +56,14 @@ def _setup(monkeypatch):
 
     async def _mock_fetch(sources, **kwargs):
         return [
-            FetchedPage(url=s.url, title=s.title, text="page content",
-                        status=200, bytes_in=10, truncated=False)
+            FetchedPage(
+                url=s.url,
+                title=s.title,
+                text="page content",
+                status=200,
+                bytes_in=10,
+                truncated=False,
+            )
             for s in sources[:8]
         ]
 
@@ -50,8 +72,13 @@ def _setup(monkeypatch):
 
     replies = {
         "planner": json.dumps({"queries": ["q1", "q2"], "rationale": ""}),
-        "extractor": json.dumps({"facts": [
-            {"claim": "X", "evidence_urls": ["https://www.bbc.com/x"], "confidence": 0.85}]}),
+        "extractor": json.dumps(
+            {
+                "facts": [
+                    {"claim": "X", "evidence_urls": ["https://www.bbc.com/x"], "confidence": 0.85}
+                ]
+            }
+        ),
         "synthesizer": "## Executive summary\nBody [BBC](https://www.bbc.com/x).\n",
         "formatter": json.dumps({"questions": ["q?"]}),
     }
@@ -77,11 +104,18 @@ def test_pipeline_emits_per_agent_started_and_finished(monkeypatch):
     _setup(monkeypatch)
     events: list[PipelineEvent] = []
     from researchhq.pipeline import run as pipeline_run
+
     asyncio.run(pipeline_run("topic", "q", on_event=events.append))
 
     expected_stages = [
-        "planner", "searcher", "source_ranker", "fetcher",
-        "extractor", "synthesizer", "verifier", "formatter",
+        "planner",
+        "searcher",
+        "source_ranker",
+        "fetcher",
+        "extractor",
+        "synthesizer",
+        "verifier",
+        "formatter",
     ]
     started = {e.stage for e in events if e.type == "agent_started"}
     finished = {e.stage for e in events if e.type == "agent_finished"}
@@ -94,6 +128,7 @@ def test_pipeline_emits_source_found_for_each_search_result(monkeypatch):
     _setup(monkeypatch)
     events: list[PipelineEvent] = []
     from researchhq.pipeline import run as pipeline_run
+
     asyncio.run(pipeline_run("topic", "q", on_event=events.append))
     found = [e for e in events if e.type == "source_found"]
     assert len(found) == 3
@@ -104,6 +139,7 @@ def test_pipeline_emits_llm_call_finished_with_token_data(monkeypatch):
     _setup(monkeypatch)
     events: list[PipelineEvent] = []
     from researchhq.pipeline import run as pipeline_run
+
     asyncio.run(pipeline_run("topic", "q", on_event=events.append))
     llm = [e for e in events if e.type == "llm_call_finished"]
     assert llm
@@ -117,6 +153,7 @@ def test_pipeline_emits_report_section_ready(monkeypatch):
     _setup(monkeypatch)
     events: list[PipelineEvent] = []
     from researchhq.pipeline import run as pipeline_run
+
     asyncio.run(pipeline_run("topic", "q", on_event=events.append))
     sections = [e for e in events if e.type == "report_section_ready"]
     assert sections

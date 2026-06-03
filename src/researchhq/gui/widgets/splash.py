@@ -21,14 +21,28 @@ import random
 logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import (
-    QEasingCurve, QPoint, QPointF, QPropertyAnimation, QRect, QTimer, Qt, Signal,
+    QEasingCurve,
+    QPoint,
+    QPointF,
+    QPropertyAnimation,
+    QRect,
+    Qt,
+    QTimer,
+    Signal,
 )
 from PySide6.QtGui import (
-    QColor, QGuiApplication, QLinearGradient, QPainter,
+    QColor,
+    QGuiApplication,
+    QLinearGradient,
+    QPainter,
 )
 from PySide6.QtWidgets import (
-    QGraphicsDropShadowEffect, QHBoxLayout, QLabel, QProgressBar,
-    QVBoxLayout, QWidget,
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QProgressBar,
+    QVBoxLayout,
+    QWidget,
 )
 
 from researchhq.gui.reduce_motion import is_reduced
@@ -55,13 +69,15 @@ class _Starfield(QWidget):
         self._stars: list[tuple[float, float, float, float, float]] = []
         for _ in range(self.STAR_COUNT):
             # (x_ratio, y_ratio, base_radius, phase, frequency)
-            self._stars.append((
-                rng.random(),
-                rng.random(),
-                rng.uniform(0.6, 1.6),
-                rng.uniform(0.0, math.tau),
-                rng.uniform(0.7, 1.4),
-            ))
+            self._stars.append(
+                (
+                    rng.random(),
+                    rng.random(),
+                    rng.uniform(0.6, 1.6),
+                    rng.uniform(0.0, math.tau),
+                    rng.uniform(0.7, 1.4),
+                )
+            )
         self._phase = 0.0
         self._timer = QTimer(self)
         self._timer.setInterval(50)  # 20 fps — plenty for ambient twinkle
@@ -106,7 +122,7 @@ class _AnimatedWordmark(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._progress = 0.0   # 0.0 → 1.0 reveal sweep
+        self._progress = 0.0  # 0.0 → 1.0 reveal sweep
         self._brand = "RESEARCH"
         self._accent_part = "HQ"
         self.setMinimumHeight(72)
@@ -155,8 +171,10 @@ class _AnimatedWordmark(QWidget):
             p.drawRect(mask_rect)
             # Bright leading edge — gives the reveal a glowing seam.
             grad = QLinearGradient(cutoff - 24, 0, cutoff + 8, 0)
-            c0 = QColor(t.accent); c0.setAlpha(0)
-            c1 = QColor(t.accent2); c1.setAlpha(140)
+            c0 = QColor(t.accent)
+            c0.setAlpha(0)
+            c1 = QColor(t.accent2)
+            c1.setAlpha(140)
             grad.setColorAt(0.0, c0)
             grad.setColorAt(1.0, c1)
             p.setBrush(grad)
@@ -263,6 +281,7 @@ class SplashScreen(QWidget):
         # animation: nodes fade in staggered → filaments draw inward →
         # core pulses up → settles into idle breathing.
         from researchhq.gui.widgets.logo import LogoMark
+
         self._logo = LogoMark(size=96, mode="assemble")
         outer.addWidget(self._logo, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -306,9 +325,7 @@ class SplashScreen(QWidget):
         self._reveal.setEndValue(1.0)
         self._reveal.setDuration(700)
         self._reveal.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self._reveal.valueChanged.connect(
-            lambda v: self._wordmark.set_progress(float(v))
-        )
+        self._reveal.valueChanged.connect(lambda v: self._wordmark.set_progress(float(v)))
         self._reveal.finished.connect(self._on_reveal_done)
 
         # Fade the whole window via setWindowOpacity (window-manager level).
@@ -357,7 +374,9 @@ class SplashScreen(QWidget):
         """Spawn a particle burst centred on the logo."""
         try:
             from PySide6.QtCore import QPointF
+
             from researchhq.gui.widgets.particle_burst import ParticleBurst
+
             # Compute the logo centre in _root-local coordinates.
             logo_geo = self._logo.geometry()
             origin = QPointF(
@@ -415,4 +434,5 @@ class SplashScreen(QWidget):
         self._wordmark.set_progress(v)
 
     from PySide6.QtCore import Property
+
     _reveal_progress = Property(float, _get_reveal_progress, _set_reveal_progress)

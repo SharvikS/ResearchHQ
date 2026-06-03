@@ -38,7 +38,9 @@ async def next_questions(
     body = "\n\n".join(f"## {s.heading}\n{s.body}" for s in sections)
     prompt = f"Mode: {mode.name}\nUser query: {query}\n\nReport so far:\n{body}"
     try:
-        response = await router.complete(prompt=prompt, system=_system(min_q, max_q), max_tokens=400, stage="formatter")
+        response = await router.complete(
+            prompt=prompt, system=_system(min_q, max_q), max_tokens=400, stage="formatter"
+        )
         data = extract_json_object(response.text)
         qs = [q.strip() for q in data.get("questions", []) if isinstance(q, str) and q.strip()]
         return qs[:max_q] if qs else _fallback_questions(mode, query)

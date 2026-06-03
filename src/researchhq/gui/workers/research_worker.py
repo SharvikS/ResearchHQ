@@ -108,7 +108,8 @@ class ResearchWorker(QThread):
             self._handle_event(ev)
 
         return await pipeline_run(
-            self._mode, self._query,
+            self._mode,
+            self._query,
             on_event=_on_event,
             cancel_check=lambda: self._cancel,
             effort=self._effort,
@@ -135,7 +136,9 @@ class ResearchWorker(QThread):
             self.stage.emit(ev.stage, ev.detail)
 
         # Always emit the structured event and updated stats.
-        self.event.emit({"type": ev.type, "stage": ev.stage, "detail": ev.detail, "data": dict(ev.data)})
+        self.event.emit(
+            {"type": ev.type, "stage": ev.stage, "detail": ev.detail, "data": dict(ev.data)}
+        )
         self.live_stats.emit(dict(self._stats))
 
     def _emit_tick(self) -> None:  # currently unused; reserved for clock-only updates

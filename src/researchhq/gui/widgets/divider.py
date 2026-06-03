@@ -15,13 +15,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QLinearGradient, QPainter
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
 from researchhq.gui.reduce_motion import ReduceMotion, is_reduced
 from researchhq.gui.theme import ThemeManager, theme
-
 
 # Period of one full top→bottom sweep, in seconds.
 _PULSE_PERIOD_S = 6.0
@@ -80,9 +79,12 @@ class WorkspaceDivider(QWidget):
 
         # ── Base gradient — soft alpha taper at both ends.
         base = QLinearGradient(0, 0, 0, h)
-        c_clear = QColor(self._color); c_clear.setAlpha(0)
-        c_soft = QColor(self._color); c_soft.setAlpha(36)
-        c_peak = QColor(self._color); c_peak.setAlpha(110)
+        c_clear = QColor(self._color)
+        c_clear.setAlpha(0)
+        c_soft = QColor(self._color)
+        c_soft.setAlpha(36)
+        c_peak = QColor(self._color)
+        c_peak.setAlpha(110)
         base.setColorAt(0.0, c_clear)
         base.setColorAt(0.15, c_soft)
         base.setColorAt(0.5, c_peak)
@@ -101,9 +103,12 @@ class WorkspaceDivider(QWidget):
         # Highlight gradient localised to the band's vertical span.
         t = theme()
         hl = QLinearGradient(0, center_y - band_h / 2, 0, center_y + band_h / 2)
-        a_clear = QColor(t.accent2); a_clear.setAlpha(0)
-        a_peak1 = QColor(t.accent);  a_peak1.setAlpha(180)
-        a_peak2 = QColor(t.accent2); a_peak2.setAlpha(150)
+        a_clear = QColor(t.accent2)
+        a_clear.setAlpha(0)
+        a_peak1 = QColor(t.accent)
+        a_peak1.setAlpha(180)
+        a_peak2 = QColor(t.accent2)
+        a_peak2.setAlpha(150)
         hl.setColorAt(0.0, a_clear)
         hl.setColorAt(0.5, a_peak1)
         hl.setColorAt(0.7, a_peak2)

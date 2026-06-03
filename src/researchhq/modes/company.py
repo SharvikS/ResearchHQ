@@ -17,8 +17,11 @@ class CompanyMode(ResearchMode):
             "{q} competitors comparison",
         ],
         preferred_tiers=[
-            SourceTier.OFFICIAL, SourceTier.NEWS, SourceTier.COMPARISON,
-            SourceTier.DOCS, SourceTier.WIKI,
+            SourceTier.OFFICIAL,
+            SourceTier.NEWS,
+            SourceTier.COMPARISON,
+            SourceTier.DOCS,
+            SourceTier.WIKI,
         ],
         drop_tiers={SourceTier.SEARCH_ENGINE, SourceTier.LOW_QUALITY},
         tier_weights={SourceTier.OFFICIAL: 11, SourceTier.NEWS: 9, SourceTier.COMPARISON: 8},

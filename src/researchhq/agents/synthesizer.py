@@ -135,7 +135,10 @@ async def synthesize(
     )
     try:
         response = await router.complete(
-            prompt=user, system=_system(mode, depth_directive), max_tokens=max_tokens, stage="synthesizer"
+            prompt=user,
+            system=_system(mode, depth_directive),
+            max_tokens=max_tokens,
+            stage="synthesizer",
         )
     except Exception as e:  # noqa: BLE001
         logger.warning("Synthesizer LLM failed (%s); returning stub section.", e)
@@ -168,7 +171,8 @@ async def synthesize(
 
 def _split_markdown_sections(md: str, mode: ResearchMode) -> list[Section]:
     skeleton = [
-        s.heading for s in mode.report_skeleton()
+        s.heading
+        for s in mode.report_skeleton()
         if s.heading not in {"Sources", "Confidence score", "Recommended next research questions"}
     ]
     out: list[Section] = []
@@ -182,9 +186,11 @@ def _split_markdown_sections(md: str, mode: ResearchMode) -> list[Section]:
     for line in md.splitlines():
         stripped = line.lstrip("# ").strip().rstrip(":")
         is_heading = line.lstrip().startswith("#") and len(line.strip()) > 1
-        match = next(
-            (h for h in skeleton if h.lower() == stripped.lower()), None
-        ) if is_heading else None
+        match = (
+            next((h for h in skeleton if h.lower() == stripped.lower()), None)
+            if is_heading
+            else None
+        )
         if match:
             _flush()
             current_heading = match

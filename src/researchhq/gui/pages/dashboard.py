@@ -12,26 +12,23 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QThreadPool, Qt, Signal
+from PySide6.QtCore import Qt, QThreadPool, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QListWidget,
     QListWidgetItem,
-    QPushButton,
     QScrollArea,
     QVBoxLayout,
     QWidget,
 )
 
-from researchhq.gui.widgets.animated_list import AnimatedListWidget
-from researchhq.gui.widgets.shimmer_button import ShimmerButton
-
 from researchhq.config import settings
 from researchhq.gui import state as gstate
+from researchhq.gui.widgets.animated_list import AnimatedListWidget
 from researchhq.gui.widgets.card import Card, StatCard
+from researchhq.gui.widgets.shimmer_button import ShimmerButton
 from researchhq.gui.workers.db_worker import DbCallable
 
 logger = logging.getLogger(__name__)
@@ -44,6 +41,7 @@ class _DashboardSnapshot:
     Computed on a worker thread; passed back to the GUI thread via a signal
     so widget mutation always happens on the main thread.
     """
+
     rows: list[Any]
     agg: dict[str, Any]
     reindexed: int  # number of files reindexed in this refresh, if any
@@ -90,8 +88,8 @@ def _build_snapshot() -> _DashboardSnapshot:
 
 
 class DashboardPage(QWidget):
-    open_research = Signal()                 # user wants to start a new research
-    open_report_path = Signal(str)           # path to a JSON report
+    open_research = Signal()  # user wants to start a new research
+    open_report_path = Signal(str)  # path to a JSON report
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -120,6 +118,7 @@ class DashboardPage(QWidget):
         # Custom-painted busy bar with flowing gradient — much more
         # tactile than the stock QProgressBar(0, 0) chunk.
         from researchhq.gui.widgets.animated_busy import AnimatedBusyBar
+
         self._busy = AnimatedBusyBar()
         header.addWidget(self._busy)
 
@@ -178,8 +177,12 @@ class DashboardPage(QWidget):
         # the first show. We intentionally store widget refs *after* the
         # layout has been built so positions are final when we read them.
         self._entrance_cards = [
-            self._stat_reports, self._stat_sources, self._stat_cost,
-            providers_card, recent_card, exports_card,
+            self._stat_reports,
+            self._stat_sources,
+            self._stat_cost,
+            providers_card,
+            recent_card,
+            exports_card,
         ]
         self._did_entrance = False
 
@@ -196,7 +199,9 @@ class DashboardPage(QWidget):
         if not self._did_entrance:
             self._did_entrance = True
             from PySide6.QtCore import QTimer
+
             from researchhq.gui.motion import stagger_in
+
             QTimer.singleShot(40, lambda: stagger_in(self._entrance_cards, step_ms=70))
 
     # ------------- public -------------
@@ -230,17 +235,19 @@ class DashboardPage(QWidget):
                     try:
                         stop()
                     except RuntimeError:
-                        logger.debug("PulseDot stop raised during provider grid clear", exc_info=True)
+                        logger.debug(
+                            "PulseDot stop raised during provider grid clear", exc_info=True
+                        )
                 w.deleteLater()
 
         from researchhq.gui.widgets.pulse_dot import PulseDot
 
         rows = [
-            ("Groq",      bool(settings.groq_api_key),      settings.models.get("groq", "")),
-            ("Gemini",    bool(settings.gemini_api_key),    settings.models.get("gemini", "")),
-            ("OpenAI",    bool(settings.openai_api_key),    settings.models.get("openai", "")),
+            ("Groq", bool(settings.groq_api_key), settings.models.get("groq", "")),
+            ("Gemini", bool(settings.gemini_api_key), settings.models.get("gemini", "")),
+            ("OpenAI", bool(settings.openai_api_key), settings.models.get("openai", "")),
             ("Anthropic", bool(settings.anthropic_api_key), settings.models.get("anthropic", "")),
-            ("Ollama",    True,                              settings.models.get("ollama", "")),
+            ("Ollama", True, settings.models.get("ollama", "")),
         ]
         for r, (name, configured, model) in enumerate(rows):
             # Wrap the pulse dot in a small horizontal layout next to the
@@ -309,6 +316,7 @@ class DashboardPage(QWidget):
         # snapshot we just hard-set values to avoid replaying the count
         # on every refresh tick.
         from researchhq.gui.motion import count_up, count_up_float
+
         reports = int(agg.get("total_reports", 0))
         sources = int(agg.get("total_sources", 0))
         cost = float(agg.get("last_run_cost", 0.0))
@@ -354,4 +362,5 @@ class DashboardPage(QWidget):
             return
         from PySide6.QtCore import QUrl
         from PySide6.QtGui import QDesktopServices
+
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))

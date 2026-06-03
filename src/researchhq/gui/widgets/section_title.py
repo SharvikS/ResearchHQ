@@ -17,19 +17,16 @@ adds a paint hook for the underline sweep.
 
 from __future__ import annotations
 
-import math
-
-from PySide6.QtCore import QRectF, QTimer, Qt
+from PySide6.QtCore import QRectF, QTimer
 from PySide6.QtGui import QColor, QLinearGradient, QPainter
 from PySide6.QtWidgets import QLabel
 
-from researchhq.gui.reduce_motion import is_reduced, ReduceMotion
+from researchhq.gui.reduce_motion import ReduceMotion, is_reduced
 from researchhq.gui.theme import ThemeManager, theme
-
 
 # Long period so the sweep never feels frantic. 7s for a full traverse.
 _SWEEP_PERIOD_S = 7.0
-_TICK_INTERVAL_MS = 60   # ~16 fps — fine for an ambient sweep
+_TICK_INTERVAL_MS = 60  # ~16 fps — fine for an ambient sweep
 _UNDERLINE_HEIGHT = 1.5
 
 
@@ -89,9 +86,12 @@ class SectionTitle(QLabel):
         x1 = x0 + band_w
 
         grad = QLinearGradient(x0, 0, x1, 0)
-        c_clear = QColor(t.accent2); c_clear.setAlpha(0)
-        c_peak  = QColor(t.accent);  c_peak.setAlpha(180)
-        c_tail  = QColor(t.accent2); c_tail.setAlpha(110)
+        c_clear = QColor(t.accent2)
+        c_clear.setAlpha(0)
+        c_peak = QColor(t.accent)
+        c_peak.setAlpha(180)
+        c_tail = QColor(t.accent2)
+        c_tail.setAlpha(110)
         grad.setColorAt(0.0, c_clear)
         grad.setColorAt(0.5, c_peak)
         grad.setColorAt(1.0, c_tail)

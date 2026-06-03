@@ -87,7 +87,9 @@ def _download(url: str, dest: str) -> None:
                 data = resp.read()
             head = data[:512].lstrip().lower()
             if head.startswith((b"<!doctype", b"<html")) or b"ResearchHQ" not in data[:512]:
-                raise OSError("downloaded file does not look like the installer (got an error page?)")
+                raise OSError(
+                    "downloaded file does not look like the installer (got an error page?)"
+                )
             with open(dest, "wb") as fh:
                 fh.write(data)
             return
@@ -157,6 +159,7 @@ _bootstrap_interactive()
 # Encoding: switch Windows console to UTF-8 so Unicode renders correctly.
 # ---------------------------------------------------------------------------
 
+
 def _setup_encoding() -> None:
     if sys.platform == "win32":
         # subprocess.run avoids a shell hop; works on Win10/11 and Server.
@@ -179,6 +182,7 @@ def _setup_encoding() -> None:
         # diagnosing unicode rendering.
         log.debug("sys.stdout.reconfigure() unavailable; leaving encoding as-is")
 
+
 _setup_encoding()
 
 # ---------------------------------------------------------------------------
@@ -196,16 +200,38 @@ def _c(code: str, text: str) -> str:
     return f"\033[{code}m{text}\033[0m" if _USE_COLOR else text
 
 
-def bold(t: str) -> str:       return _c("1", t)
-def dim(t: str) -> str:        return _c("2", t)
-def green(t: str) -> str:      return _c("32", t)
-def yellow(t: str) -> str:     return _c("33", t)
-def cyan(t: str) -> str:       return _c("36", t)
-def red(t: str) -> str:        return _c("31", t)
-def magenta(t: str) -> str:    return _c("35", t)
+def bold(t: str) -> str:
+    return _c("1", t)
+
+
+def dim(t: str) -> str:
+    return _c("2", t)
+
+
+def green(t: str) -> str:
+    return _c("32", t)
+
+
+def yellow(t: str) -> str:
+    return _c("33", t)
+
+
+def cyan(t: str) -> str:
+    return _c("36", t)
+
+
+def red(t: str) -> str:
+    return _c("31", t)
+
+
+def magenta(t: str) -> str:
+    return _c("35", t)
+
+
 # Warm Claude-style accent (256-colour 173 ≈ #d7875f). 256-colour rather than
 # truecolor for the widest terminal support.
-def accent(t: str) -> str:     return _c("38;5;173", t)
+def accent(t: str) -> str:
+    return _c("38;5;173", t)
 
 
 # Brand mark used throughout the guided flow, à la Claude Code's ✻.
@@ -243,9 +269,9 @@ def _check(cmd: list[str], *, timeout: int = 5) -> bool:
 # --- Injectable IO ---------------------------------------------------------
 # Tests and CI runners can override these to drive the installer without a
 # real TTY. Defaults call the stdlib directly.
-_input_fn = input        # type: ignore[assignment]
+_input_fn = input  # type: ignore[assignment]
 _secret_fn = getpass.getpass
-_output_fn = print       # type: ignore[assignment]
+_output_fn = print  # type: ignore[assignment]
 
 
 def set_io(*, ask=None, ask_secret=None, output=None) -> None:
@@ -297,6 +323,7 @@ def _ask_yn(prompt: str, default: bool = True) -> bool:
 # every call, is left untouched — it redraws every cell each frame so the
 # transient cooked-mode windows never show.)
 
+
 def _can_raw_menu() -> bool:
     """True only when interactive arrow-key menus are safe to use.
 
@@ -305,7 +332,7 @@ def _can_raw_menu() -> bool:
     is the contract for non-interactive use, so it must stay fully functional."""
     if os.environ.get("RHQ_NO_RAW"):
         return False
-    if _input_fn is not input:            # IO was injected (tests / library)
+    if _input_fn is not input:  # IO was injected (tests / library)
         return False
     if not (sys.stdin.isatty() and sys.stdout.isatty()):
         return False
@@ -316,16 +343,16 @@ def _can_raw_menu() -> bool:
 
 # Single-byte keys → normalised names (shared by both platform readers).
 _SIMPLE_KEYS = {
-    b" ":    "SPACE",
-    b"\r":   "ENTER",
-    b"\n":   "ENTER",
+    b" ": "SPACE",
+    b"\r": "ENTER",
+    b"\n": "ENTER",
     b"\x1b": "ESC",
     b"\x03": "CTRL_C",
     b"\x08": "BACKSPACE",
     b"\x7f": "BACKSPACE",
 }
-_CSI_ARROWS = {b"A": "UP", b"B": "DOWN", b"C": "RIGHT", b"D": "LEFT"}      # ESC [ <X>
-_WIN_ARROWS = {b"H": "UP", b"P": "DOWN", b"K": "LEFT", b"M": "RIGHT"}      # \xe0 <X>
+_CSI_ARROWS = {b"A": "UP", b"B": "DOWN", b"C": "RIGHT", b"D": "LEFT"}  # ESC [ <X>
+_WIN_ARROWS = {b"H": "UP", b"P": "DOWN", b"K": "LEFT", b"M": "RIGHT"}  # \xe0 <X>
 
 
 @contextlib.contextmanager
@@ -340,7 +367,7 @@ def _key_reader():
 
         def getkey() -> str:
             ch = msvcrt.getch()
-            if ch in (b"\xe0", b"\x00"):           # arrow / function key prefix
+            if ch in (b"\xe0", b"\x00"):  # arrow / function key prefix
                 ext = msvcrt.getch()
                 return _WIN_ARROWS.get(ext, "")
             if ch in _SIMPLE_KEYS:
@@ -364,8 +391,9 @@ def _key_reader():
     # the first read forever.
     tty.setcbreak(fd, termios.TCSANOW)
     try:
+
         def getkey() -> str:
-            select.select([fd], [], [], None)     # block until a key is ready
+            select.select([fd], [], [], None)  # block until a key is ready
             ch = os.read(fd, 1)
             if ch == b"\x1b":
                 # Distinguish a bare ESC from a CSI escape sequence (arrows).
@@ -422,7 +450,7 @@ def _select(title: str, options: list[tuple[str, str]], default: int = 0) -> int
 
     def render(first: bool = False) -> None:
         if not first:
-            sys.stdout.write(f"\033[{n + 1}A")     # back up over options + hint
+            sys.stdout.write(f"\033[{n + 1}A")  # back up over options + hint
         for i, (label, hint) in enumerate(options):
             sel = i == idx
             cursor = accent("❯") if sel else " "
@@ -458,7 +486,9 @@ def _select(title: str, options: list[tuple[str, str]], default: int = 0) -> int
     return idx
 
 
-def _multiselect(title: str, options: list[tuple[str, str]], preselected: set[int] | None = None) -> list[int]:
+def _multiselect(
+    title: str, options: list[tuple[str, str]], preselected: set[int] | None = None
+) -> list[int]:
     """Checklist menu. Space toggles, Enter confirms. Returns selected indices.
 
     Falls back to one Y/N prompt per option when raw input isn't available."""
@@ -491,7 +521,7 @@ def _multiselect(title: str, options: list[tuple[str, str]], preselected: set[in
             cursor = accent("❯") if here else " "
             box = accent("◉") if on else dim("○")
             shown = _fit(f"{label}{('  — ' + hint) if hint else ''}", cols - 8)
-            body = (accent(shown) if here else shown)
+            body = accent(shown) if here else shown
             sys.stdout.write(f"\r\033[2K  {cursor} {box} {body}\n")
         sys.stdout.write(f"\r\033[2K  {dim('↑/↓ move · space toggle · enter confirm')}\n")
         sys.stdout.flush()
@@ -580,6 +610,7 @@ def print_banner() -> None:
 # Step 1 — Prerequisites
 # ---------------------------------------------------------------------------
 
+
 def check_python() -> None:
     _section("Checking prerequisites")
     v = sys.version_info
@@ -591,9 +622,9 @@ def check_python() -> None:
 
 def detect_managers() -> dict[str, bool]:
     managers = {
-        "uv":    shutil.which("uv") is not None,
-        "pipx":  shutil.which("pipx") is not None,
-        "pip":   shutil.which("pip") is not None or shutil.which("pip3") is not None,
+        "uv": shutil.which("uv") is not None,
+        "pipx": shutil.which("pipx") is not None,
+        "pip": shutil.which("pip") is not None or shutil.which("pip3") is not None,
     }
     if managers["uv"]:
         _ok("uv detected  (will be used as primary installer)")
@@ -611,6 +642,7 @@ def detect_managers() -> dict[str, bool]:
 # ---------------------------------------------------------------------------
 # Step 2 — Install source & extras
 # ---------------------------------------------------------------------------
+
 
 def choose_source() -> str:
     _section("Installation source")
@@ -631,9 +663,9 @@ def choose_source() -> str:
 
 # Optional pip extras offered as a checklist. (tui is always installed.)
 _OPTIONAL_EXTRAS = [
-    ("gui",       "GUI desktop app", "PySide6, ~200 MB"),
+    ("gui", "GUI desktop app", "PySide6, ~200 MB"),
     ("anthropic", "Anthropic / Claude provider", "console.anthropic.com"),
-    ("openai",    "OpenAI / GPT provider", "platform.openai.com"),
+    ("openai", "OpenAI / GPT provider", "platform.openai.com"),
 ]
 
 
@@ -655,6 +687,7 @@ def choose_extras() -> list[str]:
 # ---------------------------------------------------------------------------
 # Recap — confirm the plan before doing anything irreversible
 # ---------------------------------------------------------------------------
+
 
 def _install_method(source: str, managers: dict[str, bool]) -> str:
     """Human label for how the package will actually be installed."""
@@ -723,13 +756,16 @@ def _pip_prefix() -> list[str]:
     pip module (e.g. a stripped `curl … | python3 -` interpreter)."""
     candidate = [sys.executable, "-m", "pip"]
     try:
-        ok = subprocess.run(
-            [*candidate, "--version"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=10,
-            check=False,
-        ).returncode == 0
+        ok = (
+            subprocess.run(
+                [*candidate, "--version"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=10,
+                check=False,
+            ).returncode
+            == 0
+        )
     except (OSError, subprocess.SubprocessError):
         ok = False
     if ok:
@@ -797,6 +833,7 @@ def run_install(source: str, extras: list[str], managers: dict[str, bool]) -> No
 # Step 4 — Collect API keys
 # ---------------------------------------------------------------------------
 
+
 def collect_api_keys() -> dict[str, str]:
     _section("API Keys")
     print(f"  {dim('Keys are stored in')} {bold(str(INSTALL_DIR / '.env'))}")
@@ -806,8 +843,10 @@ def collect_api_keys() -> dict[str, str]:
     keys: dict[str, str] = {}
 
     # Groq (free tier, recommended)
-    print(f"  {bold('Groq')}  {dim('(free 14 400 req/day — recommended primary)')} "
-          f"{dim('→ console.groq.com/keys')}")
+    print(
+        f"  {bold('Groq')}  {dim('(free 14 400 req/day — recommended primary)')} "
+        f"{dim('→ console.groq.com/keys')}"
+    )
     k = _ask_secret("GROQ_API_KEY")
     if k:
         keys["GROQ_API_KEY"] = k
@@ -817,8 +856,10 @@ def collect_api_keys() -> dict[str, str]:
 
     # Gemini
     print()
-    print(f"  {bold('Google Gemini')}  {dim('(free tier available)')} "
-          f"{dim('→ aistudio.google.com/apikey')}")
+    print(
+        f"  {bold('Google Gemini')}  {dim('(free tier available)')} "
+        f"{dim('→ aistudio.google.com/apikey')}"
+    )
     k = _ask_secret("GEMINI_API_KEY")
     if k:
         keys["GEMINI_API_KEY"] = k
@@ -854,7 +895,11 @@ def collect_api_keys() -> dict[str, str]:
         keys["OLLAMA_HOST"] = host
         _ok(f"Ollama host: {host}")
 
-    if not keys.get("GROQ_API_KEY") and not keys.get("GEMINI_API_KEY") and "OLLAMA_HOST" not in keys:
+    if (
+        not keys.get("GROQ_API_KEY")
+        and not keys.get("GEMINI_API_KEY")
+        and "OLLAMA_HOST" not in keys
+    ):
         _warn("No provider configured — add at least one key or Ollama before using the tool.")
 
     return keys
@@ -863,6 +908,7 @@ def collect_api_keys() -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # Step 5 — Optional: configure provider & models
 # ---------------------------------------------------------------------------
+
 
 def configure_provider(keys: dict[str, str]) -> dict[str, str]:
     _section("Default provider")
@@ -897,6 +943,7 @@ def configure_provider(keys: dict[str, str]) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # Step 6 — Write config files
 # ---------------------------------------------------------------------------
+
 
 def write_config(keys: dict[str, str], provider_cfg: dict[str, str]) -> None:
     _section("Writing configuration")
@@ -967,6 +1014,7 @@ def write_config(keys: dict[str, str], provider_cfg: dict[str, str]) -> None:
 # Step 7 — Verify
 # ---------------------------------------------------------------------------
 
+
 def verify_install() -> None:
     """Check the install actually exposes a working CLI.
 
@@ -986,7 +1034,7 @@ def verify_install() -> None:
     if found_cmd is None:
         _warn("Commands not found on PATH yet.")
         _info("If using pip --user, add ~/.local/bin to your PATH:")
-        _info("  export PATH=\"$HOME/.local/bin:$PATH\"  (add to ~/.bashrc or ~/.zshrc)")
+        _info('  export PATH="$HOME/.local/bin:$PATH"  (add to ~/.bashrc or ~/.zshrc)')
         _info("If using pipx, run: pipx ensurepath")
         return
 
@@ -1037,6 +1085,7 @@ def verify_install() -> None:
 # Step 8 — Success banner
 # ---------------------------------------------------------------------------
 
+
 def print_success() -> None:
     w = 46
     title = " ✓ Installed successfully "
@@ -1069,25 +1118,27 @@ def print_success() -> None:
 # A non-blocking terminal game that plays while the package installs.
 # =============================================================================
 
-_FPS      = 15
-_FRAME_T  = 1.0 / _FPS
-_GRAVITY  = 0.75    # fall speed per tick
-_JUMP_VY  = 4.2     # initial jump velocity
-_PX       = 4       # player fixed column (0-indexed inside play area)
-_PW       = 3       # player width in chars
-_PH       = 2       # player height in rows (body + head)
-_PLAY_H   = 10      # play area row count (gives room for tall blocks + jumps)
-_MIN_COLS = 64      # minimum terminal width to enable game
+_FPS = 15
+_FRAME_T = 1.0 / _FPS
+_GRAVITY = 0.75  # fall speed per tick
+_JUMP_VY = 4.2  # initial jump velocity
+_PX = 4  # player fixed column (0-indexed inside play area)
+_PW = 3  # player width in chars
+_PH = 2  # player height in rows (body + head)
+_PLAY_H = 10  # play area row count (gives room for tall blocks + jumps)
+_MIN_COLS = 64  # minimum terminal width to enable game
 
 
 # ── Terminal capability ───────────────────────────────────────────────────────
 
+
 def _win_enable_ansi() -> bool:
     try:
         import ctypes
+
         k32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
-        h   = k32.GetStdHandle(-11)
-        m   = ctypes.c_ulong()
+        h = k32.GetStdHandle(-11)
+        m = ctypes.c_ulong()
         k32.GetConsoleMode(h, ctypes.byref(m))
         k32.SetConsoleMode(h, m.value | 0x0004)  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
         return True
@@ -1111,6 +1162,7 @@ def _game_capable() -> bool:
 
 # ── Non-blocking input ────────────────────────────────────────────────────────
 
+
 def _read_key() -> str | None:
     """Return key name or None without blocking.
 
@@ -1121,22 +1173,28 @@ def _read_key() -> str | None:
     """
     if sys.platform == "win32":
         import msvcrt
+
         if not msvcrt.kbhit():
             return None
         ch = msvcrt.getch()
         if ch in (b"\xe0", b"\x00"):
             ext = msvcrt.getch()
             return {b"H": "UP", b"P": "DOWN"}.get(ext)
-        if ch == b" ":    return "SPACE"
-        if ch == b"\r":   return "ENTER"
-        if ch == b"\x1b": return "ESC"
-        if ch == b"\x03": return "CTRL_C"
+        if ch == b" ":
+            return "SPACE"
+        if ch == b"\r":
+            return "ENTER"
+        if ch == b"\x1b":
+            return "ESC"
+        if ch == b"\x03":
+            return "CTRL_C"
         s = ch.decode("ascii", errors="ignore").upper()
         return s if s else None
     # ── Unix ──────────────────────────────────────────────────────────────
     import select
     import termios
     import tty
+
     try:
         fd = sys.stdin.fileno()
     except (AttributeError, OSError):
@@ -1161,15 +1219,20 @@ def _read_key() -> str | None:
             rr2, _, _ = select.select([fd], [], [], 0.02)
             if rr2:
                 seq = os.read(fd, 3)
-                if b"A" in seq: return "UP"
-                if b"B" in seq: return "DOWN"
+                if b"A" in seq:
+                    return "UP"
+                if b"B" in seq:
+                    return "DOWN"
             return "ESC"
-        if ch == b" ":    return "SPACE"
-        if ch == b"\x03": return "CTRL_C"
-        if ch in (b"\r", b"\n"): return "ENTER"
+        if ch == b" ":
+            return "SPACE"
+        if ch == b"\x03":
+            return "CTRL_C"
+        if ch in (b"\r", b"\n"):
+            return "ENTER"
         s = ch.decode("ascii", errors="ignore").upper()
         return s if s else None
-    except (OSError, select.error) as exc:
+    except OSError as exc:
         log.debug("Non-blocking key read failed: %s", exc)
         return None
     finally:
@@ -1183,32 +1246,34 @@ def _read_key() -> str | None:
 
 # ── Game data ─────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class _Entity:
-    x:      float
-    row:    int    # bottom row (0 = ground level)
-    kind:   str    # 'block' | 'spike' | 'source' | 'shield' | 'boost'
-    height: int = 1   # rows tall  (blocks: 1-3, others: 1)
-    width:  int = 3   # chars wide
+    x: float
+    row: int  # bottom row (0 = ground level)
+    kind: str  # 'block' | 'spike' | 'source' | 'shield' | 'boost'
+    height: int = 1  # rows tall  (blocks: 1-3, others: 1)
+    width: int = 3  # chars wide
 
 
 @dataclass
 class _GS:
-    py:       float = 0.0
-    pvy:      float = 0.0
-    shield:   int   = 0      # frames of invincibility remaining
-    boost:    int   = 0      # frames of 2x score remaining
-    lives:    int   = 3
-    score:    int   = 0
-    speed:    float = 1.2
-    spawn_cd: int   = 28
-    frame:    int   = 0
-    paused:   bool  = False
-    dead:     bool  = False
-    entities: list  = _dc_field(default_factory=list)
+    py: float = 0.0
+    pvy: float = 0.0
+    shield: int = 0  # frames of invincibility remaining
+    boost: int = 0  # frames of 2x score remaining
+    lives: int = 3
+    score: int = 0
+    speed: float = 1.2
+    spawn_cd: int = 28
+    frame: int = 0
+    paused: bool = False
+    dead: bool = False
+    entities: list = _dc_field(default_factory=list)
 
 
 # ── Game logic ────────────────────────────────────────────────────────────────
+
 
 def _jump(gs: _GS) -> None:
     if gs.py < 0.05 and not gs.dead and not gs.paused:
@@ -1220,15 +1285,17 @@ def _tick(gs: _GS, gw: int) -> None:
         return
     gs.frame += 1
     gs.score += 2 if gs.boost > 0 else 1
-    gs.speed  = 1.2 + gs.frame * 0.00022
-    if gs.shield > 0: gs.shield -= 1
-    if gs.boost  > 0: gs.boost  -= 1
+    gs.speed = 1.2 + gs.frame * 0.00022
+    if gs.shield > 0:
+        gs.shield -= 1
+    if gs.boost > 0:
+        gs.boost -= 1
 
     gs.pvy -= _GRAVITY
-    gs.py  += gs.pvy
+    gs.py += gs.pvy
     if gs.py <= 0.0:
         gs.py, gs.pvy = 0.0, 0.0
-    gs.py = min(gs.py, float(_PLAY_H - _PH))   # ceiling: keep head inside
+    gs.py = min(gs.py, float(_PLAY_H - _PH))  # ceiling: keep head inside
 
     gs.entities = [e for e in gs.entities if e.x > -6]
     for e in gs.entities:
@@ -1288,7 +1355,7 @@ def _collide(gs: _GS) -> None:
                 gs.shield = max(0, gs.shield - _FPS)
             else:
                 gs.lives -= 1
-                gs.dead   = gs.lives <= 0
+                gs.dead = gs.lives <= 0
         elif e.kind == "source":
             gs.entities.remove(e)
             gs.score += 50 * (2 if gs.boost > 0 else 1)
@@ -1305,16 +1372,16 @@ def _collide(gs: _GS) -> None:
 # Player animation frames  (body, head)
 # frame index alternates every 4 ticks on the ground, fixed when airborne
 _PLAYER_RUN = [("/R\\", " o "), ("\\R/", " o ")]
-_PLAYER_AIR = ("[R]",          "\\o/")
-_PLAYER_DEAD = ("xxx",         " X ")
+_PLAYER_AIR = ("[R]", "\\o/")
+_PLAYER_DEAD = ("xxx", " X ")
 
 # Entity visuals  (char-string, ANSI colour code)
 _ENTITY_VIS = {
-    "block":  ("█",   "31"),   # red solid blocks
-    "spike":  ("/!\\","91"),   # bright-red spike
-    "source": ("($)", "33"),   # yellow coin
-    "shield": ("[C]", "36"),   # cyan shield
-    "boost":  ("[+]", "32"),   # green boost
+    "block": ("█", "31"),  # red solid blocks
+    "spike": ("/!\\", "91"),  # bright-red spike
+    "source": ("($)", "33"),  # yellow coin
+    "shield": ("[C]", "36"),  # cyan shield
+    "boost": ("[+]", "32"),  # green boost
 }
 
 
@@ -1327,13 +1394,13 @@ def _draw(gs: _GS, info: dict, notify: str, top: int) -> None:
     """
     B = "\033[0m"
     cols, _ = shutil.get_terminal_size(fallback=(80, 24))
-    gw = min(cols - 4, 100)    # inner play width (between the two │ chars)
+    gw = min(cols - 4, 100)  # inner play width (between the two │ chars)
 
     r_header = top
-    r_playN  = top + _PLAY_H   # terminal row of the ground-level play row
+    r_playN = top + _PLAY_H  # terminal row of the ground-level play row
     r_ground = r_playN + 1
     r_status = r_playN + 2
-    r_prog   = r_playN + 3
+    r_prog = r_playN + 3
     r_footer = r_playN + 4
 
     def G(r: int, c: int = 1) -> str:
@@ -1344,9 +1411,9 @@ def _draw(gs: _GS, info: dict, notify: str, top: int) -> None:
     # ── header ─────────────────────────────────────────────────────────────
     lives_s = "H" * gs.lives + "." * (3 - gs.lives)
     score_s = f"Score:{gs.score:07d}"
-    title   = "RESEARCH RUNNER"
-    hpad    = max(0, gw - len(title) - len(lives_s) - len(score_s) - 5)
-    header  = f" {title} {' ' * hpad}{lives_s}  {score_s} "
+    title = "RESEARCH RUNNER"
+    hpad = max(0, gw - len(title) - len(lives_s) - len(score_s) - 5)
+    header = f" {title} {' ' * hpad}{lives_s}  {score_s} "
     out.append(G(r_header) + f"┌{header[:gw]}┐")
 
     # ── play area (clear each row; entities/player drawn with cursor below) ─
@@ -1357,23 +1424,27 @@ def _draw(gs: _GS, info: dict, notify: str, top: int) -> None:
     out.append(G(r_ground) + f"│{'═' * gw}│")
 
     # ── status / controls ──────────────────────────────────────────────────
-    ctrl  = "SPACE/UP:Jump  P:Pause  Q:Quit"
+    ctrl = "SPACE/UP:Jump  P:Pause  Q:Quit"
     extra = notify
     if not extra:
-        if gs.paused:       extra = "-- PAUSED --"
-        elif gs.dead:       extra = "GAME OVER | SPACE: Restart"
-        elif gs.shield > 0: extra = "[SHIELD]"
-        elif gs.boost  > 0: extra = "[2x SCORE]"
-    spad  = max(0, gw - len(ctrl) - len(extra) - 2)
-    out.append(G(r_status) + f"│ {ctrl}{' ' * spad}{extra} │"[:gw + 2] + "│")
+        if gs.paused:
+            extra = "-- PAUSED --"
+        elif gs.dead:
+            extra = "GAME OVER | SPACE: Restart"
+        elif gs.shield > 0:
+            extra = "[SHIELD]"
+        elif gs.boost > 0:
+            extra = "[2x SCORE]"
+    spad = max(0, gw - len(ctrl) - len(extra) - 2)
+    out.append(G(r_status) + f"│ {ctrl}{' ' * spad}{extra} │"[: gw + 2] + "│")
 
     # ── install progress bar ────────────────────────────────────────────────
-    prog   = info.get("progress", 0)
-    ptext  = str(info.get("status", ""))[:35]
-    bw     = 18
+    prog = info.get("progress", 0)
+    ptext = str(info.get("status", ""))[:35]
+    bw = 18
     filled = int(bw * prog / 100)
-    bar    = "█" * filled + "░" * (bw - filled)
-    pline  = f" [{bar}] {prog}%  {ptext}"
+    bar = "█" * filled + "░" * (bw - filled)
+    pline = f" [{bar}] {prog}%  {ptext}"
     out.append(G(r_prog) + f"│{pline:{gw}s}│")
 
     # ── footer ─────────────────────────────────────────────────────────────
@@ -1381,12 +1452,12 @@ def _draw(gs: _GS, info: dict, notify: str, top: int) -> None:
 
     # ── entities (cursor-positioned after borders to avoid length issues) ───
     for e in gs.entities:
-        e_col = round(e.x) + 2    # +1 for border │, +1 for 1-indexing
+        e_col = round(e.x) + 2  # +1 for border │, +1 for 1-indexing
         vis, ecol = _ENTITY_VIS.get(e.kind, ("?", "0"))
 
         if e.kind == "block":
             # draw a solid wall column from e.row up to e.row+height-1
-            block_row = vis * e.width    # e.g. "███"
+            block_row = vis * e.width  # e.g. "███"
             for h in range(e.height):
                 er = r_playN - e.row - h
                 if top + 1 <= er <= r_playN and 2 <= e_col <= gw + 1:
@@ -1406,9 +1477,9 @@ def _draw(gs: _GS, info: dict, notify: str, top: int) -> None:
 
     # ── player (2-row animated character, cursor-positioned) ────────────────
     p_row = round(min(gs.py, float(_PLAY_H - _PH)))
-    p_body_r = r_playN - p_row           # terminal row of body
-    p_head_r = p_body_r - 1             # terminal row of head
-    p_col    = _PX + 2                  # terminal col of leftmost char
+    p_body_r = r_playN - p_row  # terminal row of body
+    p_head_r = p_body_r - 1  # terminal row of head
+    p_col = _PX + 2  # terminal col of leftmost char
 
     if gs.dead:
         body, head = _PLAYER_DEAD
@@ -1435,17 +1506,17 @@ def _draw(gs: _GS, info: dict, notify: str, top: int) -> None:
 
 # ── Splash shown while waiting for user to press G ───────────────────────────
 
+
 def _splash(info: dict, elapsed: float) -> None:
     sp = "|/-\\"[int(elapsed * 4) % 4]
     status = str(info.get("status", ""))[:50]
-    prog   = info.get("progress", 0)
-    sys.stdout.write(
-        f"\033[5;3H\033[2K  {sp} Installing... {prog}%  {status}          "
-    )
+    prog = info.get("progress", 0)
+    sys.stdout.write(f"\033[5;3H\033[2K  {sp} Installing... {prog}%  {status}          ")
     sys.stdout.flush()
 
 
 # ── Main overlay entry point ──────────────────────────────────────────────────
+
 
 def run_game_overlay(cmd: list[str]) -> int:
     """
@@ -1471,13 +1542,13 @@ def run_game_overlay(cmd: list[str]) -> int:
                 if not l:
                     continue
                 if any(k in l for k in ("Collecting", "Downloading", "Fetching")):
-                    info["status"]   = l[:40]
+                    info["status"] = l[:40]
                     info["progress"] = min(info["progress"] + 2, 80)
                 elif "Installing" in l:
-                    info["status"]   = l[:40]
+                    info["status"] = l[:40]
                     info["progress"] = min(info["progress"] + 5, 92)
                 elif "Successfully" in l:
-                    info["status"]   = "Done!"
+                    info["status"] = "Done!"
                     info["progress"] = 100
                 else:
                     info["status"] = l[:40]
@@ -1485,12 +1556,12 @@ def run_game_overlay(cmd: list[str]) -> int:
             proc.stdout.close()
             proc.wait()
             info["done"] = True
-            info["rc"]   = proc.returncode if proc.returncode is not None else 0
+            info["rc"] = proc.returncode if proc.returncode is not None else 0
 
     threading.Thread(target=_reader, daemon=True).start()
 
     # ── initialise terminal ────────────────────────────────────────────────
-    sys.stdout.write("\033[?25l")    # hide cursor
+    sys.stdout.write("\033[?25l")  # hide cursor
     sys.stdout.write("\033[2J\033[H")
     sys.stdout.write(
         f"\n  {bold(cyan('ResearchHQ Installer'))}\n"
@@ -1500,12 +1571,12 @@ def run_game_overlay(cmd: list[str]) -> int:
     )
     sys.stdout.flush()
 
-    TOP_ROW      = 2   # game frame starts at terminal row 2
-    gs           = _GS()
-    game_on      = False
+    TOP_ROW = 2  # game frame starts at terminal row 2
+    gs = _GS()
+    game_on = False
     done_noticed = False
-    wait_enter   = False
-    notify_msg   = ""
+    wait_enter = False
+    notify_msg = ""
 
     try:
         while True:
@@ -1529,8 +1600,7 @@ def run_game_overlay(cmd: list[str]) -> int:
                     game_on = False
                     sys.stdout.write("\033[2J\033[H")
                     sys.stdout.write(
-                        f"\n  {yellow('Terminal too small for game.')}"
-                        f"  Waiting for install...\n"
+                        f"\n  {yellow('Terminal too small for game.')}  Waiting for install...\n"
                     )
                     sys.stdout.flush()
 
@@ -1538,7 +1608,7 @@ def run_game_overlay(cmd: list[str]) -> int:
             if not game_on and not wait_enter:
                 if key == "G":
                     game_on = True
-                    gs      = _GS()
+                    gs = _GS()
                     sys.stdout.write("\033[2J\033[H")
                     sys.stdout.flush()
                 elif key == "Q":
@@ -1548,10 +1618,9 @@ def run_game_overlay(cmd: list[str]) -> int:
 
                 if info["done"] and not done_noticed:
                     done_noticed = True
-                    wait_enter   = True
+                    wait_enter = True
                     sys.stdout.write(
-                        f"\n\n  {green('✓')} Install complete!"
-                        f"  Press Enter to continue setup.\n"
+                        f"\n\n  {green('✓')} Install complete!  Press Enter to continue setup.\n"
                     )
                     sys.stdout.flush()
 
@@ -1560,20 +1629,21 @@ def run_game_overlay(cmd: list[str]) -> int:
 
             # ── game active ────────────────────────────────────────────────
             elif game_on:
-                if   key in ("SPACE", "UP"):           _jump(gs)
-                elif key == "P":                        gs.paused = not gs.paused
+                if key in ("SPACE", "UP"):
+                    _jump(gs)
+                elif key == "P":
+                    gs.paused = not gs.paused
                 elif key in ("Q", "ESC"):
                     game_on = False
                     sys.stdout.write("\033[2J\033[H")
                     sys.stdout.write(
-                        f"\n  {dim('Game closed.')}"
-                        f"  Waiting for install to finish...\n"
+                        f"\n  {dim('Game closed.')}  Waiting for install to finish...\n"
                     )
                     sys.stdout.flush()
                     if info["done"]:
                         wait_enter = True
                 elif gs.dead and key == "SPACE":
-                    gs = _GS()       # restart after death
+                    gs = _GS()  # restart after death
                 elif wait_enter and key == "ENTER":
                     break
 
@@ -1590,8 +1660,8 @@ def run_game_overlay(cmd: list[str]) -> int:
 
                 if info["done"] and not done_noticed:
                     done_noticed = True
-                    wait_enter   = True
-                    notify_msg   = "INSTALL COMPLETE -- Press Enter to continue"
+                    wait_enter = True
+                    notify_msg = "INSTALL COMPLETE -- Press Enter to continue"
 
                 try:
                     _draw(gs, info, notify_msg, TOP_ROW)
@@ -1600,14 +1670,14 @@ def run_game_overlay(cmd: list[str]) -> int:
 
             # ── frame rate cap ─────────────────────────────────────────────
             elapsed = time.perf_counter() - t0
-            rem     = _FRAME_T - elapsed
+            rem = _FRAME_T - elapsed
             if rem > 0:
                 time.sleep(rem)
 
     except KeyboardInterrupt:
         proc.terminate()
     finally:
-        sys.stdout.write("\033[?25h")    # restore cursor
+        sys.stdout.write("\033[?25h")  # restore cursor
         sys.stdout.write("\033[2J\033[H")
         sys.stdout.flush()
 
@@ -1616,7 +1686,7 @@ def run_game_overlay(cmd: list[str]) -> int:
         _info("Waiting for installation to complete...")
         proc.wait()
         info["done"] = True
-        info["rc"]   = proc.returncode or 0
+        info["rc"] = proc.returncode or 0
 
     return info["rc"]
 
@@ -1624,6 +1694,7 @@ def run_game_overlay(cmd: list[str]) -> int:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     print_banner()
