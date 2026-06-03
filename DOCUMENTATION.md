@@ -1886,7 +1886,7 @@ researchhq-multi-agent/
 │   │
 │   └── competiq/                  # Legacy package (backward compat)
 │
-├── frontend/                      # React/TypeScript dashboard (in progress)
+├── frontend/                      # React/TypeScript dashboard
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── types.ts               # Full TypeScript type definitions

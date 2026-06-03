@@ -1,11 +1,12 @@
 # researchhq — Multi-Agent Research Workstation
 
-A general-purpose multi-agent research assistant. Two surfaces, one engine:
+A general-purpose multi-agent research assistant. Three surfaces, one engine:
 
 - **CLI** — `research <mode> "<query>"`. Scriptable, deterministic, CI-friendly.
 - **ResearchHQ Studio (GUI)** — desktop workstation built on PySide6: dashboard,
 live agent pipeline, source intelligence, history with search/filter,
 side-by-side compare, multi-format export including PDF.
+- **Web UI** — React + Vite web application served by a FastAPI backend for browser-based access.
 
 Built on free-tier providers (Groq, Gemini, local Ollama). Operational cost: **$0**.
 
