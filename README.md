@@ -52,7 +52,7 @@ researchhq-gui
 ## Health check
 
 ```powershell
-researchhq doctor
+research-hq doctor
 ```
 
 Verifies Python version, required deps, provider keys, router init, output folder writability, history DB, and GUI importability. Exit code 1 on any critical failure.

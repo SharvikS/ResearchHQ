@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import pytest
 
+PySide6 = pytest.importorskip("PySide6")  # GUI tests only run when GUI extras present.
+
 from researchhq.events import PipelineEvent
 from researchhq.gui.workers.research_worker import ResearchWorker
-
-PySide6 = pytest.importorskip("PySide6")  # GUI tests only run when GUI extras present.
 
 
 def _make_worker():
